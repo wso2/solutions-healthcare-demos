@@ -16,39 +16,27 @@ import ballerinax/health.fhirr4;
 import ballerinax/health.fhir.r4.international401;
 
 public type Location international401:Location;
-
 public type Appointment international401:Appointment;
 
-string practitionerBaseUrl = "http://localhost:9092/fhir/r4";
-string slotBaseUrl = "http://localhost:9098/fhir/r4";
-string locationBaseUrl = "http://localhost:9095/fhir/r4";
-string appointmentBaseUrl = "http://localhost:9099/fhir/r4";
+configurable string cernerUrl = ?;
+configurable string tokenUrl = ?;
+configurable string clientId = ?;
+configurable string clientSecret = ?;
+configurable string[] scopes = ?;
 
 // Create a FHIR client configs for practitioner ,slot, location and appointment
-fhirClient:FHIRConnectorConfig practitionerConfig = {
-    baseURL: practitionerBaseUrl,
-    mimeType: fhirClient:FHIR_JSON
+fhirClient:FHIRConnectorConfig cernerConfig = {
+    baseURL: cernerUrl,
+    mimeType: fhirClient:FHIR_JSON,
+    authConfig: {
+        tokenUrl: tokenUrl,
+        clientId: clientId,
+        clientSecret: clientSecret,
+        scopes: scopes
+    }
 };
 
-fhirClient:FHIRConnectorConfig slotConfig = {
-    baseURL: slotBaseUrl,
-    mimeType: fhirClient:FHIR_JSON
-};
-
-fhirClient:FHIRConnectorConfig locationConfig = {
-    baseURL: locationBaseUrl,
-    mimeType: fhirClient:FHIR_JSON
-};
-
-fhirClient:FHIRConnectorConfig appointmentConfig = {
-    baseURL: appointmentBaseUrl,
-    mimeType: fhirClient:FHIR_JSON
-};
-
-final fhirClient:FHIRConnector fhirPractitionerObj = check new (practitionerConfig);
-final fhirClient:FHIRConnector fhirSlotObj = check new (slotConfig);
-final fhirClient:FHIRConnector fhirLocationObj = check new (locationConfig);
-final fhirClient:FHIRConnector fhirAppointmentObj = check new (appointmentConfig);
+final fhirClient:FHIRConnector fhirConnectorObj = check new (cernerConfig);
 
 service / on new fhirr4:Listener(8081, practitionerApiConfig) {
 
@@ -68,7 +56,7 @@ service / on new fhirr4:Listener(8081, practitionerApiConfig) {
             queryParams["given"] = [givenArray[0].value];
         }
 
-        fhirClient:FHIRResponse searchResponse = check fhirPractitionerObj->search("Practitioner", queryParams);
+        fhirClient:FHIRResponse searchResponse = check fhirConnectorObj->search("Practitioner", queryParams);
 
         return searchResponse.'resource.cloneWithType();
     }
@@ -94,7 +82,7 @@ service / on new fhirr4:Listener(8082, slotApiConfig) {
         queryParams["service-type"] = ["https://fhir.cerner.com/ec2458f2-1e24-41c8-b71b-0e701af7583d/codeSet/14249|4047611"];
         queryParams["_count"] = ["40"];
 
-        fhirClient:FHIRResponse searchResponse = check fhirSlotObj->search("Slot", queryParams);
+        fhirClient:FHIRResponse searchResponse = check fhirConnectorObj->search("Slot", queryParams);
 
         r4:Bundle|error resourceResponse = searchResponse.'resource.cloneWithType();
         if resourceResponse is r4:Bundle {
@@ -144,7 +132,7 @@ service / on new fhirr4:Listener(8084, locationApiConfig) {
 
     isolated resource function get fhir/r4/Location/[string id](r4:FHIRContext fhirContext) returns Location|error {
 
-        fhirClient:FHIRResponse readByIdResponse = check fhirLocationObj->getById("Location", id);
+        fhirClient:FHIRResponse readByIdResponse = check fhirConnectorObj->getById("Location", id);
         return readByIdResponse.'resource.cloneWithType(Location);
     }
 }
@@ -152,7 +140,7 @@ service / on new fhirr4:Listener(8084, locationApiConfig) {
 service / on new fhirr4:Listener(8083, appointmentApiConfig) {
     isolated resource function post fhir/r4/Appointment(r4:FHIRContext fhirContext, json appointment) returns int|error {
 
-        fhirClient:FHIRResponse postResponse = check fhirAppointmentObj->create(appointment);
+        fhirClient:FHIRResponse postResponse = check fhirConnectorObj->create(appointment);
         return postResponse.httpStatusCode;
     }
 }
