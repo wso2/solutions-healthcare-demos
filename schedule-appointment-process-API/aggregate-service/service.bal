@@ -68,14 +68,17 @@ service / on new fhirr4:Listener(8082, slotApiConfig) {
         map<string[]> queryParams = {};
         r4:BundleEntry[] newBundleEntry = [];
 
+         // Fetch the search parameter: practitioner
         r4:StringSearchParameter[]|r4:FHIRTypeError? practitionerArray = fhirContext.getStringSearchParameter("practitioner");
         if practitionerArray is r4:StringSearchParameter[] && practitionerArray.length() > 0 {
             queryParams["practitioner"] = [practitionerArray[0].value];
         }
 
+         // Fetch the search parameter: startDate
         r4:StringSearchParameter[]|r4:FHIRTypeError? startDateArray = fhirContext.getStringSearchParameter("startDate");
 
         if (startDateArray is r4:StringSearchParameter[] && startDateArray.count() > 0) {
+            //construct date to Cerner accepting format
             queryParams["start"] = [string `ge${startDateArray[0].value}T06:00:00Z`, string `lt${startDateArray[0].value}T23:55:55Z`];
         }
 
@@ -84,6 +87,7 @@ service / on new fhirr4:Listener(8082, slotApiConfig) {
 
         fhirClient:FHIRResponse searchResponse = check fhirConnectorObj->search("Slot", queryParams);
 
+        //From the Slot Bundle extract the slots for the selected two locations
         r4:Bundle|error resourceResponse = searchResponse.'resource.cloneWithType();
         if resourceResponse is r4:Bundle {
             r4:BundleEntry[]? optionalEntries = resourceResponse.entry;
@@ -100,7 +104,7 @@ service / on new fhirr4:Listener(8082, slotApiConfig) {
                                     if ext["valueReference"] is map<anydata> {
                                         json|error location = check ext["valueReference"].reference;
 
-                                        if location == "Location/25442717" {
+                                        if location == "Location/25442717" || location == "Location/32216061"{
                                             r4:BundleEntry newEntry = {
                                                 'resource: resourceEntry
                                             };
@@ -118,6 +122,7 @@ service / on new fhirr4:Listener(8082, slotApiConfig) {
             }
         }
 
+        // Construct a new Slot Bundle that has slots only from the selected locations
         r4:Bundle newBundle = {
             resourceType: "Bundle",
             entry: newBundleEntry
