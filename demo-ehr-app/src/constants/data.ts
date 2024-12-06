@@ -1191,4 +1191,3 @@ export const response = {
     },
   ],
 };
-
