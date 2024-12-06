@@ -26,6 +26,7 @@ import { Card } from "@chakra-ui/react";
 import axios from "axios";
 import { updateCdsResponse } from "../redux/cdsResponseSlice";
 import MedicalImagingSign from "./MedicalImagingSign";
+import { CDS_CHOREO_BACKEND_URL } from "../config/config";
 
 interface Coding {
   id?: string;
@@ -185,7 +186,7 @@ function MedicalImaging() {
   };
 
   const handleCrdCheck = () => {
-    const a = ORDER_SIGN_CDS_REQUEST2(
+    const payload = ORDER_SIGN_CDS_REQUEST2(
       patientId,
       practionerId,
       selectedDate?.format("YYYY-MM-DD"),
@@ -195,10 +196,7 @@ function MedicalImaging() {
     setCdsCards([]);
     setEnableSubmitButton(false);
     axios
-      .post<CdsResponse>(
-        "https://c32618cf-389d-44f1-93ee-b67a3468aae3-dev.e1-us-east-azure.choreoapis.dev/cmsdemosetups/cds-server/v1.0/cds-services/radiology-order",
-        a
-      )
+      .post<CdsResponse>(CDS_CHOREO_BACKEND_URL + "/radiology-order", payload)
       .then<CdsResponse>((res) => {
         setCdsCards(res.data.cards);
 
@@ -395,7 +393,12 @@ function MedicalImaging() {
                 <img
                   src="/imaging_center.webp"
                   alt="Healthcare"
-                  style={{ marginLeft: SCREEN_WIDTH * 0.05, width: 400, height: 400, borderRadius: 15 }}
+                  style={{
+                    marginLeft: SCREEN_WIDTH * 0.05,
+                    width: 400,
+                    height: 400,
+                    borderRadius: 15,
+                  }}
                 />
               )}
 

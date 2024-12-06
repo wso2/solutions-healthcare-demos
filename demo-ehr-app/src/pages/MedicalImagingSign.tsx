@@ -22,6 +22,7 @@ import { updateCdsResponse } from "../redux/cdsResponseSlice";
 import axios from "axios";
 import { CdsCard, CdsResponse } from "./MedicalImaging";
 import { Card } from "@chakra-ui/react";
+import { CDS_CHOREO_BACKEND_URL } from "../config/config";
 
 function MedicalImagingSign() {
   const { expanded } = useContext(ExpandedContext);
@@ -75,15 +76,15 @@ function MedicalImagingSign() {
   };
 
   const handleCrdCheck = () => {
-    const a = ORDER_DISPATCH_CDS_REQUEST(
+    const payload = ORDER_DISPATCH_CDS_REQUEST(
       patientId,
       practionerId,
       selectedImagingCenter
     );
     axios
       .post<CdsResponse>(
-        "https://c32618cf-389d-44f1-93ee-b67a3468aae3-dev.e1-us-east-azure.choreoapis.dev/cmsdemosetups/cds-server/v1.0/cds-services/book-imaging-center",
-        a
+        CDS_CHOREO_BACKEND_URL + "/book-imaging-center",
+        payload
       )
       .then<CdsResponse>((res) => {
         setCdsCards(res.data.cards);
