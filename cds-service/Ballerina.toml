@@ -1,0 +1,9 @@
+
+[package]
+org = "wso2"
+name = "cds.service"
+version = "1.0.0"
+distribution = "2201.8.6"
+authors = ["Ballerina"]
+keywords = ["Healthcare", "FHIR", "CRD", "Da Vinci", "CDS", "Coverage Requirements Discovery"]
+template = true
