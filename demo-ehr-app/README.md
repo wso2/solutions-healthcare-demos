@@ -1,30 +1,53 @@
-# React + TypeScript + Vite
+# WSO2 Demo EHR Application
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This project is a mock Electronic Health Record (EHR) system built using React. It simulates key functionalities of modern EHR systems, such as managing patient records, scheduling appointments, and Coverage requirement discovery workflows.
 
-Currently, two official plugins are available:
+**_Note_**: This system is intended only for demo purposes and is not suitable for production use.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Feel free to explore and use it as a foundation for understanding healthcare application development concepts!
 
-## Expanding the ESLint configuration
+# Run in Dev mode
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+> Run the following command to install all the dependencies listed in the project's `package.json`
 
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default {
-  // other rules...
-  parserOptions: {
-    ecmaVersion: 'latest',
-    sourceType: 'module',
-    project: ['./tsconfig.json', './tsconfig.node.json'],
-    tsconfigRootDir: __dirname,
-  },
-}
+```
+npm -i
 ```
 
-- Replace `plugin:@typescript-eslint/recommended` to `plugin:@typescript-eslint/recommended-type-checked` or `plugin:@typescript-eslint/strict-type-checked`
-- Optionally add `plugin:@typescript-eslint/stylistic-type-checked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and add `plugin:react/recommended` & `plugin:react/jsx-runtime` to the `extends` list
+> Run the following command to run in the development mode.
+
+```
+npm run dev
+```
+
+> By default it will run the application in port `5173`. http://localhost:5173/
+
+# Production build
+
+> Run the following command to install all the dependencies listed in the project's `package.json`
+
+```
+npm -i
+```
+
+> Run the following command to get the build artifacts.
+
+```
+npm run build
+```
+
+> You will find the build artifacts in `/dist` directory.
+
+> The build script is building your entire app into the build folder, ready to be statically served. However actually serving it require some kind of static file server. Run the following command to install it.
+
+```
+npm install -g serve
+```
+
+Then execute the following command to run the build in the production mode.
+
+```
+serve -s build
+```
+
+> By default it will run the application in port `3000`. http://localhost:3000
