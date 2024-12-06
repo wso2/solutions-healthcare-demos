@@ -3,67 +3,14 @@ import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { tomorrowNight } from "react-syntax-highlighter/dist/esm/styles/hljs";
 import { useSelector } from "react-redux";
 import "../assets/styles/code_theme.css";
-import { useLocation } from "react-router-dom";
 
 const CDSDevPortal = () => {
   const hook = useSelector((state: any) => state.cdsRequest.hook);
-  // const hookInstance = useSelector(
-  //   (state: any) => state.cdsRequest.hookInstance
-  // );
-  // const context = useSelector((state: any) => state.cdsRequest.context);
-  // const prefetch = useSelector((state: any) => state.cdsRequest.prefetch);
   const requestState = useSelector((state: any) => state.cdsRequest.request);
-
   const response = useSelector((state: any) => state.cdsResponse.cards);
-
-  // const dispatch = useDispatch();
-
-  const location = useLocation();
-  const lastUrlSegment = location.pathname.split("/").pop();
-
-  // const showResponse =
-  //   lastUrlSegment === "coverage-preview" || lastUrlSegment === "coverage";
-
-  console.log("Last URL Segment: ", lastUrlSegment);
-
-  // const cdsRequest = {
-  //   hook,
-  //   hookInstance,
-  //   context,
-  //   prefetch,
-  // };
 
   // Newly added
   const cdsRequest = requestState;
-
-  // const cdsResponse = useRef({
-  //   cards: [],
-  // });
-
-  // useEffect(() => {
-  //   const fetchData = async () => {
-  //     cdsResponse.current = await constructCDSResponse(
-  //       hook,
-  //       cdsRequest,
-  //       showResponse
-  //     );
-  //     console.log(cdsResponse.current);
-  //     if (hook !== "cds-services") {
-  //       dispatch(updateCdsResponse(cdsResponse.current));
-  //     }
-  //   };
-
-  //   fetchData();
-  // }, [
-  //   dispatch,
-  //   hook,
-  //   hookInstance,
-  //   context,
-  //   prefetch,
-  //   cdsRequest,
-  //   lastUrlSegment,
-  //   showResponse,
-  // ]);
 
   return (
     <Box>

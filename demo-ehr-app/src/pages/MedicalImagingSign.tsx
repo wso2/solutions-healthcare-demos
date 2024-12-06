@@ -108,20 +108,12 @@ function MedicalImagingSign() {
   return (
     <>
       <div
-        style={{ display: "flex", flexDirection: expanded ? "column" : "row", marginRight: 200 }}
+        style={{
+          display: "flex",
+          flexDirection: expanded ? "column" : "row",
+          marginRight: 200,
+        }}
       >
-        {/* {expanded && (
-          <img
-            src={appointmentBookImg}
-            alt="Healthcare"
-            style={{
-              marginLeft: SCREEN_WIDTH * 0.05,
-              height: SCREEN_HEIGHT * 0.5,
-              width: SCREEN_WIDTH * 0.3,
-            }}
-          />
-        )} */}
-
         <div style={{ marginLeft: 80 }}>
           <div
             style={{

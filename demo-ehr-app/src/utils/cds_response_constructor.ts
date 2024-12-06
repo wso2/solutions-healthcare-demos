@@ -1,14 +1,17 @@
 import { CDS_SERVICE_SAMPLE_RESPONSE } from "../constants/data";
 
-export async function constructCDSResponse(hook: string, cdsRequest: any, showResponse: boolean = true) {
-
+export async function constructCDSResponse(
+  hook: string,
+  cdsRequest: any,
+  showResponse: boolean = true
+) {
   if (hook === "" || hook === undefined || !showResponse) {
     return {
-      "cards": []
-    }
+      cards: [],
+    };
   }
 
-  if (hook === "cds-services"){
+  if (hook === "cds-services") {
     return CDS_SERVICE_SAMPLE_RESPONSE;
   }
 
@@ -22,21 +25,5 @@ export async function constructCDSResponse(hook: string, cdsRequest: any, showRe
   });
 
   const cdsResponse_from_server = await response.json();
-  // console.log(cdsResponse_from_server);
   return cdsResponse_from_server;
-
-  // const cdsResponse = { 
-  //   "cards": [
-  //     {
-  //       "uuid": "948b3cd1-a05b-49e6-804d-23a725b3db50",
-  //       "summary": "Now seeing: Daniel",
-  //       "source": {
-  //         "label": "Patient greeting service"
-  //       },
-  //       "indicator": "info"
-  //     }
-  //   ]
-  // }
-
-  // return cdsResponse;
 }

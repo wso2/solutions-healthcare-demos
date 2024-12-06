@@ -1,4 +1,9 @@
-import { APPOINTMENT_TYPE, PATIENT_DETAILS, SPECIALITY, PRACTITIONERS } from "../constants/data";
+import {
+  APPOINTMENT_TYPE,
+  PATIENT_DETAILS,
+  SPECIALITY,
+  PRACTITIONERS,
+} from "../constants/data";
 import { AppointmentResource } from "../components/interfaces/appointment";
 
 export function constructAppointmentResource(
@@ -35,13 +40,11 @@ export function constructAppointmentResource(
     (curPractitioner) => curPractitioner.Name === practitioner
   );
 
-  // const selectedHospitalId = PRACTITIONERS.filter(
-  //   (practitioner) => practitioner.Name === selectedPractitioner?.Name
-  // )[0].Appointments.filter((appointment) => appointment.Hospital === hospital)[0].HospitalID;
-
   const selectedHospitalId = "12343";
 
-  let currentPatient = PATIENT_DETAILS.find((patient) => patient.id === patientId);
+  let currentPatient = PATIENT_DETAILS.find(
+    (patient) => patient.id === patientId
+  );
   if (!currentPatient) {
     currentPatient = PATIENT_DETAILS[0];
   }
@@ -87,49 +90,48 @@ export function constructAppointmentResource(
       {
         actor: {
           reference: "Patient/" + patientId,
-          display: currentPatient.name[0].given[0] + " " + currentPatient.name[0].family,
+          display:
+            currentPatient.name[0].given[0] +
+            " " +
+            currentPatient.name[0].family,
         },
         required: "required",
         status: "accepted",
-      }
+      },
     ],
   };
 
   if (practitioner !== "" || practitioner !== undefined) {
-    APPOINTMENT_RESOURCE.participant?.push(
-      {
-        type: [
-          {
-            coding: [
-              {
-                system:
-                  "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
-                code: "ATND",
-              },
-            ],
-          },
-        ],
-        actor: {
-          reference: "Practitioner/" + selectedPractitioner?.ID,
-          display: practitioner,
+    APPOINTMENT_RESOURCE.participant?.push({
+      type: [
+        {
+          coding: [
+            {
+              system:
+                "http://terminology.hl7.org/CodeSystem/v3-ParticipationType",
+              code: "ATND",
+            },
+          ],
         },
-        required: "required",
-        status: "tentative",
-      }
-    );
+      ],
+      actor: {
+        reference: "Practitioner/" + selectedPractitioner?.ID,
+        display: practitioner,
+      },
+      required: "required",
+      status: "tentative",
+    });
   }
 
-  if (hospital !== "" || hospital !== undefined) { 
-    APPOINTMENT_RESOURCE.participant?.push(
-      {
-        actor: {
-          reference: "Location/" + selectedHospitalId,
-          display: hospital,
-        },
-        required: "required",
-        status: "accepted",
-      }
-    );
+  if (hospital !== "" || hospital !== undefined) {
+    APPOINTMENT_RESOURCE.participant?.push({
+      actor: {
+        reference: "Location/" + selectedHospitalId,
+        display: hospital,
+      },
+      required: "required",
+      status: "accepted",
+    });
   }
 
   if (selectedSpeciality !== undefined || selectedSpeciality !== "") {
