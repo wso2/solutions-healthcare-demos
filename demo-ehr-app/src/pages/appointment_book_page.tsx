@@ -1,3 +1,19 @@
+// Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 import { useState, useEffect } from "react";
 import { SelectChangeEvent } from "@mui/material/Select";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
@@ -13,13 +29,15 @@ import { APPOINTMENT_TYPE, SPECIALITY, PRACTITIONERS } from "../constants/data";
 import { constructAppointmentResource } from "../utils/appointment_resource_constructor";
 import { useDispatch, useSelector } from "react-redux";
 import { updateCdsHook, updateCdsContext } from "../redux/cdsRequestSlice";
-import {Dayjs} from "dayjs";
+import { Dayjs } from "dayjs";
 
 export default function AppointmentBookPage() {
   const { expanded } = useContext(ExpandedContext);
   const navigate = useNavigate();
   const dispatch = useDispatch();
-  const selectedPatientId = useSelector((state: any) => state.patient.selectedPatientId);
+  const selectedPatientId = useSelector(
+    (state: any) => state.patient.selectedPatientId
+  );
 
   const [filteredPractitioners, setFilteredPractitioners] = useState<string[]>(
     []
@@ -65,11 +83,13 @@ export default function AppointmentBookPage() {
 
   const handleDateChange = (date: Dayjs | null) => {
     setSelectedDate(date);
-  }
+  };
 
-  const handleChangeDescription = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChangeDescription = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     setDescription(event.target.value);
-  }
+  };
 
   const handleChangeTreatingDisease = (event: SelectChangeEvent) => {
     setSelectedTreatingDisease(event.target.value);
@@ -130,7 +150,7 @@ export default function AppointmentBookPage() {
 
   const handleChangeSlots = (event: SelectChangeEvent) => {
     setSelectedSlots(event.target.value);
-  }; 
+  };
 
   useEffect(() => {
     let formattedDate = selectedDate?.format("YYYY-MM-DD");
@@ -140,7 +160,7 @@ export default function AppointmentBookPage() {
     const appointment_resource = constructAppointmentResource(
       selectedPractitioner,
       selectedSpeciality,
-      formattedDate, 
+      formattedDate,
       selectedHospital,
       selectedSlots,
       selectedTreatingDisease,
@@ -158,7 +178,6 @@ export default function AppointmentBookPage() {
 
     dispatch(updateCdsHook("appointment-book"));
     dispatch(updateCdsContext(appointmentCDSContext));
-
   }, [
     selectedPractitioner,
     selectedSpeciality,
@@ -169,7 +188,7 @@ export default function AppointmentBookPage() {
     selectedPatientId,
     selectedDate,
     description,
-    dispatch
+    dispatch,
   ]);
 
   return (
@@ -217,7 +236,11 @@ export default function AppointmentBookPage() {
         />
 
         <div style={{ marginLeft: 8, marginBottom: 10, marginTop: 10 }}>
-          <DatePicker sx={{ minWidth: form_selector_width }} value={selectedDate} onChange={handleDateChange}/>
+          <DatePicker
+            sx={{ minWidth: form_selector_width }}
+            value={selectedDate}
+            onChange={handleDateChange}
+          />
         </div>
 
         <DropDownBox

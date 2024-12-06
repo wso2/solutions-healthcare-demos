@@ -1,13 +1,29 @@
+// Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 import { useSelector } from "react-redux";
 import { PATIENT_DETAILS, VITALS, EMERGENCY_CONTACTS } from "../constants/data";
 import { SCREEN_WIDTH } from "../constants/page";
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
-import Paper from '@mui/material/Paper';
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableCell from "@mui/material/TableCell";
+import TableContainer from "@mui/material/TableContainer";
+import TableHead from "@mui/material/TableHead";
+import TableRow from "@mui/material/TableRow";
+import Paper from "@mui/material/Paper";
 
 function createData(
   date: string,
@@ -15,16 +31,48 @@ function createData(
   diagnosis: string,
   medicinePrescribed: string,
   referrals: string,
-  labReports: string, 
+  labReports: string,
   devices: string
 ) {
-  return { date, disease, diagnosis, medicinePrescribed, referrals, labReports, devices };
+  return {
+    date,
+    disease,
+    diagnosis,
+    medicinePrescribed,
+    referrals,
+    labReports,
+    devices,
+  };
 }
 
 const rows = [
-  createData("04/04/2024", "Seasonal Allergies", "Allergic Rhinitis", "Loratadine 10mg", "N/A", "N/A", "N/A"),
-  createData("12/03/2024", "Headache", "Migraine", "Ibuprofen 400mg", "N/A", "N/A", "N/A"),
-  createData("01/02/2024", "Sprained Ankle (grade 2)", "Confirmation of healing sprain", "Ibuprofen", "Physical therapy", "N/A", "Crutches"),
+  createData(
+    "04/04/2024",
+    "Seasonal Allergies",
+    "Allergic Rhinitis",
+    "Loratadine 10mg",
+    "N/A",
+    "N/A",
+    "N/A"
+  ),
+  createData(
+    "12/03/2024",
+    "Headache",
+    "Migraine",
+    "Ibuprofen 400mg",
+    "N/A",
+    "N/A",
+    "N/A"
+  ),
+  createData(
+    "01/02/2024",
+    "Sprained Ankle (grade 2)",
+    "Confirmation of healing sprain",
+    "Ibuprofen",
+    "Physical therapy",
+    "N/A",
+    "Crutches"
+  ),
 ];
 
 const TableComponent = () => {
@@ -46,7 +94,7 @@ const TableComponent = () => {
           {rows.map((row) => (
             <TableRow
               key={row.date}
-              sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+              sx={{ "&:last-child td, &:last-child th": { border: 0 } }}
             >
               <TableCell component="th" scope="row">
                 {row.date}
@@ -63,7 +111,7 @@ const TableComponent = () => {
       </Table>
     </TableContainer>
   );
-}
+};
 
 export function PatientViewPage() {
   const selectedPatientId = useSelector(
@@ -209,7 +257,7 @@ export function PatientViewPage() {
         ))}
       </div>
 
-      <div style={{height: "4vh"}}/>
+      <div style={{ height: "4vh" }} />
       <TableComponent />
     </div>
   );

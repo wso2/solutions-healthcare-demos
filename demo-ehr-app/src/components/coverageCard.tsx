@@ -1,3 +1,19 @@
+// Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 import { useState } from "react";
 import { styled } from "@mui/material/styles";
 import Card from "@mui/material/Card";
@@ -14,7 +30,10 @@ import ErrorOutlineOutlinedIcon from "@mui/icons-material/ErrorOutlineOutlined";
 import { Button } from "@mui/material";
 import ToggleButton from "@mui/material/ToggleButton";
 import ToggleButtonGroup from "@mui/material/ToggleButtonGroup";
-import { CDSSelectorBehavior, CoverageCardProps } from "../components/interfaces/coverage";
+import {
+  CDSSelectorBehavior,
+  CoverageCardProps,
+} from "../components/interfaces/coverage";
 import { QUATERNARY_COLOR, PRIMARY_COLOR } from "../constants/color";
 
 interface ExpandMoreProps extends IconButtonProps {
@@ -73,9 +92,11 @@ export const CoverageCard = (coverageCard: CoverageCardProps) => {
         title={coverageCard.summary}
         subheader={"Source: " + coverageCard.source.label}
       />
-      <CardContent sx={{display: "flex", flexDirection: "column"}}>
+      <CardContent sx={{ display: "flex", flexDirection: "column" }}>
         <ToggleButtonGroup
-          exclusive={coverageCard.selectorBehavior === CDSSelectorBehavior.Single}
+          exclusive={
+            coverageCard.selectorBehavior === CDSSelectorBehavior.Single
+          }
           value={suggestion}
           onChange={handleSuggestion}
           aria-label="suggestions"
@@ -103,20 +124,20 @@ export const CoverageCard = (coverageCard: CoverageCardProps) => {
             </ToggleButton>
           ))}
         </ToggleButtonGroup>
-        <div style={{display: "flex", flexDirection: "row"}}>
-        {coverageCard.links?.map((link) => (
-          <Button
-            variant="contained"
-            sx={{ maxWidth: 200, fontSize: 11, marginTop: 2, marginLeft: 1 }}
-            disabled={coverageCard.isPreview}
-            href={
-              link.type === "absolute" ? link.url : "/SMART_CONFIG" + link.url
-            }
-            key={link.label}
-          >
-            {link.label}
-          </Button>
-        ))}
+        <div style={{ display: "flex", flexDirection: "row" }}>
+          {coverageCard.links?.map((link) => (
+            <Button
+              variant="contained"
+              sx={{ maxWidth: 200, fontSize: 11, marginTop: 2, marginLeft: 1 }}
+              disabled={coverageCard.isPreview}
+              href={
+                link.type === "absolute" ? link.url : "/SMART_CONFIG" + link.url
+              }
+              key={link.label}
+            >
+              {link.label}
+            </Button>
+          ))}
         </div>
       </CardContent>
       <CardActions disableSpacing>

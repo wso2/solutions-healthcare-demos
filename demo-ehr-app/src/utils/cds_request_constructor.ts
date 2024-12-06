@@ -1,62 +1,73 @@
-import { v4 as uuidv4 } from 'uuid';
+// Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
+import { v4 as uuidv4 } from "uuid";
 
 let CDS_REQUEST = {
-    hook: "",
-    hookInstance: "",
-    context: {},
-    prefetch: {}
+  hook: "",
+  hookInstance: "",
+  context: {},
+  prefetch: {},
 };
 
 export const cds_request_constructor = (hook: string) => {
+  CDS_REQUEST = {
+    hook: hook,
+    hookInstance: uuidv4(),
+    context: {},
+    prefetch: {},
+  };
 
-    CDS_REQUEST = {
-        hook: hook,
-        hookInstance: uuidv4(),
-        context: {},
-        prefetch: {}
-    }
+  if (hook === "appointment-book") {
+    CDS_REQUEST.context = {
+      userId: "",
+      patientId: "",
+      encounterId: "",
+      appointments: [],
+    };
+    // fetch the patient resource in the prefetch
+    // fetch the practitioner resource in the prefetch
+    // add these to the prefetch object
+  } else if (hook === "order-sign") {
+    CDS_REQUEST.context = {
+      userId: "",
+      patientId: "",
+      encounterId: "",
+      draftOrders: [],
+    };
 
-    if (hook === "appointment-book"){
-        CDS_REQUEST.context = {
-            userId: "",
-            patientId: "",
-            encounterId: "",
-            appointments: []
-        } 
-        // fetch the patient resource in the prefetch
-        // fetch the practitioner resource in the prefetch
-        // add these to the prefetch object
-    }
+    // fetch the patient resource in the prefetch
+    // fetch the practitioner resource in the prefetch
+    // add these to the prefetch object
+  } else if (hook === "order-select") {
+    CDS_REQUEST.context = {
+      userId: "",
+      patientId: "",
+      encounterId: "",
+      selections: [],
+      draftOrders: [],
+    };
 
-    else if (hook === "order-sign"){
-        CDS_REQUEST.context = {
-            userId: "",
-            patientId: "",
-            encounterId: "",
-            draftOrders: []
-        } 
+    // fetch the patient resource in the prefetch
+    // fetch the practitioner resource in the prefetch
+    // add these to the prefetch object
+  }
 
-        // fetch the patient resource in the prefetch
-        // fetch the practitioner resource in the prefetch
-        // add these to the prefetch object
-    }
-
-    else if (hook === "order-select"){
-        CDS_REQUEST.context = {
-            userId: "",
-            patientId: "",
-            encounterId: "",
-            selections: [],
-            draftOrders: []
-        } 
-        
-        // fetch the patient resource in the prefetch
-        // fetch the practitioner resource in the prefetch
-        // add these to the prefetch object
-    }
-
-    return CDS_REQUEST;
-}
+  return CDS_REQUEST;
+};
 
 export const cdsRequestForBookLabTest = () => {
   return {

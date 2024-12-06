@@ -1,3 +1,19 @@
+// Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 /* eslint-disable @typescript-eslint/no-unused-vars */
 
 import { useNavigate, useParams } from "react-router-dom";
@@ -58,13 +74,11 @@ export function DrugDetailsPage() {
     navigate("coverage", { state: contextData });
   };
 
-  const handleStartDateChange = (
-    date: Dayjs | null  ) => {
+  const handleStartDateChange = (date: Dayjs | null) => {
     setSelectedStartDate(date);
   };
 
-  const handleEndDateChange = (
-    date: Dayjs | null  ) => {
+  const handleEndDateChange = (date: Dayjs | null) => {
     setSelectedEndDate(date);
   };
 
@@ -87,15 +101,15 @@ export function DrugDetailsPage() {
     let formattedStartDate = selectedStartDate?.format("YYYY-MM-DD");
     let formattedEndDate = selectedEndDate?.format("YYYY-MM-DD");
 
-    if (!formattedEndDate){
+    if (!formattedEndDate) {
       formattedEndDate = "";
     }
-    if (!formattedStartDate){
+    if (!formattedStartDate) {
       formattedStartDate = "";
     }
 
     const medicationRequest = constructMedicationRequestResource(
-      drugName? drugName : "",
+      drugName ? drugName : "",
       selectedDosage,
       selectedNumberOfTablets,
       formattedStartDate,
@@ -110,11 +124,9 @@ export function DrugDetailsPage() {
       encounterId: "456",
       draftOrders: {
         resourceType: "Bundle",
-        entry: [
-          medicationRequest
-        ]
-      }
-    }
+        entry: [medicationRequest],
+      },
+    };
 
     dispatch(updateCdsHook("order-sign"));
     dispatch(updateCdsContext(orderSignContext));
