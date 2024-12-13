@@ -1,0 +1,26 @@
+openapi: 3.0.1
+info:
+  title: SyncAPI
+  description: "API used to convert the custom formatted data to FHIR and store it into FHIR repository"
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0.html
+  version: 1.0.0
+servers:
+- url: https://localhost:8243/sync
+tags:
+- name: fhir
+- name: Sync
+- name: health
+paths:
+  /sync:
+    post:
+      tags:
+      - POST
+      - Patient
+      responses:
+        "201":
+          description: Sync Patient operation successful
+      security:
+      - default: []
+      x-auth-type: Application & Application User
