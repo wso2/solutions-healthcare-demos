@@ -61,7 +61,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "http"
-version = "2.12.3"
+version = "2.12.4"
 dependencies = [
 	{org = "ballerina", name = "auth"},
 	{org = "ballerina", name = "cache"},
@@ -93,7 +93,7 @@ modules = [
 [[package]]
 org = "ballerina"
 name = "io"
-version = "1.6.2"
+version = "1.6.3"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"},
 	{org = "ballerina", name = "lang.value"}
@@ -404,7 +404,7 @@ modules = [
 ]
 
 [[package]]
-org = "sameerag"
+org = "wso2"
 name = "hl7_service"
 version = "0.1.0"
 dependencies = [
@@ -421,6 +421,6 @@ dependencies = [
 	{org = "ballerinax", name = "health.hl7v24"}
 ]
 modules = [
-	{org = "sameerag", packageName = "hl7_service", moduleName = "hl7_service"}
+	{org = "wso2", packageName = "hl7_service", moduleName = "hl7_service"}
 ]
 
