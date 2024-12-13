@@ -1,0 +1,77 @@
+{
+	"info": {
+		"_postman_id": "47072b64-91e2-44e8-8302-2a1f37e6a19a",
+		"name": "CDS Ballerina",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "2846974"
+	},
+	"item": [
+		{
+			"name": "Discovery Endpoint",
+			"request": {
+				"method": "GET",
+				"header": []
+			},
+			"response": []
+		},
+		{
+			"name": "Service Endpoint",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n        \"hookInstance\": \"d1577c69-dfbe-44ad-ba6d-3e05e953b2ea\",\n        \"fhirServer\": \"http://hooks.smarthealthit.org:9080\",\n        \"hook\": \"patient-view\",\n        \"fhirAuthorization\": {\n            \"access_token\": \"some-opaque-fhir-access-token\",\n            \"token_type\": \"Bearer\",\n            \"expires_in\": 300,\n            \"scope\": \"user/Patient.read user/Observation.read\",\n            \"subject\": \"cds-service4\"\n        },\n        \"context\": {\n            \"userId\": \"Practitioner/example\",\n            \"patientId\": \"1288992\",\n            \"encounterId\": \"89284\"\n        },\n        \"prefetch\": {\n            \"patientToGreet\": {\n                \"resourceType\": \"Patient\",\n                \"gender\": \"male\",\n                \"birthDate\": \"1925-12-23\",\n                \"id\": \"1288992\",\n                \"active\": true\n            }\n        }\n    }",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/cds-services/static-appointment-book2",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
+					"path": [
+						"cds-services",
+						"static-appointment-book2"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Feedback Endpoint",
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n        \"feedback\": [\n            {\n                \"card\": \"4e0a3a1e-3283-4575-ab82-028d55fe2719\",\n                \"outcome\": \"accepted\",\n                \"acceptedSuggestions\": [\n                    {\n                        \"id\": \"e56e1945-20b3-4393-8503-a1a20fd73152\"\n                    }\n                ],\n                \"outcomeTimestamp\": \"2021-12-11T10:05:31Z\"\n            }\n        ]\n    }",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8081/cds-services/static-patient-greeter/feedback",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8081",
+					"path": [
+						"cds-services",
+						"static-patient-greeter",
+						"feedback"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
