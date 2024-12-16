@@ -4,7 +4,7 @@ version: 0.1
 # +required List of endpoints to create
 endpoints:
 - name: FHIR Patient API
-  port: 9090
+  port: 9091
   type: REST
   networkVisibility: Public
   context: /
