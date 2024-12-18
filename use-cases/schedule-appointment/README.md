@@ -32,8 +32,8 @@ Glen feels reassured knowing he has an appointment with a cardiologist. He goes 
 
 ## Running the App
 1. Setup and run the [Medconnect-Service](./medconnect-service/README.md)
-2. Add the url configuration details to the <SOLUTIONS-HEALTHCARE-DEMOS>/apps/demo-ehr-app/src/config/urlConfig.ts file. (Currently the medconnect service is deployed in Choreo. You can update these values to match your local environment or any other deployment setup as needed.)
-3. Navigate to the directory, <SOLUTIONS-HEALTHCARE-DEMOS>/apps/demo-ehr-app
+2. Add the url configuration details to the `<SOLUTIONS-HEALTHCARE-DEMOS>/apps/demo-ehr-app/src/config/urlConfig.ts` file. (Currently the medconnect service is deployed in Choreo. You can update these values to match your local environment or any other deployment setup as needed.)
+3. Navigate to the directory, `<SOLUTIONS-HEALTHCARE-DEMOS>/apps/demo-ehr-app`
 4. Execute the following command. 
 ```
 npm run dev
