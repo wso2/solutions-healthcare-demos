@@ -11,7 +11,7 @@ Feel free to explore and use it as a foundation for understanding healthcare app
 > Run the following command to install all the dependencies listed in the project's `package.json`
 
 ```
-npm -i
+npm install
 ```
 
 > Run the following command to run in the development mode.
