@@ -1,0 +1,8 @@
+[package]
+org = "isuruuy"
+name = "medconnect_service"
+version = "0.1.0"
+distribution = "2201.8.8"
+
+[build-options]
+observabilityIncluded = true
