@@ -19,6 +19,7 @@ import { ExpandedContextProvider } from "./utils/expanded_context.tsx";
 import PatientEncounter from "./pages/patient_encounter_start.tsx";
 import PractionerDashBoard from "./pages/practitioner_dashboard.tsx";
 import AppointmentBookPage from "./pages/appointment_book_page.tsx";
+import AppointmentReceipt from "./components/appointment_receipt.tsx";
 import DrugOrderPage from "./pages/drug_order_page.tsx";
 import { DrugDetailsPage } from "./pages/drug_details_page.tsx";
 import DeviceOrderPage from "./pages/device_order_page.tsx";
@@ -53,6 +54,10 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               <Route
                 path="appointment-schedule"
                 element={<AppointmentBookPage />}
+              />
+              <Route
+                path="appointment-receipt"
+                element={<AppointmentReceipt />}
               />
               <Route
                 path="appointment-schedule/coverage-preview"
