@@ -23,6 +23,12 @@
 hs_err_pid*
 replay_pid*
 
+# Mac configuration file
+.DS_Store
+
+# Ballerina
+target/
+Config.toml
 # Logs
 logs
 *.log
@@ -49,5 +55,3 @@ dist-ssr
 *.sln
 *.sw?
 
-**/target/
-**/Config.toml
