@@ -20,7 +20,7 @@ import { tomorrowNight } from "react-syntax-highlighter/dist/esm/styles/hljs";
 import { useSelector } from "react-redux";
 import "../assets/styles/code_theme.css";
 
-const CDSDevPortal = () => {
+const DevConsole = () => {
   const hook = useSelector((state: any) => state.cdsRequest.hook);
   const requestState = useSelector((state: any) => state.cdsRequest.request);
   const response = useSelector((state: any) => state.cdsResponse.cards);
@@ -31,27 +31,29 @@ const CDSDevPortal = () => {
   return (
     <Box>
       <Box fontSize={36} fontWeight={200} textAlign={"center"}>
-        CDS Developer Portal
+        Developer Console
       </Box>
-      <div
-        style={{
-          height: "8vh",
-          width: "80%",
-          borderRadius: 2,
-          backgroundColor: "#D9D9D9",
-          textAlign: "center",
-          alignSelf: "center",
-          marginTop: 30,
-          marginLeft: "10%",
-          fontSize: 24,
-        }}
-      >
-        {hook ? hook : "dummy-service-name"}
-      </div>
+      {hook && (
+        <div
+          style={{
+            height: "5vh",
+            width: "80%",
+            borderRadius: 2,
+            backgroundColor: "#D9D9D9",
+            textAlign: "center",
+            alignSelf: "center",
+            marginTop: 30,
+            marginLeft: "10%",
+            fontSize: 24,
+          }}
+        >
+          {hook}
+        </div>
+      )}
 
       <div
         style={{
-          height: "8vh",
+          height: "5vh",
           width: "80%",
           borderRadius: 2,
           backgroundColor: "#D9D9D9",
@@ -70,8 +72,9 @@ const CDSDevPortal = () => {
           width: "80%",
           alignContent: "center",
           marginLeft: "10%",
-          height: hook == "cds-services" ? "100%" : "100vh",
+          height: cdsRequest ? "100%" : "100vh",
           overflow: "auto",
+          marginBottom: "3%",
         }}
       >
         <SyntaxHighlighter
@@ -87,7 +90,7 @@ const CDSDevPortal = () => {
 
       <div
         style={{
-          height: "8vh",
+          height: "5vh",
           width: "80%",
           borderRadius: 2,
           backgroundColor: "#D9D9D9",
@@ -113,4 +116,4 @@ const CDSDevPortal = () => {
   );
 };
 
-export default CDSDevPortal;
+export default DevConsole;

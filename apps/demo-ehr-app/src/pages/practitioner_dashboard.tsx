@@ -56,9 +56,6 @@ function PractitionerDashBoard() {
   let currentPatient = PATIENT_DETAILS.find(
     (patient) => patient.id === selectedPatientId
   );
-  const dispatch = useDispatch();
-
-  dispatch(updateCdsHook("cds-services"));
 
   if (!currentPatient) {
     currentPatient = PATIENT_DETAILS[0];

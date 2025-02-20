@@ -1,9 +1,13 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import '../assets/styles/appointment.css';
-import MessageBox from '../components/message_box';
-import appointmentImage from '../assets/images/appointment-booking.png'
-import urlConfig from '../config/urlConfigs'
+import React, { useState, useEffect, useContext } from "react";
+import { useNavigate } from "react-router-dom";
+import "../assets/styles/appointment.css";
+import MessageBox from "../components/message_box";
+import appointmentImage from "../assets/images/appointment-booking.png";
+import urlConfig from "../config/urlConfigs";
+import { ExpandedContext } from "../utils/expanded_context";
+import { useDispatch } from "react-redux";
+import { resetCdsResponse, updateCdsResponse } from "../redux/cdsResponseSlice";
+import { resetCdsRequest, updateRequest } from "../redux/cdsRequestSlice";
 
 // Define interfaces for Doctor, Slot, and Location objects
 interface Doctor {
@@ -25,27 +29,32 @@ interface Location {
 
 function App() {
   // State variables for user input and app state
-  const [firstName, setFirstName] = useState<string>('');
-  const [lastName, setLastName] = useState<string>('');
+  const [firstName, setFirstName] = useState<string>("");
+  const [lastName, setLastName] = useState<string>("");
   const [doctorNames, setDoctorNames] = useState<Doctor[]>([]);
   const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
-  const [appointmentDate, setAppointmentDate] = useState<string>('');
+  const [appointmentDate, setAppointmentDate] = useState<string>("");
   const [availableSlots, setAvailableSlots] = useState<Slot[]>([]);
   const [locations, setLocations] = useState<Location>({});
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [appointmentCreated, setAppointmentCreated] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(false); // Spinner state for doctor search
   const [loadingSlots, setLoadingSlots] = useState<boolean>(false); // Spinner state for slots
-  const [creatingAppointment, setCreatingAppointment] = useState<boolean>(false);
+  const [creatingAppointment, setCreatingAppointment] =
+    useState<boolean>(false);
   const navigate = useNavigate();
+  const { expanded } = useContext(ExpandedContext);
+  const dispatch = useDispatch();
 
   // Message box state
-  const [message, setMessage] = useState<string>('');
-  const [messageType, setMessageType] = useState<'success' | 'error' | 'warning'>('success');
+  const [message, setMessage] = useState<string>("");
+  const [messageType, setMessageType] = useState<
+    "success" | "error" | "warning"
+  >("success");
   const [showMessageBox, setShowMessageBox] = useState<boolean>(false);
 
   // Function to show a message box for two seconds
-  const showMessage = (msg: string, type: 'success' | 'error' | 'warning') => {
+  const showMessage = (msg: string, type: "success" | "error" | "warning") => {
     setMessage(msg);
     setMessageType(type);
     setShowMessageBox(true);
@@ -55,7 +64,7 @@ function App() {
   // Fetches list of doctors based on the entered first and last name
   const handleSearch = async () => {
     if (!firstName || !lastName) {
-      showMessage('Please enter both first and last name.', 'warning');
+      showMessage("Please enter both first and last name.", "warning");
       return;
     }
 
@@ -63,15 +72,19 @@ function App() {
     setSelectedDoctor(null);
     setAvailableSlots([]);
     setSelectedSlot(null);
-    setAppointmentDate('');
+    setAppointmentDate("");
     setAppointmentCreated(false); // Clear any appointment state
 
     setLoading(true); // Show spinner while loading doctors
     //const url = `/fhir8081/r4/Practitioner?family=${lastName}&given=${firstName}`;
     const url = `${urlConfig.baseUrl}/${urlConfig.paths.practitioner}?family=${lastName}&given=${firstName}`;
+    dispatch(resetCdsRequest());
+    dispatch(updateRequest({ Method: "GET", URL: url }));
+    dispatch(resetCdsResponse());
     try {
       const res = await fetch(url);
       const data = await res.json();
+      dispatch(updateCdsResponse({ cards: data }));
 
       const names = data.entry.map((entry: any) => ({
         name: entry.resource.name[0].text,
@@ -81,13 +94,13 @@ function App() {
       setDoctorNames(names);
       setLoading(false); // // Hide loading indicator
     } catch (error) {
-      console.error('Error fetching doctor data:', error);
-      showMessage('Error fetching doctor data.', 'error');
+      console.error("Error fetching doctor data:", error);
+      showMessage("Error fetching doctor data.", "error");
       setLoading(false); // Hide spinner if there's an error
     }
   };
 
-   // Sets the selected doctor when clicked
+  // Sets the selected doctor when clicked
   const handleDoctorClick = (doctor: Doctor) => {
     setSelectedDoctor(doctor);
     setAvailableSlots([]);
@@ -101,7 +114,6 @@ function App() {
   // Fetches available slots for the selected doctor and date
   const handleAppointment = async () => {
     if (selectedDoctor && appointmentDate) {
-
       setAvailableSlots([]);
       setSelectedSlot(null);
       setAppointmentCreated(false); // Clear any previous appointment receipt
@@ -112,27 +124,34 @@ function App() {
       const practitionerId = selectedDoctor.id;
 
       const url = `${urlConfig.baseUrl}/${urlConfig.paths.slot}?startDate=${startDate}&endDate=${endDate}&practitioner=${practitionerId}`;
+      dispatch(resetCdsRequest());
+      dispatch(updateRequest({ Method: "GET", URL: url }));
+      dispatch(resetCdsResponse());
 
       try {
         const res = await fetch(url);
         const data = await res.json();
+        dispatch(updateCdsResponse({ cards: data }));
 
         const slots = data.entry.map((entry: any) => ({
           start: entry.resource.start,
           reference: entry.resource.id,
-          locationReference: entry.resource.extension[0].valueReference.reference.split('/').pop()
+          locationReference:
+            entry.resource.extension[0].valueReference.reference
+              .split("/")
+              .pop(),
         }));
 
         setAvailableSlots(slots);
         fetchLocationNames(slots);
         setLoadingSlots(false);
       } catch (error) {
-        console.error('Error fetching slot data:', error);
-        showMessage('Error fetching slot data.', 'error');
+        console.error("Error fetching slot data:", error);
+        showMessage("Error fetching slot data.", "error");
         setLoadingSlots(false);
       }
     } else {
-      showMessage('Please select a doctor and an appointment date.', 'warning');
+      showMessage("Please select a doctor and an appointment date.", "warning");
     }
   };
 
@@ -148,9 +167,15 @@ function App() {
           const data = await res.json();
           newLocations[slot.locationReference] = data.name;
         } catch (error) {
-          console.error(`Error fetching location for reference ${slot.locationReference}:`, error);
-          showMessage(`Error fetching location for reference ${slot.locationReference}`, 'error');
-          newLocations[slot.locationReference] = 'Unknown location';
+          console.error(
+            `Error fetching location for reference ${slot.locationReference}:`,
+            error
+          );
+          showMessage(
+            `Error fetching location for reference ${slot.locationReference}`,
+            "error"
+          );
+          newLocations[slot.locationReference] = "Unknown location";
         }
       }
     }
@@ -166,20 +191,21 @@ function App() {
   // useEffect to handle navigation to appointment-receipt page after appointment is created successfully
   useEffect(() => {
     if (appointmentCreated && selectedDoctor && selectedSlot) {
-
-      setMessage('Appointment successfully created!');
-      setMessageType('success');
+      setMessage("Appointment successfully created!");
+      setMessageType("success");
       setShowMessageBox(true);
+      // dispatch(updateCdsHook("AS"));
 
       // Navigate to receipt page after a delay
       const timer = setTimeout(() => {
-        navigate('/dashboard/appointment-receipt', {
+        navigate("/dashboard/appointment-receipt", {
           state: {
             doctorName: selectedDoctor.name,
-            patientName: 'Emily Davis',
+            patientName: "Emily Davis",
             date: new Date(selectedSlot.start).toLocaleDateString(),
             time: new Date(selectedSlot.start).toLocaleTimeString(),
-            location: locations[selectedSlot.locationReference] || 'Unknown location',
+            location:
+              locations[selectedSlot.locationReference] || "Unknown location",
             referenceID: selectedSlot.reference,
           },
         });
@@ -191,52 +217,67 @@ function App() {
   // Handles creating the appointment with selected slot
   const createAppointment = async () => {
     if (!selectedSlot) {
-      showMessage('Please select a slot before creating an appointment.', 'warning');
+      showMessage(
+        "Please select a slot before creating an appointment.",
+        "warning"
+      );
       return;
     }
 
     setCreatingAppointment(true); // Start the loading state
 
     const appointmentData = {
-      resourceType: 'Appointment',
-      status: 'booked',
+      resourceType: "Appointment",
+      status: "booked",
       slot: [
         {
           reference: `Slot/${selectedSlot.reference}`,
-        }
+        },
       ],
       start: selectedSlot.start,
-      end: new Date(new Date(selectedSlot.start).getTime() + 30 * 60000).toISOString(),
+      end: new Date(
+        new Date(selectedSlot.start).getTime() + 30 * 60000
+      ).toISOString(),
       participant: [
         {
           actor: {
-            reference: 'Patient/12724066', // Hardcoded for now
+            reference: "Patient/12724066", // Hardcoded for now
           },
-          status: 'accepted',
-        }
-      ]
+          status: "accepted",
+        },
+      ],
     };
 
     try {
       const appointmentUrl = `${urlConfig.baseUrl}/${urlConfig.paths.appointment}`;
+      dispatch(resetCdsRequest());
+      dispatch(
+        updateRequest({
+          Method: "POST",
+          URL: appointmentUrl,
+          "Content-Type": "application/fhir+json",
+          payload: appointmentData,
+        })
+      );
+
       const res = await fetch(appointmentUrl, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/fhir+json'
+          "Content-Type": "application/fhir+json",
         },
         body: JSON.stringify(appointmentData),
       });
 
       if (res.ok) {
-
-        showMessage('Appointment successfully created!', 'success');
+        dispatch(updateCdsResponse({ cards: res.body }));
+        showMessage("Appointment successfully created!", "success");
         setAppointmentCreated(true); // Set state to show receipt after successful creation
       } else {
-        showMessage('Failed to create appointment.', 'error');
+        showMessage("Failed to create appointment.", "error");
       }
     } catch (error) {
-      console.error('Error creating appointment:', error);
-      showMessage('Error creating appointment.', 'error');
+      console.error("Error creating appointment:", error);
+      showMessage("Error creating appointment.", "error");
     } finally {
       setCreatingAppointment(false); // End the loading state
     }
@@ -248,7 +289,7 @@ function App() {
     const seenSlots = new Set<string>();
 
     for (const slot of availableSlots) {
-      const location = locations[slot.locationReference] || 'Loading...';
+      const location = locations[slot.locationReference] || "Loading...";
       const slotKey = `${slot.start}-${location}`;
 
       if (!seenSlots.has(slotKey)) {
@@ -313,8 +354,11 @@ The entire layout is styled using CSS classes to enhance readability, usability,
               value={lastName}
               onChange={(e) => setLastName(e.target.value)}
             />
-            <button onClick={handleSearch} disabled={loading || creatingAppointment}>
-              {loading ? 'Searching...' : 'Search Doctor'}
+            <button
+              onClick={handleSearch}
+              disabled={loading || creatingAppointment}
+            >
+              {loading ? "Searching..." : "Search Doctor"}
             </button>
           </div>
         </div>
@@ -329,7 +373,11 @@ The entire layout is styled using CSS classes to enhance readability, usability,
               {doctorNames.map((doctor, index) => (
                 <div
                   key={index}
-                  className={`doctor-box ${selectedDoctor && selectedDoctor.id === doctor.id ? 'selected' : ''}`}
+                  className={`doctor-box ${
+                    selectedDoctor && selectedDoctor.id === doctor.id
+                      ? "selected"
+                      : ""
+                  }`}
                   onClick={() => handleDoctorClick(doctor)}
                 >
                   {doctor.name}
@@ -339,9 +387,15 @@ The entire layout is styled using CSS classes to enhance readability, usability,
           </div>
         )}
 
-        <div className="image-container">
-          <img src={appointmentImage} alt="Appointment Image" className="right-image" />
-        </div>
+        {!expanded && (
+          <div className="image-container">
+            <img
+              src={appointmentImage}
+              alt="Appointment Image"
+              className="right-image"
+            />
+          </div>
+        )}
 
         {/* Show calendar and slots only if a doctor is selected */}
         {selectedDoctor && (
@@ -352,8 +406,11 @@ The entire layout is styled using CSS classes to enhance readability, usability,
               value={appointmentDate}
               onChange={handleDateChange}
             />
-            <button onClick={handleAppointment} disabled={loadingSlots || creatingAppointment}>
-              {loadingSlots ? 'Checking Availability...' : 'Check Availability'}
+            <button
+              onClick={handleAppointment}
+              disabled={loadingSlots || creatingAppointment}
+            >
+              {loadingSlots ? "Checking Availability..." : "Check Availability"}
             </button>
           </div>
         )}
@@ -369,32 +426,57 @@ The entire layout is styled using CSS classes to enhance readability, usability,
               {getUniqueSlots().map((slot, index) => (
                 <div
                   key={index}
-                  className={`slot-box ${selectedSlot && selectedSlot.reference === slot.reference ? 'selected-slot' : ''}`}
+                  className={`slot-box ${
+                    selectedSlot && selectedSlot.reference === slot.reference
+                      ? "selected-slot"
+                      : ""
+                  }`}
                   onClick={() => !creatingAppointment && handleSlotClick(slot)} // Prevent click if creatingAppointment is true
                   style={{
-                    pointerEvents: creatingAppointment ? 'none' : 'auto', // Disable clicks
-                    opacity: creatingAppointment ? 0.5 : 1 // Change appearance to indicate disabled state
+                    pointerEvents: creatingAppointment ? "none" : "auto", // Disable clicks
+                    opacity: creatingAppointment ? 0.5 : 1, // Change appearance to indicate disabled state
                   }}
                 >
-                  <p><strong>Start Time:</strong> {new Date(slot.start).toLocaleString()}</p>
-                  <p><strong>Location:</strong> {locations[slot.locationReference] || 'Loading...'}</p>
+                  <p>
+                    <strong>Start Time:</strong>{" "}
+                    {new Date(slot.start).toLocaleString()}
+                  </p>
+                  <p>
+                    <strong>Location:</strong>{" "}
+                    {locations[slot.locationReference] || "Loading..."}
+                  </p>
                 </div>
               ))}
             </div>
             {selectedSlot && (
-              <button className="create-appointment" onClick={createAppointment} disabled={creatingAppointment}>
-                {creatingAppointment ? 'Creating Appointment...' : 'Create Appointment'}
+              <button
+                className="create-appointment"
+                onClick={createAppointment}
+                disabled={creatingAppointment}
+              >
+                {creatingAppointment
+                  ? "Creating Appointment..."
+                  : "Create Appointment"}
               </button>
             )}
 
             {/* Display spinner while creating the appointment */}
-            {creatingAppointment && <div className="spinner">The appointment is being created. Please wait!</div>}
-
+            {creatingAppointment && (
+              <div className="spinner">
+                The appointment is being created. Please wait!
+              </div>
+            )}
           </div>
         )}
 
         {/* Message box */}
-        {showMessageBox && <MessageBox message={message} type={messageType} onClose={() => setShowMessageBox(false)} />}
+        {showMessageBox && (
+          <MessageBox
+            message={message}
+            type={messageType}
+            onClose={() => setShowMessageBox(false)}
+          />
+        )}
       </div>
     </div>
   );
