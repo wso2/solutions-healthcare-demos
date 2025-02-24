@@ -15,10 +15,10 @@
 // under the License.
 
 import NavBar from "./nav_bar";
-import { CDSButton } from "./cds_button";
+import { DevPortalExpandButton } from "./cds_button";
 import { Outlet } from "react-router-dom";
 import { useContext } from "react";
-import CDSDevPortal from "./cds_dev_portal";
+import DevConsole from "./dev_console";
 import { ExpandedContext } from "../utils/expanded_context";
 import { SCREEN_HEIGHT } from "../constants/page";
 
@@ -40,7 +40,7 @@ export const Layout = () => {
         </div>
 
         <div style={{ width: "1.5vw", marginLeft: "2vw" }}>
-          <CDSButton />
+          <DevPortalExpandButton />
         </div>
 
         <div
@@ -62,7 +62,7 @@ export const Layout = () => {
             opacity: expanded ? 1 : 0,
           }}
         >
-          <CDSDevPortal />
+          <DevConsole />
         </div>
       </div>
     </div>

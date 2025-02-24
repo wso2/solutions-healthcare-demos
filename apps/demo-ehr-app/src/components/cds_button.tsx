@@ -18,7 +18,7 @@ import { useContext } from "react";
 import { Box, Button } from "@mui/material";
 import { ExpandedContext } from "../utils/expanded_context";
 
-export const CDSButton = () => {
+export const DevPortalExpandButton = () => {
   const { toggleExpanded } = useContext(ExpandedContext);
 
   return (
@@ -33,7 +33,7 @@ export const CDSButton = () => {
         }}
         onClick={toggleExpanded}
       >
-        CDS Service Developer Portal
+        Developer Console
       </Button>
     </Box>
   );
