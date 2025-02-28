@@ -1,4 +1,4 @@
-// Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+// Copyright (c) 2024-2025, WSO2 LLC. (http://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -19,35 +19,34 @@ export const SERVICE_CARD_DETAILS = [
     serviceImagePath: "/patient_view_service.png",
     serviceName: "View Patient",
     serviceDescription:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud ",
+      "Access and manage patient records, including personal details, medical history, and treatment plans.",
     path: "/dashboard/patient",
   },
   {
     serviceImagePath: "/appointment_book_service.png",
     serviceName: "Book an Appointment",
     serviceDescription:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud ",
+      "Easily schedule and manage appointments with healthcare providers.",
     path: "/dashboard/appointment-schedule",
   },
   {
     serviceImagePath: "/drug_order_service.png",
     serviceName: "Order Drugs",
     serviceDescription:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud ",
-    path: "/dashboard/drug-order",
+      "Order and manage medications for patients, ensuring timely and accurate delivery.",
+    path: "/dashboard/drug-order-v2",
   },
   {
     serviceImagePath: "/order_device_service.png",
     serviceName: "Order Devices",
-    serviceDescription:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud ",
+    serviceDescription: "Order and manage medical devices for patient care.",
     path: "/dashboard/device-order",
   },
   {
     serviceImagePath: "/medical_imaging.png",
     serviceName: "Schedule Medical Imaging",
     serviceDescription:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud ",
+      "Schedule and manage medical imaging appointments, including CT scans, X-rays, and MRIs.",
     path: "/dashboard/medical-imaging",
   },
 ];
@@ -1211,3 +1210,58 @@ export const response = {
     },
   ],
 };
+
+export const FREQUENCY_OPTIONS = [
+  { value: "once", label: "Once a day" },
+  { value: "twice", label: "Twice a day" },
+  { value: "thrice", label: "Thrice a day" },
+];
+
+export const TREATMENT_OPTIONS = [
+  {
+    value: "Gastroesophageal Reflux Disease",
+    label: "Gastroesophageal Reflux Disease",
+  },
+  { value: "Vertigo", label: "Vertigo" },
+  { value: "Urinary tract Infection", label: "Urinary tract Infection" },
+  { value: "Mechanical Pain", label: "Mechanical Pain" },
+];
+
+export const MEDICATION_OPTIONS = [
+  {
+    label: "Omeprazole",
+    options: [
+      { value: "Omeprazole 10 mg", label: "Omeprazole 10 mg" },
+      { value: "Omeprazole 20 mg", label: "Omeprazole 20 mg" },
+      { value: "Omeprazole 40 mg", label: "Omeprazole 40 mg" },
+    ],
+  },
+  {
+    label: "Esmoprazole",
+    options: [
+      { value: "Esmoprazole 20 mg", label: "Esmoprazole 20 mg" },
+      { value: "Esmoprazole 40 mg", label: "Esmoprazole 40 mg" },
+    ],
+  },
+  {
+    label: "Stemetil",
+    options: [{ value: "Stemetil 5 mg", label: "Stemetil 5 mg" }],
+  },
+  {
+    label: "Ciprofloxacin",
+    options: [{ value: "Ciprofloxacin 500 mg", label: "Ciprofloxacin 500 mg" }],
+  },
+  {
+    label: "Nitrofurantion",
+    options: [
+      { value: "Nitrofurantion 50 mg", label: "Ciprofloxacin 50 mg" },
+      { value: "Nitrofurantion 100 mg", label: "Ciprofloxacin 100 mg" },
+    ],
+  },
+  {
+    label: "Diclofenac Sodium",
+    options: [
+      { value: "Diclofenac Sodium 50 mg", label: "Diclofenac Sodium 50 mg" },
+    ],
+  },
+];

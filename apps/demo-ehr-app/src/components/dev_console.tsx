@@ -1,4 +1,4 @@
-// Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+// Copyright (c) 2024-2025, WSO2 LLC. (http://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -30,30 +30,37 @@ const DevConsole = () => {
 
   return (
     <Box>
-      <Box fontSize={36} fontWeight={200} textAlign={"center"}>
+      <Box
+        fontSize={36}
+        fontWeight={500}
+        textAlign={"center"}
+        color={"white"}
+        fontFamily={"monospace"}
+      >
         Developer Console
       </Box>
       {hook && (
         <div
           style={{
-            height: "5vh",
+            height: "4vh",
             width: "80%",
-            borderRadius: 2,
+            borderRadius: 50,
             backgroundColor: "#D9D9D9",
             textAlign: "center",
             alignSelf: "center",
             marginTop: 30,
             marginLeft: "10%",
-            fontSize: 24,
+            fontSize: 22,
+            fontFamily: "monospace",
           }}
         >
-          {hook}
+          Hook: <b>{hook}</b>
         </div>
       )}
 
       <div
         style={{
-          height: "5vh",
+          height: "4vh",
           width: "80%",
           borderRadius: 2,
           backgroundColor: "#D9D9D9",
@@ -61,7 +68,9 @@ const DevConsole = () => {
           alignSelf: "center",
           marginTop: 30,
           marginLeft: "10%",
-          fontSize: 24,
+          fontSize: 22,
+          fontFamily: "monospace",
+          fontWeight: 500,
         }}
       >
         Request
@@ -90,14 +99,16 @@ const DevConsole = () => {
 
       <div
         style={{
-          height: "5vh",
+          height: "4vh",
           width: "80%",
           borderRadius: 2,
           backgroundColor: "#D9D9D9",
           textAlign: "center",
           alignSelf: "center",
           marginLeft: "10%",
-          fontSize: 24,
+          fontSize: 22,
+          fontFamily: "monospace",
+          fontWeight: 500,
         }}
       >
         Response

@@ -1,4 +1,4 @@
-// Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+// Copyright (c) 2024-2025, WSO2 LLC. (http://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -20,20 +20,43 @@ import { Outlet } from "react-router-dom";
 import { useContext } from "react";
 import DevConsole from "./dev_console";
 import { ExpandedContext } from "../utils/expanded_context";
-import { SCREEN_HEIGHT } from "../constants/page";
 
 export const Layout = () => {
   const { expanded } = useContext(ExpandedContext);
   return (
-    <div style={{ height: "100%" }}>
-      <NavBar />
-      <div style={{ display: "flex", flexDirection: "row" }}>
+    <div
+      style={{
+        height: "100vh",
+        width: "100vw",
+        display: "flex",
+        flexDirection: "column",
+      }}
+    >
+      <div
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 1000,
+          color: "white",
+        }}
+      >
+        <NavBar />
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "row",
+          backgroundColor: "white",
+        }}
+      >
         <div
           style={{
-            width: expanded ? "49vw" : "94.1vw",
+            width: expanded ? "50vw" : "100vw",
             overflowY: "hidden",
             transition: "width 0.5s ease-in-out",
             height: "100%",
+            marginTop: "30px",
           }}
         >
           <Outlet />
@@ -45,21 +68,20 @@ export const Layout = () => {
 
         <div
           style={{
-            width: "0.1vw",
             backgroundColor: "black",
             marginLeft: "1vw",
-            marginTop: -SCREEN_HEIGHT * 0.04,
           }}
         />
 
         <div
           style={{
-            alignContent: "center",
-            width: expanded ? "45vw" : "0vw",
+            width: expanded ? "50vw" : "0vw",
             height: expanded ? "100%" : "0vh",
             overflowY: "auto",
             transition: "width 0.5s ease-in-out, opacity 0.5s ease-in-out",
             opacity: expanded ? 1 : 0,
+            backgroundColor: "	#4C585B",
+            paddingTop: "30px",
           }}
         >
           <DevConsole />
