@@ -1,4 +1,4 @@
-// Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+// Copyright (c) 2024-2025, WSO2 LLC. (http://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -14,8 +14,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { QUATERNARY_COLOR } from "../constants/color";
-import { SCREEN_WIDTH } from "../constants/page";
+import { DARK_RED_COLOR } from "../constants/color";
 import { SERVICE_CARD_DETAILS, PATIENT_DETAILS } from "../constants/data";
 import Button from "@mui/material/Button";
 import { ServiceCardListProps } from "../components/interfaces/card";
@@ -23,7 +22,7 @@ import MultiActionAreaCard from "../components/serviceCard";
 import { useContext } from "react";
 import { ExpandedContext } from "../utils/expanded_context";
 import { useSelector, useDispatch } from "react-redux";
-import { updateCdsHook } from "../redux/cdsRequestSlice";
+import Form from "react-bootstrap/Form";
 
 function ServiceCardList({ services, expanded }: ServiceCardListProps) {
   return (
@@ -32,7 +31,6 @@ function ServiceCardList({ services, expanded }: ServiceCardListProps) {
         display: "grid",
         gridTemplateColumns: expanded ? "repeat(1, 1fr)" : "repeat(3, 1fr)",
         gap: "20px",
-        marginLeft: expanded ? "8vw" : "2vw",
       }}
     >
       {services.map((service, index) => (
@@ -48,6 +46,68 @@ function ServiceCardList({ services, expanded }: ServiceCardListProps) {
   );
 }
 
+const DetailsDiv = () => {
+  const selectedPatientId = useSelector(
+    (state: any) => state.patient.selectedPatientId
+  );
+  let currentPatient = PATIENT_DETAILS.find(
+    (patient) => patient.id === selectedPatientId
+  );
+
+  if (!currentPatient) {
+    currentPatient = PATIENT_DETAILS[0];
+  }
+
+  return (
+    <div style={{ display: "flex", gap: "20px" }}>
+      <Form.Group
+        controlId="formPatientName"
+        style={{ marginTop: "20px", flex: "1 1 35%" }}
+      >
+        <Form.Label>Patient Name</Form.Label>
+        <Form.Control
+          type="text"
+          value={
+            currentPatient.name &&
+            currentPatient.name[0] &&
+            currentPatient.name[0].given &&
+            currentPatient.name[0].given[0] +
+              " " +
+              currentPatient.name[0].family
+          }
+          disabled
+        />
+      </Form.Group>
+      <Form.Group
+        controlId="formPatientID"
+        style={{ marginTop: "20px", flex: "1 1 35%" }}
+      >
+        <Form.Label>Patient ID</Form.Label>
+        <Form.Control type="text" value={currentPatient.id} disabled />
+      </Form.Group>
+      <div
+        style={{
+          flex: "1 1 10%",
+        }}
+      ></div>
+      <Button
+        variant="contained"
+        style={{
+          borderRadius: "50px",
+          backgroundColor: DARK_RED_COLOR,
+          height: "fit-content",
+          alignSelf: "center",
+          flex: "1 1 20%",
+          marginTop: "50px",
+          // marginLeft: "200px",
+        }}
+      >
+        Dismiss Patient
+      </Button>
+    </div>
+  );
+};
+
 function PractitionerDashBoard() {
   const { expanded } = useContext(ExpandedContext);
   const selectedPatientId = useSelector(
@@ -62,7 +122,8 @@ function PractitionerDashBoard() {
   }
 
   return (
-    <div>
+    <div style={{ marginLeft: 50, marginBottom: 50 }}>
+      <DetailsDiv />
       <div
         style={{
           display: "flex",
@@ -70,36 +131,14 @@ function PractitionerDashBoard() {
           alignItems: "center",
           justifyContent: "space-between",
         }}
-      >
-        <div style={{ fontSize: 20, marginLeft: SCREEN_WIDTH * 0.01 }}>
-          Patient:{" "}
-          {currentPatient.name[0].given[0] +
-            " " +
-            currentPatient.name[0].family}{" "}
-          ID: {currentPatient.id}
-        </div>
-
-        <Button
-          variant="contained"
-          href="/"
-          style={{
-            borderRadius: "50px",
-            marginLeft: SCREEN_WIDTH * 0.3,
-            backgroundColor: QUATERNARY_COLOR,
-          }}
-        >
-          Dismiss Patient
-        </Button>
+      ></div>
+      <br />
+      <div className="page-heading">HealthCare HQ Services</div>
+      <div style={{ height: "5vh" }}>
+        <ServiceCardList services={SERVICE_CARD_DETAILS} expanded={expanded} />
       </div>
-
-      <div style={{ textAlign: "center" }}>
-        <h1 style={{ fontSize: 48 }}>HealthCare HQ Services</h1>
-      </div>
-
-      <div style={{ height: "5vh" }} />
-
-      <ServiceCardList services={SERVICE_CARD_DETAILS} expanded={expanded} />
     </div>
   );
 }
+
 export default PractitionerDashBoard;
