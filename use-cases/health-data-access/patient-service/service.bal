@@ -30,6 +30,8 @@ configurable string[] scopes = ?;
 configurable string client_id = ?;
 configurable string client_secret = ?;
 
+#Audit service configurations
+configurable string auditServiceUrl = ?;
 
 # Generic type to wrap all implemented profiles.
 # Add required profile types here.
