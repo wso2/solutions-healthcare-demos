@@ -149,4 +149,3 @@ components:
           properties:
             reference:
               type: string
-              

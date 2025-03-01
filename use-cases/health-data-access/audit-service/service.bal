@@ -17,6 +17,8 @@ configurable string fhirServerName = "wso2fhirserver.com";
 // agent type of the audit event. This is used as the agent type in the FHIR audit event
 configurable string agentType = "humanuser";
 
+configurable int port = 9093;
+
 // This creates a new cache with the advanced configuration.
 final cache:Cache cache = new ({
     capacity: cacheCapacity
@@ -59,7 +61,6 @@ class RetryFailedAuditEvents {
     }
 }
 
-int port = 9093;
 
 service / on new http:Listener(port) {
 
