@@ -73,6 +73,7 @@ service / on new http:Listener(port) {
 
     isolated resource function post audits(InternalAuditEvent audit) returns international401:AuditEvent|http:STATUS_ACCEPTED|http:STATUS_INTERNAL_SERVER_ERROR {
         international401:AuditEvent auditEvent = toFhirAuditEvent(audit);
+        log:printInfo("Audit event triggered.", auditEvent = auditEvent);
         io:Error? result = io:fileWriteLines(auditLogPath, [auditEvent.toJsonString()], option = io:APPEND);
         if result is io:Error {
             // keep track of failed audit events in an inmemory buffer and retry to write
