@@ -77,7 +77,7 @@ export default function NavBar() {
             <Button href="/dashboard/drug-order-v2/prior-auth" color="inherit">
               Drugs Prior Auth
             </Button>
-            <Button href="/dashboard/device-order" color="inherit">
+            <Button href="/dashboard/device-order-v2" color="inherit">
               Devices
             </Button>
             <Button href="/dashboard/medical-imaging" color="inherit">

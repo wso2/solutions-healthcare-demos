@@ -40,7 +40,7 @@ export const SERVICE_CARD_DETAILS = [
     serviceImagePath: "/order_device_service.png",
     serviceName: "Order Devices",
     serviceDescription: "Order and manage medical devices for patient care.",
-    path: "/dashboard/device-order",
+    path: "/dashboard/device-order-v2",
   },
   {
     serviceImagePath: "/medical_imaging.png",
@@ -139,82 +139,62 @@ export const DEVICE = [
     name: "Glucometer",
     imagePath: "/gloco_meter.png",
     description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud",
+      "A device used to measure blood glucose levels, essential for diabetes management.",
     large_description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-    dosages: ["50mg", "100mg", "150mg", "250mg"],
-    path: "/dashboard/drug-order/glucometer",
+      "The glucometer is a portable device that measures blood glucose levels. It is crucial for individuals with diabetes to monitor their blood sugar levels regularly. The device provides quick and accurate readings, helping users manage their condition effectively.",
+    dosages: ["N/A"],
+    path: "/dashboard/device-order/glucometer",
   },
   {
-    name: "Glucometer",
-    imagePath: "/gloco_meter.png",
+    name: "Blood Pressure Monitor",
+    imagePath: "/blood_pressure_monitor.png",
     description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud",
+      "Accurately measure and monitor blood pressure levels with this easy-to-use device.",
     large_description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-    dosages: ["50mg", "100mg", "150mg", "250mg"],
-    path: "/dashboard/drug-order/glucometer",
+      "This blood pressure monitor provides accurate readings and stores historical data for tracking. It features a large display and easy-to-use interface, making it ideal for home use.",
+    dosages: ["N/A"],
+    path: "/dashboard/device-order/blood-pressure-monitor",
   },
   {
-    name: "Glucometer",
-    imagePath: "/gloco_meter.png",
+    name: "Pulse Oximeter",
+    imagePath: "/pulse_oximeter.png",
     description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud",
+      "Quickly measure blood oxygen saturation levels and pulse rate with this compact device.",
     large_description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-    dosages: ["50mg", "100mg", "150mg", "250mg"],
-    path: "/dashboard/drug-order/glucometer",
+      "The pulse oximeter is a non-invasive device that measures blood oxygen saturation levels and pulse rate. It is compact, portable, and easy to use, making it perfect for both home and clinical use.",
+    dosages: ["N/A"],
+    path: "/dashboard/device-order/pulse-oximeter",
   },
   {
-    name: "Glucometer",
-    imagePath: "/gloco_meter.png",
+    name: "Thermometer",
+    imagePath: "/thermometer.png",
     description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud",
+      "Get accurate body temperature readings with this digital thermometer.",
     large_description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-    dosages: ["50mg", "100mg", "150mg", "250mg"],
-    path: "/dashboard/drug-order/glucometer",
+      "This digital thermometer provides quick and accurate body temperature readings. It features a clear display and is suitable for all ages, making it an essential tool for monitoring health at home.",
+    dosages: ["N/A"],
+    path: "/dashboard/device-order/thermometer",
   },
   {
-    name: "Glucometer",
-    imagePath: "/gloco_meter.png",
+    name: "Nebulizer",
+    imagePath: "/nebulizer.jpg",
     description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud",
+      "Effectively deliver medication to the lungs with this portable nebulizer.",
     large_description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-    dosages: ["50mg", "100mg", "150mg", "250mg"],
-    path: "/dashboard/drug-order/glucometer",
+      "The nebulizer is designed to convert liquid medication into a fine mist for inhalation. It is portable, easy to use, and ideal for patients with respiratory conditions such as asthma or COPD.",
+    dosages: ["N/A"],
+    path: "/dashboard/device-order/nebulizer",
   },
   {
-    name: "Glucometer",
-    imagePath: "/gloco_meter.png",
+    name: "ECG Machine",
+    imagePath: "/ecg_machine.webp",
     description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud",
+      "Monitor heart activity with this advanced ECG machine.",
     large_description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-    dosages: ["50mg", "100mg", "150mg", "250mg"],
-    path: "/dashboard/drug-order/glucometer",
-  },
-  {
-    name: "Glucometer",
-    imagePath: "/gloco_meter.png",
-    description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud",
-    large_description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-    dosages: ["50mg", "100mg", "150mg", "250mg"],
-    path: "/dashboard/drug-order/glucometer",
-  },
-  {
-    name: "Glucometer",
-    imagePath: "/gloco_meter.png",
-    description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud",
-    large_description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-    dosages: ["50mg", "100mg", "150mg", "250mg"],
-    path: "/dashboard/drug-order/glucometer",
-  },
+      "This ECG machine provides detailed readings of heart activity, helping to diagnose and monitor cardiac conditions. It is equipped with advanced features and is suitable for both clinical and home use.",
+    dosages: ["N/A"],
+    path: "/dashboard/device-order/ecg-machine",
+  }
 ];
 
 export const RESPONSE_CARD_DETAILS = [

@@ -23,7 +23,7 @@ import Button from "react-bootstrap/Button";
 import Select from "react-select";
 import Card from "react-bootstrap/Card";
 import DatePicker from "react-datepicker";
-import { requirementsResponse2 } from "../utils/placeholders";
+import { requirementsResponse2 } from "../constants/placeholders";
 import {
   FREQUENCY_OPTIONS,
   MEDICATION_OPTIONS,

@@ -91,6 +91,7 @@ const DetailsDiv = () => {
         }}
       ></div>
       <Button
+        href="/"
         variant="contained"
         style={{
           borderRadius: "50px",
@@ -99,7 +100,6 @@ const DetailsDiv = () => {
           alignSelf: "center",
           flex: "1 1 20%",
           marginTop: "50px",
-          // marginLeft: "200px",
         }}
       >
         Dismiss Patient

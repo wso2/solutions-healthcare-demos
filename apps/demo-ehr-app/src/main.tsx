@@ -38,6 +38,7 @@ import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import MedicalImaging from "./pages/MedicalImaging.tsx";
 import PriorAuth from "./pages/PriorAuth.tsx";
 import DrugPiorAuthPage from "./pages/drug_prior_auth.tsx";
+import DeviceOrderPageV2 from "./pages/device_order_page_v2.tsx";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <Provider store={store}>
@@ -85,6 +86,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                 element={<CoverageCardDisplayPage />}
               />
               <Route path="device-order" element={<DeviceOrderPage />} />
+              <Route path="device-order-v2" element={<DeviceOrderPageV2 />} />
               <Route
                 path="device-order/:deviceName"
                 element={<DeviceDetailsPage />}
