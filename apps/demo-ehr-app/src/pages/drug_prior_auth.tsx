@@ -168,12 +168,12 @@ const PrescribedForm = () => {
             style={{ marginTop: "20px" }}
           >
             <Form.Label>Treating Sickness</Form.Label>
-            <Form.Control type="text" value={treatingSickness || ""} readOnly />
+            <Form.Control type="text" value={treatingSickness || ""} disabled />
           </Form.Group>
 
           <Form.Group controlId="formMedication" style={{ marginTop: "20px" }}>
             <Form.Label>Medication</Form.Label>
-            <Form.Control type="text" value={medication || ""} readOnly />
+            <Form.Control type="text" value={medication || ""} disabled />
           </Form.Group>
 
           <div
@@ -187,7 +187,7 @@ const PrescribedForm = () => {
               style={{ marginTop: "20px", flex: "1 1 100%" }}
             >
               <Form.Label>Quantity</Form.Label>
-              <Form.Control type="text" value={quantity || ""} readOnly />
+              <Form.Control type="text" value={quantity || ""} disabled />
             </Form.Group>
 
             <Form.Group
@@ -195,7 +195,7 @@ const PrescribedForm = () => {
               style={{ marginTop: "20px", flex: "1 1 100%" }}
             >
               <Form.Label>Frequency</Form.Label>
-              <Form.Control type="text" value={frequency || ""} readOnly />
+              <Form.Control type="text" value={frequency || ""} disabled />
             </Form.Group>
 
             <Form.Group
@@ -203,7 +203,7 @@ const PrescribedForm = () => {
               style={{ marginTop: "20px", flex: "1 1 100%" }}
             >
               <Form.Label>Duration (days)</Form.Label>
-              <Form.Control type="text" value={frequency || ""} readOnly />
+              <Form.Control type="text" value={frequency || ""} disabled />
             </Form.Group>
 
             <Form.Group
@@ -217,7 +217,7 @@ const PrescribedForm = () => {
                 dateFormat="yyyy/MM/dd"
                 className="form-control"
                 wrapperClassName="date-picker-full-width"
-                readOnly
+                disabled
               />
             </Form.Group>
           </div>
