@@ -29,7 +29,8 @@ import { PatientViewPage } from "./pages/patient_view.tsx";
 import { CoverageCardDisplayPage } from "./pages/coverage_card_display_page.tsx";
 import { Layout } from "./components/layout.tsx";
 import { Provider } from "react-redux";
-import store from "./redux/store.ts";
+import { PersistGate } from 'redux-persist/integration/react';
+import { store, persistor } from "./redux/store.ts";
 import "./index.css";
 import { BrowserRouter } from "react-router-dom";
 import { Routes, Route } from "react-router-dom";
@@ -42,6 +43,7 @@ import DeviceOrderPageV2 from "./pages/device_order_page_v2.tsx";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <Provider store={store}>
+    <PersistGate loading={null} persistor={persistor}>
     <ExpandedContextProvider>
       <LocalizationProvider dateAdapter={AdapterDayjs}>
         <BrowserRouter>
@@ -72,7 +74,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               />
               <Route path="drug-order" element={<DrugOrderPage />} />
               <Route path="drug-order-v2" element={<DrugOrderPageV2 />} />
-              <Route path="drug-order-v2/prior-auth" element={<DrugPiorAuthPage />} />
+              <Route path="drug-order-v2/prior-auth/*" element={<DrugPiorAuthPage />} />
               <Route
                 path="drug-order/:drugName"
                 element={<DrugDetailsPage />}
@@ -107,5 +109,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         </BrowserRouter>
       </LocalizationProvider>
     </ExpandedContextProvider>
+    </PersistGate>
   </Provider>
 );

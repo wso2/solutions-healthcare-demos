@@ -14,29 +14,132 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import axios from "axios";
 import Form from "react-bootstrap/Form";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
+import { useLocation } from "react-router-dom";
+import { baseUrl, paths } from "../config/urlConfigs";
+import Select from "react-select";
 
-const DiagnosisForm = () => {
+import { useDispatch, useSelector } from "react-redux";
+import { updateRequest } from "../redux/cdsRequestSlice";
+import { updateCdsResponse } from "../redux/cdsResponseSlice";
+
+const useQuery = () => {
+  return new URLSearchParams(useLocation().search);
+};
+
+const QuestionnniarForm = ({
+  questionnaireId,
+}: {
+  questionnaireId: string;
+}) => {
+  const dispatch = useDispatch();
+  const [questions, setQuestions] = useState<any[]>([]);
+  const [formData, setFormData] = useState<{ [key: string]: any }>({});
+
+  useEffect(() => {
+    // Fetch the questionnaire data from the API
+    axios
+      .get(baseUrl + paths.questionnaire + questionnaireId)
+      .then((response) => {
+        const questionnaire = response.data;
+        setQuestions(questionnaire.item || []);
+
+        dispatch(
+          updateCdsResponse({
+            cards: questionnaire,
+            systemActions: {},
+          })
+        );
+      })
+      .catch((error) => {
+        console.error("Error fetching questionnaire data:", error);
+      });
+  }, []);
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData({ ...formData, [name]: value });
+  };
+
+  const handleBooleanChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, checked } = e.target;
+    setFormData({ ...formData, [name]: checked });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("Form Data:", formData);
+    dispatch(updateRequest(formData));
+  };
+
+  const renderFormField = (question: any) => {
+    switch (question.type) {
+      case "boolean":
+        return (
+          <Select
+            name={question.linkId}
+            onChange={(selectedOption) =>
+              handleBooleanChange({
+                target: {
+                  name: question.linkId,
+                  checked: selectedOption?.value === "Yes",
+                },
+              } as React.ChangeEvent<HTMLInputElement>)
+            }
+            options={[
+              { value: "Yes", label: "Yes" },
+              { value: "No", label: "No" },
+            ]}
+          />
+        );
+      case "integer":
+        return (
+          <Form.Control
+            type="number"
+            name={question.linkId}
+            value={formData[question.linkId] || ""}
+            onChange={handleInputChange}
+          />
+        );
+      case "string":
+      default:
+        return (
+          <Form.Control
+            type="text"
+            name={question.linkId}
+            value={formData[question.linkId] || ""}
+            onChange={handleInputChange}
+          />
+        );
+    }
+  };
+
   return (
     <Card style={{ marginTop: "30px", padding: "20px" }}>
       <Card.Body>
-        <Card.Title>Diagnosis</Card.Title>
-        <Form>
-          <Form.Group controlId="formDiagnosis" style={{ marginTop: "20px" }}>
-            <Form.Label>Diagnosis Summary</Form.Label>
-            <Form.Control
-              as="textarea"
-              rows={3}
-              placeholder="Enter diagnosis summary here."
-            />
-          </Form.Group>
-          <Form.Group controlId="formFileUpload" style={{ marginTop: "20px" }}>
-            <Form.Label>Upload Supporting Documents</Form.Label>
-            <Form.Control type="file" multiple />
-          </Form.Group>
+        <Card.Title>Questionnaire</Card.Title>
+        <Form onSubmit={handleSubmit}>
+          {questions.map((question, index) => (
+            <Form.Group
+              controlId={`formQuestion${index}`}
+              style={{ marginTop: "20px" }}
+              key={index}
+            >
+              <Form.Label>{question.text}</Form.Label>
+              {renderFormField(question)}
+            </Form.Group>
+          ))}
+          <Button
+            variant="primary"
+            type="submit"
+            style={{ marginTop: "30px", float: "right" }}
+          >
+            SUBMIT
+          </Button>
         </Form>
       </Card.Body>
     </Card>
@@ -44,15 +147,21 @@ const DiagnosisForm = () => {
 };
 
 const PrescribedForm = () => {
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-  };
-
+  const query = useQuery();
+  const medicationFormData = useSelector(
+    (state: any) => state.medicationFormData
+  );
+  console.log("medicationFormData", medicationFormData);
+  const treatingSickness = medicationFormData.treatingSickness;
+  const medication = medicationFormData.medication;
+  const quantity = medicationFormData.quantity;
+  const frequency = medicationFormData.frequency;
+  const startDate = medicationFormData.startDate;
   return (
     <Card style={{ marginTop: "30px", padding: "20px" }}>
       <Card.Body>
         <Card.Title>Prescribed Medicine</Card.Title>
-        <Form onSubmit={handleSubmit}>
+        <Form>
           <Form.Group
             controlId="formTreatingSickness"
             style={{ marginTop: "20px" }}
@@ -60,14 +169,18 @@ const PrescribedForm = () => {
             <Form.Label>Treating Sickness</Form.Label>
             <Form.Control
               type="text"
-              value="Gastroesophageal Reflux Disease"
+              value={treatingSickness || ""}
               readOnly
             />
           </Form.Group>
 
           <Form.Group controlId="formMedication" style={{ marginTop: "20px" }}>
             <Form.Label>Medication</Form.Label>
-            <Form.Control type="text" value="Omeprazole 20 mg" readOnly />
+            <Form.Control
+              type="text"
+              value={medication || ""}
+              readOnly
+            />
           </Form.Group>
 
           <div
@@ -81,7 +194,11 @@ const PrescribedForm = () => {
               style={{ marginTop: "20px", flex: "1 1 100%" }}
             >
               <Form.Label>Quantity</Form.Label>
-              <Form.Control type="text" value="2 pills" readOnly />
+              <Form.Control
+                type="text"
+                value={quantity || ""}
+                readOnly
+              />
             </Form.Group>
 
             <Form.Group
@@ -89,7 +206,11 @@ const PrescribedForm = () => {
               style={{ marginTop: "20px", flex: "1 1 100%" }}
             >
               <Form.Label>Frequency</Form.Label>
-              <Form.Control type="text" value="Twice a day" readOnly />
+              <Form.Control
+                type="text"
+                value={frequency || ""}
+                readOnly
+              />
             </Form.Group>
 
             <Form.Group
@@ -97,7 +218,11 @@ const PrescribedForm = () => {
               style={{ marginTop: "20px", flex: "1 1 100%" }}
             >
               <Form.Label>Duration (days)</Form.Label>
-              <Form.Control type="text" value="7" readOnly />
+              <Form.Control
+                type="text"
+                value={frequency || ""}
+                readOnly
+              />
             </Form.Group>
 
             <Form.Group
@@ -106,7 +231,11 @@ const PrescribedForm = () => {
             >
               <Form.Label>Starting Date</Form.Label>
               <br />
-              <Form.Control type="text" value="2025/02/28" readOnly />
+              <Form.Control
+                type="text"
+                value={startDate || ""}
+                readOnly
+              />
             </Form.Group>
           </div>
         </Form>
@@ -115,16 +244,9 @@ const PrescribedForm = () => {
   );
 };
 
-const DetailsDiv = () => {
+const DetailsDiv = ({ questionnaireId }: { questionnaireId: string }) => {
   return (
     <div style={{ display: "flex", gap: "20px" }}>
-      <Form.Group
-        controlId="formPatientName"
-        style={{ marginTop: "20px", flex: "1 1 100%" }}
-      >
-        <Form.Label>Order ID</Form.Label>
-        <Form.Control type="text" value="OR022943" disabled />
-      </Form.Group>
       <Form.Group
         controlId="formPatientName"
         style={{ marginTop: "20px", flex: "1 1 100%" }}
@@ -139,26 +261,32 @@ const DetailsDiv = () => {
         <Form.Label>Patient ID</Form.Label>
         <Form.Control type="text" value="PT32403" disabled />
       </Form.Group>
+      <Form.Group
+        controlId="formPatientName"
+        style={{ marginTop: "20px", flex: "1 1 100%" }}
+      >
+        <Form.Label>Questionnaire ID</Form.Label>
+        <Form.Control type="text" value={questionnaireId} disabled />
+      </Form.Group>
     </div>
   );
 };
 
 export default function DrugPiorAuthPage() {
+  const query = useQuery();
+  const questionnaireId = query.get("questionnaireId");
+  const medicationFormData = useSelector(
+    (state: any) => state.medicationFormData
+  );
+  console.log("medicationFormData", medicationFormData);
   return (
     <div style={{ marginLeft: 50, marginBottom: 50 }}>
       <div className="page-heading">
         Send a Prior-Authorizing Request for Drugs
       </div>
-      <DetailsDiv />
+      <DetailsDiv questionnaireId={questionnaireId || ""} />
       <PrescribedForm />
-      <DiagnosisForm />
-      <Button
-        variant="primary"
-        type="submit"
-        style={{ marginTop: "30px", float: "right", marginBottom: "30px" }}
-      >
-        SUBMIT
-      </Button>
+      <QuestionnniarForm questionnaireId={questionnaireId || ""} />
       <style jsx>{`
         .card {
           height: 100%;

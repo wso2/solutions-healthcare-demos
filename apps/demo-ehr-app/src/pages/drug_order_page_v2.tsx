@@ -23,39 +23,77 @@ import Button from "react-bootstrap/Button";
 import Select from "react-select";
 import Card from "react-bootstrap/Card";
 import DatePicker from "react-datepicker";
-import { requirementsResponse2 } from "../constants/placeholders";
+import { useDispatch, useSelector } from "react-redux";
+import { updateCdsHook, updateRequest } from "../redux/cdsRequestSlice";
+import { updateCdsResponse } from "../redux/cdsResponseSlice";
+import { updateMedicationFormData } from "../redux/medicationFormDataSlice";
+
 import {
   FREQUENCY_OPTIONS,
   MEDICATION_OPTIONS,
+  PRESCRIBE_MEDICINE_REQUEST_BODY,
   TREATMENT_OPTIONS,
 } from "../constants/data";
+import { CdsCard, CdsResponse } from "../components/interfaces/cdsCard";
+import axios from "axios";
+import { baseUrl, paths } from "../config/urlConfigs";
 
-const PrescribeForm = () => {
-  const [formData, setFormData] = useState({
-    treatingSickness: "",
-    medication: "",
-    quantity: "",
-    duration: "",
-    frequency: "",
-    startDate: new Date() as Date | null,
-  });
+const PrescribeForm = ({ setCdsCards }) => {
+  const dispatch = useDispatch();
+  const medicationFormData = useSelector(
+    (state: any) => state.medicationFormData
+  );
+
+  const [patientId] = useState("john-smith");
+  const [practionerId] = useState("456");
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    dispatch(updateMedicationFormData({ [name]: value }));
   };
 
   const handleSelectChange = (selectedOption: any, actionMeta: any) => {
-    setFormData({ ...formData, [actionMeta.name]: selectedOption.value });
+    dispatch(
+      updateMedicationFormData({ [actionMeta.name]: selectedOption.value })
+    );
   };
 
   const handleDateSelectChange = (date: Date | null) => {
-    setFormData({ ...formData, startDate: date as Date | null });
+    dispatch(updateMedicationFormData({ startDate: date as Date | null }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form Data:", formData);
+    console.log("Form Data:", medicationFormData);
+  };
+
+  const handleCheckPayerRequirements = () => {
+    console.log("Getting payer requirements");
+
+    const payload = PRESCRIBE_MEDICINE_REQUEST_BODY(
+      patientId,
+      practionerId,
+      medicationFormData.medication,
+      medicationFormData.quantity
+    );
+    console.log("Payload: \n", payload);
+    setCdsCards([]);
+    dispatch(updateCdsHook("order-sign"));
+    dispatch(updateRequest(payload));
+    axios
+      .post<CdsResponse>(baseUrl + paths.prescribe_medication, payload)
+      .then<CdsResponse>((res) => {
+        setCdsCards(res.data.cards);
+
+        dispatch(
+          updateCdsResponse({ cards: res.data.cards, systemActions: {} })
+        );
+        return res.data;
+      })
+      .catch((err) => {
+        console.log(err);
+        dispatch(updateCdsResponse({ cards: err, systemActions: {} }));
+      });
   };
 
   return (
@@ -68,7 +106,7 @@ const PrescribeForm = () => {
             style={{ marginTop: "20px" }}
           >
             <Form.Label>
-              Treating Sickness <span style={{ color: "red" }}>*</span>
+              Treating <span style={{ color: "red" }}>*</span>
             </Form.Label>
             <Select
               name="treatingSickness"
@@ -107,10 +145,10 @@ const PrescribeForm = () => {
                 Quantity <span style={{ color: "red" }}>*</span>
               </Form.Label>
               <Form.Control
-                type="text"
+                type="number"
                 placeholder="Enter quantity"
                 name="quantity"
-                value={formData.quantity}
+                value={medicationFormData.quantity}
                 onChange={handleInputChange}
                 required
               />
@@ -138,13 +176,13 @@ const PrescribeForm = () => {
               style={{ marginTop: "20px", flex: "1 1 100%" }}
             >
               <Form.Label>
-                Duration (days) <span style={{ color: "red" }}>*</span>
+                Duration<span style={{ color: "red" }}>*</span>
               </Form.Label>
               <Form.Control
                 type="number"
                 placeholder="Enter duration"
                 name="duration"
-                value={formData.duration}
+                value={medicationFormData.duration}
                 onChange={handleInputChange}
                 required
               />
@@ -157,7 +195,7 @@ const PrescribeForm = () => {
               <Form.Label>Starting Date</Form.Label>
               <br />
               <DatePicker
-                selected={formData.startDate}
+                selected={medicationFormData.startDate}
                 onChange={handleDateSelectChange}
                 dateFormat="yyyy/MM/dd"
                 className="form-control"
@@ -170,6 +208,7 @@ const PrescribeForm = () => {
             variant="primary"
             type="submit"
             style={{ marginTop: "30px", float: "right" }}
+            onClick={handleCheckPayerRequirements}
           >
             CHECK PAYER REQUIREMENTS
           </Button>
@@ -179,7 +218,7 @@ const PrescribeForm = () => {
   );
 };
 
-const PrescribeMedicineCard = () => {
+const PrescribeMedicineCard = ({ setCdsCards }) => {
   return (
     <div
       style={{
@@ -187,12 +226,12 @@ const PrescribeMedicineCard = () => {
         marginTop: "20px",
       }}
     >
-      <PrescribeForm />
+      <PrescribeForm setCdsCards={setCdsCards} />
     </div>
   );
 };
 
-const PayerRequirementsCard = ({ requirementsResponse }) => {
+const PayerRequirementsCard = ({ cdsCards }) => {
   return (
     <div
       style={{
@@ -201,7 +240,7 @@ const PayerRequirementsCard = ({ requirementsResponse }) => {
         gap: "20px",
       }}
     >
-      {requirementsResponse.cards.map((card, index) => (
+      {cdsCards.map((card, index) => (
         <RequirementCard key={index} requirementsResponsCard={card} />
       ))}
     </div>
@@ -209,6 +248,9 @@ const PayerRequirementsCard = ({ requirementsResponse }) => {
 };
 
 const RequirementCard = ({ requirementsResponsCard }) => {
+  const medicationFormData = useSelector(
+    (state: any) => state.medicationFormData
+  );
   return (
     <div>
       <Card style={{ marginTop: "30px", padding: "20px" }}>
@@ -274,7 +316,7 @@ const RequirementCard = ({ requirementsResponsCard }) => {
                     <div key={index}>
                       <li>
                         <Card.Link
-                          href={link.url}
+                          href={`${link.url}`}
                           target="_blank"
                           style={{ color: "#4635B1" }}
                         >
@@ -293,6 +335,8 @@ const RequirementCard = ({ requirementsResponsCard }) => {
 };
 
 export default function DrugOrderPageV2() {
+  const [cdsCards, setCdsCards] = useState<CdsCard[]>([]);
+
   return (
     <div style={{ marginLeft: 50, marginBottom: 50 }}>
       <div className="page-heading">Order Drugs</div>
@@ -302,7 +346,7 @@ export default function DrugOrderPageV2() {
           style={{ marginTop: "20px", flex: "1 1 100%" }}
         >
           <Form.Label>Patient Name</Form.Label>
-          <Form.Control type="text" value="PA0012323" disabled />
+          <Form.Control type="text" value="John Smith" disabled />
         </Form.Group>
         <Form.Group
           controlId="formPatientID"
@@ -313,9 +357,16 @@ export default function DrugOrderPageV2() {
         </Form.Group>
       </div>
       <div>
-        <PrescribeMedicineCard />
+        <PrescribeMedicineCard setCdsCards={setCdsCards} />
       </div>
-      <PayerRequirementsCard requirementsResponse={requirementsResponse2} />
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+          gap: "20px",
+        }}
+      ></div>
+      <PayerRequirementsCard cdsCards={cdsCards} />
       <style jsx>{`
         .card {
           height: 100%;

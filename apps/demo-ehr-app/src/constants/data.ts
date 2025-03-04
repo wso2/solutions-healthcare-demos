@@ -188,13 +188,12 @@ export const DEVICE = [
   {
     name: "ECG Machine",
     imagePath: "/ecg_machine.webp",
-    description:
-      "Monitor heart activity with this advanced ECG machine.",
+    description: "Monitor heart activity with this advanced ECG machine.",
     large_description:
       "This ECG machine provides detailed readings of heart activity, helping to diagnose and monitor cardiac conditions. It is equipped with advanced features and is suitable for both clinical and home use.",
     dosages: ["N/A"],
     path: "/dashboard/device-order/ecg-machine",
-  }
+  },
 ];
 
 export const RESPONSE_CARD_DETAILS = [
@@ -945,6 +944,95 @@ export const CT_SCAN_SERVICE_REQUEST = {
   authoredOn: "2019-09-20T15:42:13+02:00",
 };
 
+export const PRESCRIBE_MEDICINE_REQUEST_BODY = (
+  patientId: string,
+  practitionerId: string,
+  medicationName: string,
+  quantity: number
+) => {
+  return {
+    hook: "order-sign",
+    hookInstance: "98765-wxyz-43210-lmno",
+    context: {
+      userId: `PractitionerRole/${practitionerId}`,
+      patientId: `${patientId}`,
+      draftOrders: {
+        resourceType: "Bundle",
+        meta: {
+          profile: ["http://hl7.org/fhir/StructureDefinition/Bundle"],
+        },
+        type: "collection",
+        entry: [
+          {
+            resource: {
+              resourceType: "MedicationRequest",
+              subject: {
+                reference: "Patient/john-smith",
+              },
+              medicationCodeableConcept: {
+                coding: [
+                  {
+                    system: "http://www.nlm.nih.gov/research/umls/rxnorm",
+                    code: "1746007",
+                    display: `${medicationName}`,
+                  },
+                ],
+                text: `${medicationName}`,
+              },
+              dispenseRequest: {
+                quantity: {
+                  value: quantity,
+                  unit: "mL",
+                  system: "http://unitsofmeasure.org",
+                  code: "mL",
+                },
+                numberOfRepeatsAllowed: 1,
+                expectedSupplyDuration: {
+                  unit: "days",
+                  system: "http://unitsofmeasure.org",
+                  code: "d",
+                  value: 30.0,
+                },
+              },
+              id: "medication-request-001",
+              intent: "order",
+              dosageInstruction: [
+                {
+                  text: "Inject 70 mg once a month",
+                  timing: {
+                    repeat: {
+                      boundsPeriod: {
+                        start: "2025-03-02",
+                      },
+                      frequency: 1,
+                      period: 1.0,
+                      periodUnit: "mo",
+                    },
+                  },
+                  doseAndRate: [
+                    {
+                      doseQuantity: {
+                        value: 70.0,
+                        unit: "mg",
+                        system: "http://unitsofmeasure.org",
+                        code: "mg",
+                      },
+                    },
+                  ],
+                },
+              ],
+              meta: {
+                lastUpdated: "2025-03-02T10:00:00.000Z",
+              },
+              status: "draft",
+            },
+          },
+        ],
+      },
+    },
+  };
+};
+
 export const ORDER_SIGN_CDS_REQUEST = {
   hookInstance: "d1577c69-dfbe-44ad-ba6d-3e05e953b2ea",
   fhirServer: "http://hapi.fhir.org/baseR4sd",
@@ -1192,12 +1280,35 @@ export const response = {
 };
 
 export const FREQUENCY_OPTIONS = [
-  { value: "once", label: "Once a day" },
-  { value: "twice", label: "Twice a day" },
-  { value: "thrice", label: "Thrice a day" },
+  {
+    label: "Daily",
+    options: [
+      { value: "Once a day", label: "Once a day" },
+      { value: "Twice a day", label: "Twice a day" },
+      { value: "Thrice a day", label: "Thrice a day" },
+    ],
+  },
+  {
+    label: "Weekly",
+    options: [
+      { value: "Once a week", label: "Once a week" },
+      { value: "Twice a week", label: "Twice a week" },
+    ],
+  },
+  {
+    label: "Monthly",
+    options: [
+      { value: "Once a month", label: "Once a month" },
+      { value: "Twice a month", label: "Twice a month" },
+    ],
+  },
 ];
 
 export const TREATMENT_OPTIONS = [
+  {
+    value: "Migraine Prevention",
+    label: "Migraine Prevention",
+  },
   {
     value: "Gastroesophageal Reflux Disease",
     label: "Gastroesophageal Reflux Disease",
@@ -1208,6 +1319,21 @@ export const TREATMENT_OPTIONS = [
 ];
 
 export const MEDICATION_OPTIONS = [
+  {
+    label: "Aimovig",
+    options: [
+      {
+        code: "1746007",
+        value: "Aimovig 70 mg Injection",
+        label: "Aimovig 70 mg Injection",
+      },
+      {
+        code: "1746008",
+        value: "Aimovig 140 mg Injection",
+        label: "Aimovig 140 mg Injection",
+      },
+    ],
+  },
   {
     label: "Omeprazole",
     options: [
