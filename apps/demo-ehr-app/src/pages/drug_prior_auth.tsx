@@ -73,7 +73,58 @@ const QuestionnniarForm = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     console.log("Form Data:", formData);
-    dispatch(updateRequest(formData));
+    const questionnaireResponse = {
+      resourceType: "QuestionnaireResponse",
+      questionnaire: "Questionnaire/" + questionnaireId,
+      status: "completed",
+      subject: {
+        reference: "Patient/101",
+      },
+      author: {
+        reference: "PractitionerRole/456",
+      },
+      item: questions.map((question) => ({
+        linkId: question.linkId,
+        text: question.text,
+        answer: [
+          {
+            valueQuestionnaireResponseBoolean:
+              typeof formData[question.linkId] === "boolean"
+                ? formData[question.linkId]
+                : undefined,
+            valuevalueQuestionnaireResponseIntegerInteger:
+              typeof formData[question.linkId] === "number"
+                ? formData[question.linkId]
+                : undefined,
+            valueQuestionnaireResponseString:
+              typeof formData[question.linkId] === "string"
+                ? formData[question.linkId]
+                : undefined,
+          },
+        ],
+      })),
+    };
+
+    console.log("Questionnaire Response:", questionnaireResponse);
+    dispatch(updateRequest(questionnaireResponse));
+
+    // Submit the questionnaire response to the API
+    axios
+      .post(baseUrl + paths.questionnaire_response, questionnaireResponse, {
+      headers: {
+        "Content-Type": "application/fhir+json",
+      },
+      })
+      .then((response) => {
+      console.log(
+        "Questionnaire response submitted successfully:",
+        response.data
+      );
+      dispatch(updateCdsResponse({ cards: response, systemActions: {} }));
+      })
+      .catch((error) => {
+      console.error("Error submitting questionnaire response:", error);
+      });
   };
 
   const renderFormField = (question: any) => {
@@ -137,6 +188,7 @@ const QuestionnniarForm = ({
             variant="primary"
             type="submit"
             style={{ marginTop: "30px", float: "right" }}
+            onClick={handleSubmit}
           >
             SUBMIT
           </Button>
