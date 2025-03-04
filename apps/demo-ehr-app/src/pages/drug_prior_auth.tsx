@@ -22,7 +22,7 @@ import Button from "react-bootstrap/Button";
 import { useLocation } from "react-router-dom";
 import { baseUrl, paths } from "../config/urlConfigs";
 import Select from "react-select";
-
+import DatePicker from "react-datepicker";
 import { useDispatch, useSelector } from "react-redux";
 import { updateRequest } from "../redux/cdsRequestSlice";
 import { updateCdsResponse } from "../redux/cdsResponseSlice";
@@ -157,6 +157,7 @@ const PrescribedForm = () => {
   const quantity = medicationFormData.quantity;
   const frequency = medicationFormData.frequency;
   const startDate = medicationFormData.startDate;
+
   return (
     <Card style={{ marginTop: "30px", padding: "20px" }}>
       <Card.Body>
@@ -167,20 +168,12 @@ const PrescribedForm = () => {
             style={{ marginTop: "20px" }}
           >
             <Form.Label>Treating Sickness</Form.Label>
-            <Form.Control
-              type="text"
-              value={treatingSickness || ""}
-              readOnly
-            />
+            <Form.Control type="text" value={treatingSickness || ""} readOnly />
           </Form.Group>
 
           <Form.Group controlId="formMedication" style={{ marginTop: "20px" }}>
             <Form.Label>Medication</Form.Label>
-            <Form.Control
-              type="text"
-              value={medication || ""}
-              readOnly
-            />
+            <Form.Control type="text" value={medication || ""} readOnly />
           </Form.Group>
 
           <div
@@ -194,11 +187,7 @@ const PrescribedForm = () => {
               style={{ marginTop: "20px", flex: "1 1 100%" }}
             >
               <Form.Label>Quantity</Form.Label>
-              <Form.Control
-                type="text"
-                value={quantity || ""}
-                readOnly
-              />
+              <Form.Control type="text" value={quantity || ""} readOnly />
             </Form.Group>
 
             <Form.Group
@@ -206,11 +195,7 @@ const PrescribedForm = () => {
               style={{ marginTop: "20px", flex: "1 1 100%" }}
             >
               <Form.Label>Frequency</Form.Label>
-              <Form.Control
-                type="text"
-                value={frequency || ""}
-                readOnly
-              />
+              <Form.Control type="text" value={frequency || ""} readOnly />
             </Form.Group>
 
             <Form.Group
@@ -218,11 +203,7 @@ const PrescribedForm = () => {
               style={{ marginTop: "20px", flex: "1 1 100%" }}
             >
               <Form.Label>Duration (days)</Form.Label>
-              <Form.Control
-                type="text"
-                value={frequency || ""}
-                readOnly
-              />
+              <Form.Control type="text" value={frequency || ""} readOnly />
             </Form.Group>
 
             <Form.Group
@@ -231,9 +212,11 @@ const PrescribedForm = () => {
             >
               <Form.Label>Starting Date</Form.Label>
               <br />
-              <Form.Control
-                type="text"
-                value={startDate || ""}
+              <DatePicker
+                selected={medicationFormData.startDate}
+                dateFormat="yyyy/MM/dd"
+                className="form-control"
+                wrapperClassName="date-picker-full-width"
                 readOnly
               />
             </Form.Group>

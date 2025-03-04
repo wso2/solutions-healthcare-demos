@@ -148,7 +148,6 @@ const PrescribeForm = ({ setCdsCards }) => {
                 type="number"
                 placeholder="Enter quantity"
                 name="quantity"
-                value={medicationFormData.quantity}
                 onChange={handleInputChange}
                 required
               />
@@ -182,7 +181,6 @@ const PrescribeForm = ({ setCdsCards }) => {
                 type="number"
                 placeholder="Enter duration"
                 name="duration"
-                value={medicationFormData.duration}
                 onChange={handleInputChange}
                 required
               />
