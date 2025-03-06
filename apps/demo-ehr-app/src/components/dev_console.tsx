@@ -68,18 +68,18 @@ const DevConsole = () => {
             width: "80%",
             borderRadius: 10,
             backgroundColor: "#D9D9D9",
-            // textAlign: "center",
+            textAlign: "center",
             alignSelf: "center",
             marginTop: 10,
             marginLeft: "10%",
-            paddingLeft: "25px",
+            padding: "8px",
             paddingTop: "5px",
             paddingBottom: "5px",
             fontSize: 16,
             fontFamily: "monospace",
           }}
         >
-          {requestMethod && <b>[{requestMethod}]</b>}: {requestUrl} <br />
+          {requestMethod && <b>[{requestMethod}]:</b>} {requestUrl} <br />
         </div>
       )}
 
@@ -93,12 +93,12 @@ const DevConsole = () => {
           alignSelf: "center",
           marginTop: 20,
           marginLeft: "10%",
-          fontSize: 18,
+          fontSize: 16,
           fontFamily: "monospace",
-          fontWeight: 600,
+          fontWeight: 500,
         }}
       >
-        Request
+        Request Body
       </div>
 
       <div
@@ -132,12 +132,12 @@ const DevConsole = () => {
           textAlign: "center",
           alignSelf: "center",
           marginLeft: "10%",
-          fontSize: 18,
+          fontSize: 16,
           fontFamily: "monospace",
-          fontWeight: 600,
+          fontWeight: 500,
         }}
       >
-        Response
+        Response Body
       </div>
 
       <div

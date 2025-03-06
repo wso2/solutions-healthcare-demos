@@ -24,8 +24,8 @@ import { baseUrl, paths } from "../config/urlConfigs";
 import Select from "react-select";
 import DatePicker from "react-datepicker";
 import { useDispatch, useSelector } from "react-redux";
-import { updateRequest } from "../redux/cdsRequestSlice";
-import { updateCdsResponse } from "../redux/cdsResponseSlice";
+import { updateRequest, updateRequestUrl, updateRequestMethod, resetCdsRequest } from "../redux/cdsRequestSlice";
+import { updateCdsResponse, resetCdsResponse } from "../redux/cdsResponseSlice";
 
 const useQuery = () => {
   return new URLSearchParams(useLocation().search);
@@ -43,12 +43,17 @@ const QuestionnniarForm = ({
   //   useState(false);
 
   useEffect(() => {
+    dispatch(resetCdsRequest());
+    dispatch(resetCdsResponse());
     // Fetch the questionnaire data from the API
     axios
       .get(baseUrl + paths.questionnaire + questionnaireId)
       .then((response) => {
         const questionnaire = response.data;
         setQuestions(questionnaire.item || []);
+
+        dispatch(updateRequestUrl(paths.questionnaire + questionnaireId));
+        dispatch(updateRequestMethod("GET"));
 
         dispatch(
           updateCdsResponse({
@@ -108,7 +113,11 @@ const QuestionnniarForm = ({
   };
 
   const submitQuestionnaireResponse = (questionnaireResponse: any) => {
+    dispatch(resetCdsRequest());
+    dispatch(resetCdsResponse());
     dispatch(updateRequest(questionnaireResponse));
+    dispatch(updateRequestUrl(paths.questionnaire_response));
+    dispatch(updateRequestMethod("POST"));
 
     // Submit the questionnaire response to the API
     axios

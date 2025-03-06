@@ -24,8 +24,8 @@ import { baseUrl, paths } from "../config/urlConfigs";
 import Select from "react-select";
 import DatePicker from "react-datepicker";
 import { useDispatch, useSelector } from "react-redux";
-import { updateRequest } from "../redux/cdsRequestSlice";
-import { updateCdsResponse } from "../redux/cdsResponseSlice";
+import { updateRequest, updateRequestMethod, updateRequestUrl, resetCdsRequest } from "../redux/cdsRequestSlice";
+import { updateCdsResponse, resetCdsResponse } from "../redux/cdsResponseSlice";
 import { CLAIM_REQUEST_BODY } from "../constants/data";
 
 const useQuery = () => {
@@ -74,6 +74,9 @@ const ClaimForm = () => {
     );
     console.log("payload", payload);
     dispatch(updateRequest(payload));
+    dispatch(updateRequestMethod("POST"));
+    dispatch(updateRequestUrl(paths.claim));
+    dispatch(resetCdsResponse());
     axios
       .post(baseUrl + paths.claim, payload, {
         headers: {
