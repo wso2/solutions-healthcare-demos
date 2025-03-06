@@ -33,12 +33,14 @@ const useQuery = () => {
 
 const QuestionnniarForm = ({
   questionnaireId,
-}: {
-  questionnaireId: string;
+  isQuestionnaireResponseSubmited,
+  setIsQuestionnaireResponseSubmited,
 }) => {
   const dispatch = useDispatch();
   const [questions, setQuestions] = useState<any[]>([]);
   const [formData, setFormData] = useState<{ [key: string]: any }>({});
+  // const [isQuestionnaireResponseSubmited, setIsQuestionnaireResponseSubmited] =
+  //   useState(false);
 
   useEffect(() => {
     // Fetch the questionnaire data from the API
@@ -70,10 +72,9 @@ const QuestionnniarForm = ({
     setFormData({ ...formData, [name]: checked });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log("Form Data:", formData);
-    const questionnaireResponse = {
+  // generate the questionnaire response object
+  const generateQuestionnaireResponse = () => {
+    return {
       resourceType: "QuestionnaireResponse",
       questionnaire: "Questionnaire/" + questionnaireId,
       status: "completed",
@@ -92,7 +93,7 @@ const QuestionnniarForm = ({
               typeof formData[question.linkId] === "boolean"
                 ? formData[question.linkId]
                 : undefined,
-            valuevalueQuestionnaireResponseIntegerInteger:
+            valueQuestionnaireResponseInteger:
               typeof formData[question.linkId] === "number"
                 ? formData[question.linkId]
                 : undefined,
@@ -104,27 +105,41 @@ const QuestionnniarForm = ({
         ],
       })),
     };
+  };
 
-    console.log("Questionnaire Response:", questionnaireResponse);
+  const submitQuestionnaireResponse = (questionnaireResponse: any) => {
     dispatch(updateRequest(questionnaireResponse));
 
     // Submit the questionnaire response to the API
     axios
       .post(baseUrl + paths.questionnaire_response, questionnaireResponse, {
-      headers: {
-        "Content-Type": "application/fhir+json",
-      },
+        headers: {
+          "Content-Type": "application/fhir+json",
+        },
       })
       .then((response) => {
-      console.log(
-        "Questionnaire response submitted successfully:",
-        response.data
-      );
-      dispatch(updateCdsResponse({ cards: response, systemActions: {} }));
+        console.log(
+          "Questionnaire response submitted successfully:",
+          response.data
+        );
+        dispatch(updateCdsResponse({ cards: response, systemActions: {} }));
+        alert("Questionnaire response submitted successfully!");
+        setIsQuestionnaireResponseSubmited(true);
       })
       .catch((error) => {
-      console.error("Error submitting questionnaire response:", error);
+        console.error("Error submitting questionnaire response:", error);
       });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("Form Data:", formData);
+
+    const questionnaireResponse = generateQuestionnaireResponse();
+    console.log("Questionnaire Response:", questionnaireResponse);
+
+    submitQuestionnaireResponse(questionnaireResponse);
+
   };
 
   const renderFormField = (question: any) => {
@@ -189,10 +204,19 @@ const QuestionnniarForm = ({
             type="submit"
             style={{ marginTop: "30px", float: "right" }}
             onClick={handleSubmit}
+            // disabled={isQuestionnaireResponseSubmited}
           >
-            SUBMIT
+            Submit Questionnaire Response
           </Button>
         </Form>
+        <Button
+          variant="success"
+          style={{ marginTop: "30px", marginRight: "20px", float: "right" }}
+          onClick={() => window.open("/dashboard/drug-order-v2/claim", "_blank")}
+          disabled={!isQuestionnaireResponseSubmited}
+        >
+          Visit Claim Submission
+        </Button>
       </Card.Body>
     </Card>
   );
@@ -313,6 +337,9 @@ export default function DrugPiorAuthPage() {
   const medicationFormData = useSelector(
     (state: any) => state.medicationFormData
   );
+  const [isQuestionnaireResponseSubmited, setIsQuestionnaireResponseSubmited] =
+    useState(false);
+
   console.log("medicationFormData", medicationFormData);
   return (
     <div style={{ marginLeft: 50, marginBottom: 50 }}>
@@ -321,7 +348,11 @@ export default function DrugPiorAuthPage() {
       </div>
       <DetailsDiv questionnaireId={questionnaireId || ""} />
       <PrescribedForm />
-      <QuestionnniarForm questionnaireId={questionnaireId || ""} />
+      <QuestionnniarForm
+        questionnaireId={questionnaireId || ""}
+        isQuestionnaireResponseSubmited={isQuestionnaireResponseSubmited}
+        setIsQuestionnaireResponseSubmited={setIsQuestionnaireResponseSubmited}
+      />
       <style jsx>{`
         .card {
           height: 100%;

@@ -24,7 +24,7 @@ import Select from "react-select";
 import Card from "react-bootstrap/Card";
 import DatePicker from "react-datepicker";
 import { useDispatch, useSelector } from "react-redux";
-import { updateCdsHook, updateRequest } from "../redux/cdsRequestSlice";
+import { updateCdsHook, updateRequest, updateRequestUrl, updateRequestMethod } from "../redux/cdsRequestSlice";
 import { updateCdsResponse } from "../redux/cdsResponseSlice";
 import { updateMedicationFormData } from "../redux/medicationFormDataSlice";
 
@@ -79,6 +79,8 @@ const PrescribeForm = ({ setCdsCards }) => {
     console.log("Payload: \n", payload);
     setCdsCards([]);
     dispatch(updateCdsHook("order-sign"));
+    dispatch(updateRequestMethod("POST"));
+    dispatch(updateRequestUrl(paths.prescribe_medication));
     dispatch(updateRequest(payload));
     axios
       .post<CdsResponse>(baseUrl + paths.prescribe_medication, payload)

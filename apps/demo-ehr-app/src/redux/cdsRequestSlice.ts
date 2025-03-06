@@ -23,6 +23,8 @@ const initialState = {
   context: {},
   prefetch: {},
   request: {},
+  requestUrl: "", // Added requestUrl to initial state
+  requestMethod: "", // Added requestMethod to initial state
 };
 
 const cdsRequestSlice = createSlice({
@@ -41,6 +43,12 @@ const cdsRequestSlice = createSlice({
     updateRequest(state, action) {
       state.request = { ...state.request, ...action.payload };
     },
+    updateRequestUrl(state, action) { // Added reducer for requestUrl
+      state.requestUrl = action.payload;
+    },
+    updateRequestMethod(state, action) { // Added reducer for requestMethod
+      state.requestMethod = action.payload;
+    },
     resetCdsRequest() {
       return initialState;
     },
@@ -53,5 +61,7 @@ export const {
   updateCdsPrefetch,
   resetCdsRequest,
   updateRequest,
+  updateRequestUrl, // Exporting new action
+  updateRequestMethod, // Exporting new action
 } = cdsRequestSlice.actions;
 export default cdsRequestSlice.reducer;

@@ -944,6 +944,117 @@ export const CT_SCAN_SERVICE_REQUEST = {
   authoredOn: "2019-09-20T15:42:13+02:00",
 };
 
+export const CLAIM_REQUEST_BODY = (
+  patient: string,
+  provider: string,
+  insurer: string,
+  use: string,
+  supportingInfo: string,
+  category: string,
+  medication: string,
+  quantity: string,
+  unitPrice: string
+) => {
+  return {
+    resourceType: "Claim",
+    identifier: [
+      {
+        system: "http://hospital.org/claims",
+        value: "PA-20250302-001",
+      },
+    ],
+    status: "active",
+    type: {
+      coding: [
+        {
+          system: "http://terminology.hl7.org/CodeSystem/claim-type",
+          code: "professional",
+          display: "Professional",
+        },
+      ],
+    },
+    use: `${use}`,
+    priority: {
+      coding: [
+        {
+          system: "http://terminology.hl7.org/CodeSystem/processpriority",
+          code: "stat",
+          display: "Immediate",
+        },
+      ],
+    },
+    patient: {
+      reference: `${patient}`,
+    },
+    created: "2025-03-02",
+    insurer: {
+      reference: `${insurer}`,
+    },
+    provider: {
+      reference: `${provider}`,
+    },
+    insurance: [
+      {
+        sequence: 1,
+        focal: true,
+        coverage: {
+          reference: "Coverage/insurance-coverage",
+        },
+      },
+    ],
+    supportingInfo: [
+      {
+        sequence: 1,
+        category: {
+          coding: [
+            {
+              system:
+                "http://terminology.hl7.org/CodeSystem/claiminformationcategory",
+              code: "info",
+              display: "Supporting Information",
+            },
+          ],
+        },
+        valueReference: {
+          reference: `${supportingInfo}`,
+        },
+      },
+    ],
+    item: [
+      {
+        sequence: 1,
+        category: {
+          coding: [
+            {
+              system:
+                "http://terminology.hl7.org/CodeSystem/ex-benefitcategory",
+              code: "pharmacy",
+              display: `${category}`,
+            },
+          ],
+        },
+        productOrService: {
+          coding: [
+            {
+              system: "http://www.nlm.nih.gov/research/umls/rxnorm",
+              code: "1746007",
+              display: `${medication}`,
+            },
+          ],
+        },
+        servicedDate: "2025-03-02",
+        unitPrice: {
+          value: +`${unitPrice}`.split(" ")[0],
+          currency: `${unitPrice}`.split(" ")[1],
+        },
+        quantity: {
+          value: +`${quantity}`,
+        },
+      },
+    ],
+  };
+};
+
 export const PRESCRIBE_MEDICINE_REQUEST_BODY = (
   patientId: string,
   practitionerId: string,

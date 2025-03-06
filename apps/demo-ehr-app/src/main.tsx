@@ -40,6 +40,7 @@ import MedicalImaging from "./pages/MedicalImaging.tsx";
 import PriorAuth from "./pages/PriorAuth.tsx";
 import DrugPiorAuthPage from "./pages/drug_prior_auth.tsx";
 import DeviceOrderPageV2 from "./pages/device_order_page_v2.tsx";
+import DrugClaimPage from "./pages/drug_claim_page.tsx";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <Provider store={store}>
@@ -75,6 +76,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               <Route path="drug-order" element={<DrugOrderPage />} />
               <Route path="drug-order-v2" element={<DrugOrderPageV2 />} />
               <Route path="drug-order-v2/prior-auth/*" element={<DrugPiorAuthPage />} />
+              <Route path="drug-order-v2/claim/*" element={<DrugClaimPage />} />
               <Route
                 path="drug-order/:drugName"
                 element={<DrugDetailsPage />}

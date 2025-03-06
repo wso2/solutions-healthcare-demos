@@ -81,7 +81,7 @@ export const Layout = () => {
             transition: "width 0.5s ease-in-out, opacity 0.5s ease-in-out",
             opacity: expanded ? 1 : 0,
             backgroundColor: "	#4C585B",
-            paddingTop: "30px",
+            paddingTop: "5px",
           }}
         >
           <DevConsole />

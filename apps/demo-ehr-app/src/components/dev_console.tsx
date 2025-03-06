@@ -23,16 +23,19 @@ import "../assets/styles/code_theme.css";
 const DevConsole = () => {
   const hook = useSelector((state: any) => state.cdsRequest.hook);
   const requestState = useSelector((state: any) => state.cdsRequest.request);
+  const requestUrl = useSelector((state: any) => state.cdsRequest.requestUrl);
+  const requestMethod = useSelector(
+    (state: any) => state.cdsRequest.requestMethod
+  );
   const response = useSelector((state: any) => state.cdsResponse.cards);
 
-  // Newly added
   const cdsRequest = requestState;
 
   return (
     <Box>
       <Box
-        fontSize={36}
-        fontWeight={500}
+        fontSize={25}
+        fontWeight={400}
         textAlign={"center"}
         color={"white"}
         fontFamily={"monospace"}
@@ -42,15 +45,15 @@ const DevConsole = () => {
       {hook && (
         <div
           style={{
-            height: "4vh",
+            height: "3vh",
             width: "80%",
             borderRadius: 50,
             backgroundColor: "#D9D9D9",
             textAlign: "center",
             alignSelf: "center",
-            marginTop: 30,
+            marginTop: 15,
             marginLeft: "10%",
-            fontSize: 22,
+            fontSize: 18,
             fontFamily: "monospace",
           }}
         >
@@ -58,19 +61,41 @@ const DevConsole = () => {
         </div>
       )}
 
+      {requestUrl && (
+        <div
+          style={{
+            // height: "10vh",
+            width: "80%",
+            borderRadius: 10,
+            backgroundColor: "#D9D9D9",
+            // textAlign: "center",
+            alignSelf: "center",
+            marginTop: 10,
+            marginLeft: "10%",
+            paddingLeft: "25px",
+            paddingTop: "5px",
+            paddingBottom: "5px",
+            fontSize: 16,
+            fontFamily: "monospace",
+          }}
+        >
+          {requestMethod && <b>[{requestMethod}]</b>}: {requestUrl} <br />
+        </div>
+      )}
+
       <div
         style={{
-          height: "4vh",
+          height: "3vh",
           width: "80%",
           borderRadius: 2,
           backgroundColor: "#D9D9D9",
           textAlign: "center",
           alignSelf: "center",
-          marginTop: 30,
+          marginTop: 20,
           marginLeft: "10%",
-          fontSize: 22,
+          fontSize: 18,
           fontFamily: "monospace",
-          fontWeight: 500,
+          fontWeight: 600,
         }}
       >
         Request
@@ -81,9 +106,9 @@ const DevConsole = () => {
           width: "80%",
           alignContent: "center",
           marginLeft: "10%",
-          height: cdsRequest ? "100%" : "100vh",
+          maxHeight: "50vh",
           overflow: "auto",
-          marginBottom: "3%",
+          marginBottom: "15px",
         }}
       >
         <SyntaxHighlighter
@@ -99,22 +124,32 @@ const DevConsole = () => {
 
       <div
         style={{
-          height: "4vh",
+          height: "3vh",
+
           width: "80%",
           borderRadius: 2,
           backgroundColor: "#D9D9D9",
           textAlign: "center",
           alignSelf: "center",
           marginLeft: "10%",
-          fontSize: 22,
+          fontSize: 18,
           fontFamily: "monospace",
-          fontWeight: 500,
+          fontWeight: 600,
         }}
       >
         Response
       </div>
 
-      <div style={{ width: "80%", alignContent: "center", marginLeft: "10%" }}>
+      <div
+        style={{
+          width: "80%",
+          alignContent: "center",
+          marginLeft: "10%",
+          maxHeight: "50vh",
+          overflow: "auto",
+          marginBottom: "15px",
+        }}
+      >
         <SyntaxHighlighter
           language="json"
           style={tomorrowNight}
