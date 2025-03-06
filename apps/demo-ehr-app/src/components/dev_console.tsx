@@ -21,7 +21,6 @@ import {
   RadioGroup,
   FormControlLabel,
   FormControl,
-  FormLabel,
 } from "@mui/material";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { tomorrowNight } from "react-syntax-highlighter/dist/esm/styles/hljs";
@@ -29,7 +28,7 @@ import { useSelector } from "react-redux";
 import "../assets/styles/code_theme.css";
 
 const DevConsole = () => {
-  const [stage, setStage] = useState("vertical");
+  const [stage, setStage] = useState("horizontal");
 
   const handleStageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     setStage((event.target as HTMLInputElement).value);
@@ -53,6 +52,7 @@ const DevConsole = () => {
         textAlign={"center"}
         color={"white"}
         fontFamily={"monospace"}
+        marginBottom={2}
       >
         Developer Console
       </Box>
@@ -79,7 +79,6 @@ const DevConsole = () => {
       {requestUrl && (
         <div
           style={{
-            // height: "10vh",
             width: "80%",
             borderRadius: 10,
             backgroundColor: "#D9D9D9",
@@ -102,7 +101,6 @@ const DevConsole = () => {
           component="fieldset"
           style={{
             marginTop: 15,
-            // marginBottom: 20,
             textAlign: "center",
             color: "white",
           }}
@@ -115,14 +113,14 @@ const DevConsole = () => {
             onChange={handleStageChange}
           >
             <FormControlLabel
-              value="vertical"
-              control={<Radio />}
-              label="Vertical"
-            />
-            <FormControlLabel
               value="horizontal"
               control={<Radio />}
               label="Horizontal"
+            />
+            <FormControlLabel
+              value="vertical"
+              control={<Radio/>}
+              label="Vertical"
             />
           </RadioGroup>
         </FormControl>
@@ -131,7 +129,8 @@ const DevConsole = () => {
         style={{
           display: stage === "vertical" ? "block" : "flex",
           gap: "10px",
-          margin: "15px",
+          marginLeft: "20px",
+          marginRight: "20px",
           maxWidth: "100%",
         }}
       >
@@ -144,13 +143,11 @@ const DevConsole = () => {
           <div
             style={{
               height: "3vh",
-              // width: "80%",
               borderRadius: 2,
               backgroundColor: "#D9D9D9",
               textAlign: "center",
               alignSelf: "center",
               marginTop: 20,
-              // marginLeft: "10%",
               fontSize: 16,
               fontFamily: "monospace",
               fontWeight: 500,
@@ -161,10 +158,7 @@ const DevConsole = () => {
 
           <div
             style={{
-              // width: "80%",
               alignContent: "center",
-              // marginLeft: "10%",
-              // maxHeight: "50vh",
               overflow: "auto",
               marginBottom: "15px",
             }}
@@ -190,13 +184,11 @@ const DevConsole = () => {
           <div
             style={{
               height: "3vh",
-              // width: "80%",
               borderRadius: 2,
               backgroundColor: "#D9D9D9",
               textAlign: "center",
               alignSelf: "center",
               marginTop: 20,
-              // marginLeft: "10%",
               fontSize: 16,
               fontFamily: "monospace",
               fontWeight: 500,
@@ -208,8 +200,6 @@ const DevConsole = () => {
           <div
             style={{
               alignContent: "center",
-              // marginLeft: "10%",
-              // maxHeight: "50vh",
               overflow: "auto",
               marginBottom: "15px",
             }}

@@ -24,15 +24,22 @@ import Select from "react-select";
 import Card from "react-bootstrap/Card";
 import DatePicker from "react-datepicker";
 import { useDispatch, useSelector } from "react-redux";
-import { updateCdsHook, updateRequest, updateRequestUrl, updateRequestMethod } from "../redux/cdsRequestSlice";
-import { updateCdsResponse } from "../redux/cdsResponseSlice";
+import {
+  updateCdsHook,
+  updateRequest,
+  updateRequestUrl,
+  updateRequestMethod,
+  resetCdsRequest,
+} from "../redux/cdsRequestSlice";
+import { resetCdsResponse, updateCdsResponse } from "../redux/cdsResponseSlice";
 import { updateMedicationFormData } from "../redux/medicationFormDataSlice";
 
 import {
   FREQUENCY_OPTIONS,
   MEDICATION_OPTIONS,
-  PRESCRIBE_MEDICINE_REQUEST_BODY,
+  CHECK_PAYER_REQUIREMENTS_REQUEST_BODY,
   TREATMENT_OPTIONS,
+  CREATE_MEDICATION_REQUEST_BODY,
 } from "../constants/data";
 import { CdsCard, CdsResponse } from "../components/interfaces/cdsCard";
 import axios from "axios";
@@ -46,6 +53,7 @@ const PrescribeForm = ({ setCdsCards }) => {
 
   const [patientId] = useState("john-smith");
   const [practionerId] = useState("456");
+  const [isSubmited, setIsSubmited] = useState(false);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -69,8 +77,10 @@ const PrescribeForm = ({ setCdsCards }) => {
 
   const handleCheckPayerRequirements = () => {
     console.log("Getting payer requirements");
+    dispatch(resetCdsRequest());
+    dispatch(resetCdsResponse());
 
-    const payload = PRESCRIBE_MEDICINE_REQUEST_BODY(
+    const payload = CHECK_PAYER_REQUIREMENTS_REQUEST_BODY(
       patientId,
       practionerId,
       medicationFormData.medication,
@@ -88,8 +98,43 @@ const PrescribeForm = ({ setCdsCards }) => {
         setCdsCards(res.data.cards);
 
         dispatch(
-          updateCdsResponse({ cards: res.data.cards, systemActions: {} })
+          updateCdsResponse({ cards: res, systemActions: {} })
         );
+
+        return res.data;
+      })
+      .catch((err) => {
+        console.log(err);
+        dispatch(updateCdsResponse({ cards: err, systemActions: {} }));
+      });
+  };
+
+  const handleCreateMedicationOrder = () => {
+    console.log("Creating medication order");
+    dispatch(resetCdsRequest());
+    dispatch(resetCdsResponse());
+
+    const payload = CREATE_MEDICATION_REQUEST_BODY(
+      patientId,
+      practionerId,
+      medicationFormData.medication,
+      medicationFormData.quantity
+    );
+    console.log("Medication Request Payload: \n", payload);
+    dispatch(updateRequestMethod("POST"));
+    dispatch(updateRequestUrl(paths.medication_request));
+    dispatch(updateRequest(payload));
+    axios
+      .post<CdsResponse>(baseUrl + paths.medication_request, payload, {
+        headers: {
+          "Content-Type": "application/fhir+json",
+        },
+      })
+      .then<CdsResponse>((res) => {
+        dispatch(
+          updateCdsResponse({ cards: res, systemActions: {} })
+        );
+        setIsSubmited(true);
         return res.data;
       })
       .catch((err) => {
@@ -203,15 +248,26 @@ const PrescribeForm = ({ setCdsCards }) => {
               />
             </Form.Group>
           </div>
-
-          <Button
-            variant="primary"
-            type="submit"
-            style={{ marginTop: "30px", float: "right" }}
-            onClick={handleCheckPayerRequirements}
-          >
-            CHECK PAYER REQUIREMENTS
-          </Button>
+          <div style={{ marginTop: "30px", float: "right" }}>
+            {isSubmited && (
+              <Button
+                variant="primary"
+                type="submit"
+                onClick={handleCheckPayerRequirements}
+              >
+                Check Payer Requirements
+              </Button>
+            )}
+            <Button
+              variant="success"
+              // type="submit"
+              style={{ marginLeft: "30px", float: "right" }}
+              onClick={handleCreateMedicationOrder}
+              disabled={isSubmited}
+            >
+              Create Medication Order
+            </Button>
+          </div>
         </Form>
       </Card.Body>
     </Card>

@@ -21,10 +21,12 @@ import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
 import { useLocation } from "react-router-dom";
 import { baseUrl, paths } from "../config/urlConfigs";
-import Select from "react-select";
-import DatePicker from "react-datepicker";
 import { useDispatch, useSelector } from "react-redux";
-import { updateRequest, updateRequestMethod, updateRequestUrl, resetCdsRequest } from "../redux/cdsRequestSlice";
+import {
+  updateRequest,
+  updateRequestMethod,
+  updateRequestUrl,
+} from "../redux/cdsRequestSlice";
 import { updateCdsResponse, resetCdsResponse } from "../redux/cdsResponseSlice";
 import { CLAIM_REQUEST_BODY } from "../constants/data";
 
@@ -60,7 +62,6 @@ const ClaimForm = () => {
 
   const handleSubmit = () => {
     console.log("Form data submitted:", formData);
-    // Add your form submission logic here
     const payload = CLAIM_REQUEST_BODY(
       formData.patient,
       formData.provider,
@@ -75,10 +76,10 @@ const ClaimForm = () => {
     console.log("payload", payload);
     dispatch(updateRequest(payload));
     dispatch(updateRequestMethod("POST"));
-    dispatch(updateRequestUrl(paths.claim));
+    dispatch(updateRequestUrl(paths.claim_submit));
     dispatch(resetCdsResponse());
     axios
-      .post(baseUrl + paths.claim, payload, {
+      .post(baseUrl + paths.claim_submit, payload, {
         headers: {
           "Content-Type": "application/fhir+json",
         },
@@ -95,6 +96,12 @@ const ClaimForm = () => {
       })
       .catch((error) => {
         console.error("Error submitting claim", error);
+        dispatch(
+          updateCdsResponse({
+            cards: error,
+            systemActions: {},
+          })
+        );
       });
   };
 

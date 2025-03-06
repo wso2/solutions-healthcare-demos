@@ -956,106 +956,196 @@ export const CLAIM_REQUEST_BODY = (
   unitPrice: string
 ) => {
   return {
-    resourceType: "Claim",
-    identifier: [
+    resourceType: "Parameters",
+    parameter: [
       {
-        system: "http://hospital.org/claims",
-        value: "PA-20250302-001",
-      },
-    ],
-    status: "active",
-    type: {
-      coding: [
-        {
-          system: "http://terminology.hl7.org/CodeSystem/claim-type",
-          code: "professional",
-          display: "Professional",
-        },
-      ],
-    },
-    use: `${use}`,
-    priority: {
-      coding: [
-        {
-          system: "http://terminology.hl7.org/CodeSystem/processpriority",
-          code: "stat",
-          display: "Immediate",
-        },
-      ],
-    },
-    patient: {
-      reference: `${patient}`,
-    },
-    created: "2025-03-02",
-    insurer: {
-      reference: `${insurer}`,
-    },
-    provider: {
-      reference: `${provider}`,
-    },
-    insurance: [
-      {
-        sequence: 1,
-        focal: true,
-        coverage: {
-          reference: "Coverage/insurance-coverage",
-        },
-      },
-    ],
-    supportingInfo: [
-      {
-        sequence: 1,
-        category: {
-          coding: [
+        name: "resource",
+        resource: {
+          resourceType: "Bundle",
+          type: "collection",
+          entry: [
             {
-              system:
-                "http://terminology.hl7.org/CodeSystem/claiminformationcategory",
-              code: "info",
-              display: "Supporting Information",
+              resource: {
+                resourceType: "Claim",
+                identifier: [
+                  {
+                    system: "http://hospital.org/claims",
+                    value: "PA-20250302-001",
+                  },
+                ],
+                status: "active",
+                type: {
+                  coding: [
+                    {
+                      system:
+                        "http://terminology.hl7.org/CodeSystem/claim-type",
+                      code: "professional",
+                      display: "Professional",
+                    },
+                  ],
+                },
+                use: `${use}`,
+                priority: {
+                  coding: [
+                    {
+                      system:
+                        "http://terminology.hl7.org/CodeSystem/processpriority",
+                      code: "stat",
+                      display: "Immediate",
+                    },
+                  ],
+                },
+                patient: {
+                  reference: `${patient}`,
+                },
+                created: "2025-03-02",
+                insurer: {
+                  reference: `${insurer}`,
+                },
+                provider: {
+                  reference: `${provider}`,
+                },
+                insurance: [
+                  {
+                    sequence: 1,
+                    focal: true,
+                    coverage: {
+                      reference: "Coverage/insurance-coverage",
+                    },
+                  },
+                ],
+                supportingInfo: [
+                  {
+                    sequence: 1,
+                    category: {
+                      coding: [
+                        {
+                          system:
+                            "http://terminology.hl7.org/CodeSystem/claiminformationcategory",
+                          code: "info",
+                          display: "Supporting Information",
+                        },
+                      ],
+                    },
+                    valueReference: {
+                      reference: `${supportingInfo}`,
+                    },
+                  },
+                ],
+                item: [
+                  {
+                    sequence: 1,
+                    category: {
+                      coding: [
+                        {
+                          system:
+                            "http://terminology.hl7.org/CodeSystem/ex-benefitcategory",
+                          code: "pharmacy",
+                          display: `${category}`,
+                        },
+                      ],
+                    },
+                    productOrService: {
+                      coding: [
+                        {
+                          system: "http://www.nlm.nih.gov/research/umls/rxnorm",
+                          code: "1746007",
+                          display: `${medication}`,
+                        },
+                      ],
+                    },
+                    servicedDate: "2025-03-02",
+                    unitPrice: {
+                      value: +`${unitPrice}`.split(" ")[0],
+                      currency: `${unitPrice}`.split(" ")[1],
+                    },
+                    quantity: {
+                      value: +`${quantity}`,
+                    },
+                  },
+                ],
+              },
             },
           ],
-        },
-        valueReference: {
-          reference: `${supportingInfo}`,
-        },
-      },
-    ],
-    item: [
-      {
-        sequence: 1,
-        category: {
-          coding: [
-            {
-              system:
-                "http://terminology.hl7.org/CodeSystem/ex-benefitcategory",
-              code: "pharmacy",
-              display: `${category}`,
-            },
-          ],
-        },
-        productOrService: {
-          coding: [
-            {
-              system: "http://www.nlm.nih.gov/research/umls/rxnorm",
-              code: "1746007",
-              display: `${medication}`,
-            },
-          ],
-        },
-        servicedDate: "2025-03-02",
-        unitPrice: {
-          value: +`${unitPrice}`.split(" ")[0],
-          currency: `${unitPrice}`.split(" ")[1],
-        },
-        quantity: {
-          value: +`${quantity}`,
         },
       },
     ],
   };
 };
 
-export const PRESCRIBE_MEDICINE_REQUEST_BODY = (
+export const CREATE_MEDICATION_REQUEST_BODY = (
+  patientId: string,
+  practitionerId: string,
+  medicationName: string,
+  quantity: number
+) => {
+  return {
+    resourceType: "MedicationRequest",
+    subject: {
+      reference: "Patient/101",
+    },
+    medicationReference: {
+      reference: "Medication/aimovig-70mg",
+    },
+    dispenseRequest: {
+      quantity: {
+        value: 1.0,
+        unit: "injection",
+        system: "http://unitsofmeasure.org",
+        code: "injection",
+      },
+      expectedSupplyDuration: {
+        unit: "days",
+        system: "http://unitsofmeasure.org",
+        code: "d",
+        value: 30.0,
+      },
+    },
+    requester: {
+      reference: "Practitioner/456",
+    },
+    authoredOn: "2025-03-02",
+    medicationCodeableConcept: {
+      coding: [
+        {
+          system: "http://www.nlm.nih.gov/research/umls/rxnorm",
+          code: "1746007",
+          display: "Aimovig 70 mg Injection",
+        },
+      ],
+      text: "Aimovig 70 mg Injection",
+    },
+    intent: "order",
+    dosageInstruction: [
+      {
+        timing: {
+          repeat: {
+            boundsPeriod: {
+              start: "2025-03-02",
+            },
+            frequency: 1,
+            period: 1.0,
+            periodUnit: "mo",
+          },
+        },
+        doseAndRate: [
+          {
+            doseQuantity: {
+              value: 70.0,
+              unit: "mg",
+              system: "http://unitsofmeasure.org",
+              code: "mg",
+            },
+          },
+        ],
+        text: "Inject 70 mg subcutaneously once a month",
+      },
+    ],
+    status: "active",
+  };
+};
+
+export const CHECK_PAYER_REQUIREMENTS_REQUEST_BODY = (
   patientId: string,
   practitionerId: string,
   medicationName: string,

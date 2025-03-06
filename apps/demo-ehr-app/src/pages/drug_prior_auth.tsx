@@ -91,6 +91,12 @@ const QuestionnniarForm = ({
       })
       .catch((error) => {
         console.error("Error fetching questionnaire data:", error);
+        dispatch(
+          updateCdsResponse({
+            cards: error,
+            systemActions: {},
+          })
+        );
       });
   }, []);
 
@@ -129,10 +135,6 @@ const QuestionnniarForm = ({
               typeof formData[question.linkId] === "number"
                 ? formData[question.linkId]
                 : undefined,
-            // valueQuestionnaireResponseInteger:
-            //   typeof formData[question.linkId] === "integer"
-            //     ? formData[question.linkId]
-            //     : undefined,
             valueQuestionnaireResponseString:
               typeof formData[question.linkId] === "string"
                 ? formData[question.linkId]
@@ -168,6 +170,12 @@ const QuestionnniarForm = ({
       })
       .catch((error) => {
         console.error("Error submitting questionnaire response:", error);
+        dispatch(
+          updateCdsResponse({
+            cards: error,
+            systemActions: {},
+          })
+        );
       });
   };
 
