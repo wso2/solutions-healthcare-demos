@@ -40,20 +40,47 @@ const QuestionnniarForm = ({
   const [questions, setQuestions] = useState<any[]>([]);
   const [formData, setFormData] = useState<{ [key: string]: any }>({});
   // const [isQuestionnaireResponseSubmited, setIsQuestionnaireResponseSubmited] =
-  //   useState(false);
+  //   useState(false)
+  
+  // Prepare the request body
+  const requestBody = {
+    resourceType: "Parameters",
+    id: "questionnaire-package-request",
+    parameter: [
+      {
+        name: "coverage",
+        resource: {
+          resourceType: "Coverage",
+          reference: "Coverage/367",
+        },
+      },
+      {
+        name: "order",
+        resource: {
+          resourceType: "MedicationRequest",
+          reference: "MedicationRequest/111112",
+        },
+      },
+    ],
+  };
 
   useEffect(() => {
     dispatch(resetCdsRequest());
     dispatch(resetCdsResponse());
     // Fetch the questionnaire data from the API
     axios
-      .get(baseUrl + paths.questionnaire + questionnaireId)
+    .post(baseUrl + paths.questionnaire_package, requestBody, {
+      headers: {
+        "Content-Type": "application/fhir+json",
+      },
+    })
       .then((response) => {
         const questionnaire = response.data;
-        setQuestions(questionnaire.item || []);
+        setQuestions(questionnaire.parameter[0].resource.entry[0].resource.item || []);
 
-        dispatch(updateRequestUrl(paths.questionnaire + questionnaireId));
-        dispatch(updateRequestMethod("GET"));
+        dispatch(updateRequestUrl(paths.questionnaire_package));
+        dispatch(updateRequestMethod("POST"));
+        dispatch(updateRequest(requestBody));
 
         dispatch(
           updateCdsResponse({
@@ -98,10 +125,14 @@ const QuestionnniarForm = ({
               typeof formData[question.linkId] === "boolean"
                 ? formData[question.linkId]
                 : undefined,
-            valueQuestionnaireResponseInteger:
+            valueQuestionnaireResponseNumber:
               typeof formData[question.linkId] === "number"
                 ? formData[question.linkId]
                 : undefined,
+            // valueQuestionnaireResponseInteger:
+            //   typeof formData[question.linkId] === "integer"
+            //     ? formData[question.linkId]
+            //     : undefined,
             valueQuestionnaireResponseString:
               typeof formData[question.linkId] === "string"
                 ? formData[question.linkId]

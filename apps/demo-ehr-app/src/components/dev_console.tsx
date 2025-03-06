@@ -14,13 +14,27 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { Box } from "@mui/material";
+import React, { useState } from "react";
+import {
+  Box,
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormControl,
+  FormLabel,
+} from "@mui/material";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { tomorrowNight } from "react-syntax-highlighter/dist/esm/styles/hljs";
 import { useSelector } from "react-redux";
 import "../assets/styles/code_theme.css";
 
 const DevConsole = () => {
+  const [stage, setStage] = useState("vertical");
+
+  const handleStageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setStage((event.target as HTMLInputElement).value);
+  };
+
   const hook = useSelector((state: any) => state.cdsRequest.hook);
   const requestState = useSelector((state: any) => state.cdsRequest.request);
   const requestUrl = useSelector((state: any) => state.cdsRequest.requestUrl);
@@ -42,6 +56,7 @@ const DevConsole = () => {
       >
         Developer Console
       </Box>
+
       {hook && (
         <div
           style={{
@@ -82,81 +97,132 @@ const DevConsole = () => {
           {requestMethod && <b>[{requestMethod}]:</b>} {requestUrl} <br />
         </div>
       )}
-
-      <div
-        style={{
-          height: "3vh",
-          width: "80%",
-          borderRadius: 2,
-          backgroundColor: "#D9D9D9",
-          textAlign: "center",
-          alignSelf: "center",
-          marginTop: 20,
-          marginLeft: "10%",
-          fontSize: 16,
-          fontFamily: "monospace",
-          fontWeight: 500,
-        }}
-      >
-        Request Body
-      </div>
-
-      <div
-        style={{
-          width: "80%",
-          alignContent: "center",
-          marginLeft: "10%",
-          maxHeight: "50vh",
-          overflow: "auto",
-          marginBottom: "15px",
-        }}
-      >
-        <SyntaxHighlighter
-          language="json"
-          style={tomorrowNight}
-          showLineNumbers={true}
+      <div style={{ textAlign: "center", width: "100%" }}>
+        <FormControl
+          component="fieldset"
+          style={{
+            marginTop: 15,
+            // marginBottom: 20,
+            textAlign: "center",
+            color: "white",
+          }}
         >
-          {hook != "cds-services"
-            ? JSON.stringify(cdsRequest, null, 2)
-            : "No Request Body"}
-        </SyntaxHighlighter>
+          <RadioGroup
+            row
+            aria-label="stage"
+            name="stage"
+            value={stage}
+            onChange={handleStageChange}
+          >
+            <FormControlLabel
+              value="vertical"
+              control={<Radio />}
+              label="Vertical"
+            />
+            <FormControlLabel
+              value="horizontal"
+              control={<Radio />}
+              label="Horizontal"
+            />
+          </RadioGroup>
+        </FormControl>
       </div>
-
       <div
         style={{
-          height: "3vh",
-
-          width: "80%",
-          borderRadius: 2,
-          backgroundColor: "#D9D9D9",
-          textAlign: "center",
-          alignSelf: "center",
-          marginLeft: "10%",
-          fontSize: 16,
-          fontFamily: "monospace",
-          fontWeight: 500,
+          display: stage === "vertical" ? "block" : "flex",
+          gap: "10px",
+          margin: "15px",
+          maxWidth: "100%",
         }}
       >
-        Response Body
-      </div>
-
-      <div
-        style={{
-          width: "80%",
-          alignContent: "center",
-          marginLeft: "10%",
-          maxHeight: "50vh",
-          overflow: "auto",
-          marginBottom: "15px",
-        }}
-      >
-        <SyntaxHighlighter
-          language="json"
-          style={tomorrowNight}
-          showLineNumbers={true}
+        <div
+          style={{
+            flex: "1 1 100%",
+            maxWidth: stage === "vertical" ? "100%" : "50%",
+          }}
         >
-          {JSON.stringify(response, null, 2)}
-        </SyntaxHighlighter>
+          <div
+            style={{
+              height: "3vh",
+              // width: "80%",
+              borderRadius: 2,
+              backgroundColor: "#D9D9D9",
+              textAlign: "center",
+              alignSelf: "center",
+              marginTop: 20,
+              // marginLeft: "10%",
+              fontSize: 16,
+              fontFamily: "monospace",
+              fontWeight: 500,
+            }}
+          >
+            Request Body
+          </div>
+
+          <div
+            style={{
+              // width: "80%",
+              alignContent: "center",
+              // marginLeft: "10%",
+              // maxHeight: "50vh",
+              overflow: "auto",
+              marginBottom: "15px",
+            }}
+          >
+            <SyntaxHighlighter
+              language="json"
+              style={tomorrowNight}
+              showLineNumbers={true}
+            >
+              {hook != "cds-services"
+                ? JSON.stringify(cdsRequest, null, 2)
+                : "No Request Body"}
+            </SyntaxHighlighter>
+          </div>
+        </div>
+
+        <div
+          style={{
+            flex: "1 1 100%",
+            maxWidth: stage === "vertical" ? "100%" : "50%",
+          }}
+        >
+          <div
+            style={{
+              height: "3vh",
+              // width: "80%",
+              borderRadius: 2,
+              backgroundColor: "#D9D9D9",
+              textAlign: "center",
+              alignSelf: "center",
+              marginTop: 20,
+              // marginLeft: "10%",
+              fontSize: 16,
+              fontFamily: "monospace",
+              fontWeight: 500,
+            }}
+          >
+            Response Body
+          </div>
+
+          <div
+            style={{
+              alignContent: "center",
+              // marginLeft: "10%",
+              // maxHeight: "50vh",
+              overflow: "auto",
+              marginBottom: "15px",
+            }}
+          >
+            <SyntaxHighlighter
+              language="json"
+              style={tomorrowNight}
+              showLineNumbers={true}
+            >
+              {JSON.stringify(response, null, 2)}
+            </SyntaxHighlighter>
+          </div>
+        </div>
       </div>
     </Box>
   );
