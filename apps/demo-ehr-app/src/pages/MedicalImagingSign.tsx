@@ -1,4 +1,4 @@
-// Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+// Copyright (c) 2024 - 2025, WSO2 LLC. (http://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -38,7 +38,7 @@ import { updateCdsResponse } from "../redux/cdsResponseSlice";
 import axios from "axios";
 import { CdsCard, CdsResponse } from "./MedicalImaging";
 import { Card } from "@chakra-ui/react";
-import { CDS_CHOREO_BACKEND_URL } from "../config/config";
+import { baseUrl, paths } from "../config/urlConfigs";
 
 function MedicalImagingSign() {
   const { expanded } = useContext(ExpandedContext);
@@ -99,7 +99,7 @@ function MedicalImagingSign() {
     );
     axios
       .post<CdsResponse>(
-        CDS_CHOREO_BACKEND_URL + "/book-imaging-center",
+        baseUrl + paths.book_imaging_center,
         payload
       )
       .then<CdsResponse>((res) => {

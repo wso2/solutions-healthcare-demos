@@ -76,7 +76,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
               <Route path="drug-order" element={<DrugOrderPage />} />
               <Route path="drug-order-v2" element={<DrugOrderPageV2 />} />
               <Route path="drug-order-v2/prior-auth/*" element={<DrugPiorAuthPage />} />
-              <Route path="drug-order-v2/claim/*" element={<DrugClaimPage />} />
+              <Route path="drug-order-v2/claim-submit/*" element={<DrugClaimPage />} />
               <Route
                 path="drug-order/:drugName"
                 element={<DrugDetailsPage />}

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import "../assets/styles/appointment.css";
 import MessageBox from "../components/message_box";
 import appointmentImage from "../assets/images/appointment-booking.png";
-import urlConfig from "../config/urlConfigs";
+import { baseUrl, paths } from "../config/urlConfigs";
 import { ExpandedContext } from "../utils/expanded_context";
 import { useDispatch } from "react-redux";
 import { resetCdsResponse, updateCdsResponse } from "../redux/cdsResponseSlice";
@@ -77,7 +77,7 @@ function App() {
 
     setLoading(true); // Show spinner while loading doctors
     //const url = `/fhir8081/r4/Practitioner?family=${lastName}&given=${firstName}`;
-    const url = `${urlConfig.baseUrl}/${urlConfig.paths.practitioner}?family=${lastName}&given=${firstName}`;
+    const url = `${baseUrl}${paths.practitioner}?family=${lastName}&given=${firstName}`;
     dispatch(resetCdsRequest());
     dispatch(updateRequest({ Method: "GET", URL: url }));
     dispatch(resetCdsResponse());
@@ -123,7 +123,7 @@ function App() {
       const endDate = appointmentDate;
       const practitionerId = selectedDoctor.id;
 
-      const url = `${urlConfig.baseUrl}/${urlConfig.paths.slot}?startDate=${startDate}&endDate=${endDate}&practitioner=${practitionerId}`;
+      const url = `${baseUrl}${paths.slot}?startDate=${startDate}&endDate=${endDate}&practitioner=${practitionerId}`;
       dispatch(resetCdsRequest());
       dispatch(updateRequest({ Method: "GET", URL: url }));
       dispatch(resetCdsResponse());
@@ -162,7 +162,7 @@ function App() {
     for (const slot of slots) {
       if (!newLocations[slot.locationReference]) {
         try {
-          const locationUrl = `${urlConfig.baseUrl}/${urlConfig.paths.location}/${slot.locationReference}`;
+          const locationUrl = `${baseUrl}${paths.location}/${slot.locationReference}`;
           const res = await fetch(locationUrl);
           const data = await res.json();
           newLocations[slot.locationReference] = data.name;
@@ -249,7 +249,7 @@ function App() {
     };
 
     try {
-      const appointmentUrl = `${urlConfig.baseUrl}/${urlConfig.paths.appointment}`;
+      const appointmentUrl = `${baseUrl}${paths.appointment}`;
       dispatch(resetCdsRequest());
       dispatch(
         updateRequest({

@@ -292,7 +292,7 @@ const QuestionnniarForm = ({
           variant="success"
           style={{ marginTop: "30px", marginRight: "20px", float: "right" }}
           onClick={() =>
-            window.open("/dashboard/drug-order-v2/claim", "_blank")
+            window.open("/dashboard/drug-order-v2/claim-submit", "_blank")
           }
           disabled={!isQuestionnaireResponseSubmited}
         >

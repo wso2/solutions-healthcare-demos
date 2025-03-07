@@ -72,19 +72,19 @@ export default function NavBar() {
               Appointment
             </Button>
             <Button href="/dashboard/drug-order-v2" color="inherit">
-              Drugs
+              Order Drugs
             </Button>
-            <Button href="/dashboard/drug-order-v2/prior-auth?questionnaireId=4" color="inherit">
+            {/* <Button href="/dashboard/drug-order-v2/prior-auth?questionnaireId=4" color="inherit">
               Drugs Prior Auth
             </Button>
-            <Button href="/dashboard/drug-order-v2/claim" color="inherit">
+            <Button href="/dashboard/drug-order-v2/claim-submit" color="inherit">
               Drugs Claim Submit
-            </Button>
+            </Button> */}
             <Button href="/dashboard/device-order-v2" color="inherit">
-              Devices
+              Order Devices
             </Button>
             <Button href="/dashboard/medical-imaging" color="inherit">
-              Imaging
+              Order Imaging
             </Button>
           </Box>
           <Button href="/dashboard/patient">
