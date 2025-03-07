@@ -57,8 +57,6 @@ const PrescribeForm = ({
     }) => state.medicationFormData
   );
 
-  console.log("Init Medication Form Data: ", medicationFormData);
-
   const [patientId] = useState("john-smith");
   const [practionerId] = useState("456");
   const [isSubmited, setIsSubmited] = useState(false);
@@ -73,7 +71,11 @@ const PrescribeForm = ({
     actionMeta: ActionMeta<{ value: string | null }>
   ) => {
     dispatch(
-      updateMedicationFormData({ [actionMeta.name as string]: selectedOption ? selectedOption.value : null })
+      updateMedicationFormData({
+        [actionMeta.name as string]: selectedOption
+          ? selectedOption.value
+          : null,
+      })
     );
   };
 
@@ -83,11 +85,9 @@ const PrescribeForm = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form Data:", medicationFormData);
   };
 
   const handleCheckPayerRequirements = () => {
-    console.log("Getting payer requirements");
     dispatch(resetCdsRequest());
     dispatch(resetCdsResponse());
 
@@ -97,36 +97,31 @@ const PrescribeForm = ({
       medicationFormData.medication as string,
       medicationFormData.quantity as number
     );
-    console.log("Payload: \n", payload);
     setCdsCards([]);
     dispatch(updateCdsHook("order-sign"));
     dispatch(updateRequestMethod("POST"));
-    dispatch(updateRequestUrl(paths.prescribe_medication));
+    dispatch(updateRequestUrl("/cds-services/prescirbe-medication"));
     dispatch(updateRequest(payload));
     axios
       .post<CdsResponse>(baseUrl + paths.prescribe_medication, payload)
       .then<CdsResponse>((res) => {
         setCdsCards(res.data.cards);
 
-        dispatch(updateCdsResponse({ cards: res, systemActions: {} }));
-
+        dispatch(updateCdsResponse({ cards: res.data, systemActions: {} }));
         return res.data;
       })
       .catch((err) => {
-        console.log(err);
         dispatch(updateCdsResponse({ cards: err, systemActions: {} }));
       });
   };
 
   const handleCreateMedicationOrder = () => {
-    console.log("Creating medication order");
     dispatch(resetCdsRequest());
     dispatch(resetCdsResponse());
 
     const payload = CREATE_MEDICATION_REQUEST_BODY();
-    console.log("Medication Request Payload: \n", payload);
     dispatch(updateRequestMethod("POST"));
-    dispatch(updateRequestUrl(paths.medication_request));
+    dispatch(updateRequestUrl("/fhir/r4/MedicationRequest"));
     dispatch(updateRequest(payload));
     axios
       .post<CdsResponse>(baseUrl + paths.medication_request, payload, {
@@ -135,12 +130,11 @@ const PrescribeForm = ({
         },
       })
       .then<CdsResponse>((res) => {
-        dispatch(updateCdsResponse({ cards: res, systemActions: {} }));
+        dispatch(updateCdsResponse({ cards: res.data, systemActions: {} }));
         setIsSubmited(true);
         return res.data;
       })
       .catch((err) => {
-        console.log(err);
         dispatch(updateCdsResponse({ cards: err, systemActions: {} }));
       });
   };
@@ -242,7 +236,11 @@ const PrescribeForm = ({
               <Form.Label>Starting Date</Form.Label>
               <br />
               <DatePicker
-                selected={medicationFormData.startDate instanceof Date ? medicationFormData.startDate : null}
+                selected={
+                  medicationFormData.startDate instanceof Date
+                    ? medicationFormData.startDate
+                    : null
+                }
                 onChange={handleDateSelectChange}
                 dateFormat="yyyy/MM/dd"
                 className="form-control"

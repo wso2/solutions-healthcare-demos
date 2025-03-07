@@ -54,10 +54,7 @@ const QuestionnniarForm = ({
   const [formData, setFormData] = useState<{
     [key: string]: string | number | boolean;
   }>({});
-  // const [isQuestionnaireResponseSubmited, setIsQuestionnaireResponseSubmited] =
-  //   useState(false)
 
-  // Prepare the request body
   const requestBody = {
     resourceType: "Parameters",
     id: "questionnaire-package-request",
@@ -95,7 +92,9 @@ const QuestionnniarForm = ({
           questionnaire.parameter[0].resource.entry[0].resource.item || []
         );
 
-        dispatch(updateRequestUrl(paths.questionnaire_package));
+        dispatch(
+          updateRequestUrl("/fhir/r4/Questionnaire/$questionnaire-package")
+        );
         dispatch(updateRequestMethod("POST"));
         dispatch(updateRequest(requestBody));
 
@@ -118,8 +117,9 @@ const QuestionnniarForm = ({
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    const { name, value, type } = e.target;
+    const parsedValue = type === "number" ? parseFloat(value) : value;
+    setFormData({ ...formData, [name]: parsedValue });
   };
 
   const handleBooleanChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -181,7 +181,7 @@ const QuestionnniarForm = ({
     dispatch(resetCdsRequest());
     dispatch(resetCdsResponse());
     dispatch(updateRequest(questionnaireResponse));
-    dispatch(updateRequestUrl(paths.questionnaire_response));
+    dispatch(updateRequestUrl("/fhir/r4/QuestionnaireResponse"));
     dispatch(updateRequestMethod("POST"));
 
     // Submit the questionnaire response to the API
@@ -192,11 +192,9 @@ const QuestionnniarForm = ({
         },
       })
       .then((response) => {
-        console.log(
-          "Questionnaire response submitted successfully:",
-          response.data
+        dispatch(
+          updateCdsResponse({ cards: response.data, systemActions: {} })
         );
-        dispatch(updateCdsResponse({ cards: response, systemActions: {} }));
         alert("Questionnaire response submitted successfully!");
         setIsQuestionnaireResponseSubmited(true);
       })
@@ -213,15 +211,15 @@ const QuestionnniarForm = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Form Data:", formData);
-
     const questionnaireResponse = generateQuestionnaireResponse();
-    console.log("Questionnaire Response:", questionnaireResponse);
-
     submitQuestionnaireResponse(questionnaireResponse);
   };
 
-  const renderFormField = (question: { linkId: string; text: string; type: string }) => {
+  const renderFormField = (question: {
+    linkId: string;
+    text: string;
+    type: string;
+  }) => {
     switch (question.type) {
       case "boolean":
         return (
@@ -246,7 +244,6 @@ const QuestionnniarForm = ({
           <Form.Control
             type="number"
             name={question.linkId}
-            // value={formData[question.linkId] || ""}
             onChange={handleInputChange}
           />
         );
@@ -256,7 +253,6 @@ const QuestionnniarForm = ({
           <Form.Control
             type="text"
             name={question.linkId}
-            // value={formData[question.linkId] || ""}
             onChange={handleInputChange}
           />
         );
@@ -315,7 +311,6 @@ const PrescribedForm = () => {
       };
     }) => state.medicationFormData
   );
-  console.log("medicationFormData", medicationFormData);
   const treatingSickness = medicationFormData.treatingSickness;
   const medication = medicationFormData.medication;
   const quantity = medicationFormData.quantity;
@@ -421,21 +416,9 @@ const DetailsDiv = ({ questionnaireId }: { questionnaireId: string }) => {
 export default function DrugPiorAuthPage() {
   const query = useQuery();
   const questionnaireId = query.get("questionnaireId");
-  const medicationFormData = useSelector(
-    (state: {
-      medicationFormData: {
-        treatingSickness: string;
-        medication: string;
-        quantity: string;
-        frequency: string;
-        startDate: Date;
-      };
-    }) => state.medicationFormData
-  );
   const [isQuestionnaireResponseSubmited, setIsQuestionnaireResponseSubmited] =
     useState(false);
 
-  console.log("medicationFormData", medicationFormData);
   return (
     <div style={{ marginLeft: 50, marginBottom: 50 }}>
       <div className="page-heading">
