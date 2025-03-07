@@ -81,7 +81,7 @@ const ClaimForm = () => {
     console.log("payload", payload);
     dispatch(updateRequest(payload));
     dispatch(updateRequestMethod("POST"));
-    dispatch(updateRequestUrl(paths.claim_submit));
+    dispatch(updateRequestUrl("/fhir/r4/Claim/$submit"));
     dispatch(resetCdsResponse());
     axios
       .post(baseUrl + paths.claim_submit, payload, {
