@@ -14,12 +14,11 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import axios from "axios";
 import Form from "react-bootstrap/Form";
 import Card from "react-bootstrap/Card";
 import Button from "react-bootstrap/Button";
-import { useLocation } from "react-router-dom";
 import { baseUrl, paths } from "../config/urlConfigs";
 import { useDispatch, useSelector } from "react-redux";
 import {
@@ -30,17 +29,23 @@ import {
 import { updateCdsResponse, resetCdsResponse } from "../redux/cdsResponseSlice";
 import { CLAIM_REQUEST_BODY } from "../constants/data";
 
-const useQuery = () => {
-  return new URLSearchParams(useLocation().search);
-};
-
 const ClaimForm = () => {
-  const query = useQuery();
   const dispatch = useDispatch();
   const medicationFormData = useSelector(
-    (state: any) => state.medicationFormData
+    (state: { medicationFormData: { medication: string; quantity: string } }) =>
+      state.medicationFormData
   );
-  const [formData, setFormData] = useState<{ [key: string]: any }>({
+  const [formData, setFormData] = useState<{
+    medication: string;
+    quantity: string;
+    patient: string;
+    provider: string;
+    insurer: string;
+    use: string;
+    supportingInfo: string;
+    category: string;
+    unitPrice: string;
+  }>({
     medication: medicationFormData.medication,
     quantity: medicationFormData.quantity,
     patient: "Patient/101",
@@ -85,14 +90,18 @@ const ClaimForm = () => {
         },
       })
       .then((response) => {
-        console.log("Claim submitted successfully", response.data);
+        console.log("Claim submitted successfully");
         dispatch(
           updateCdsResponse({
             cards: response,
             systemActions: {},
           })
         );
-        alert("Claim submitted successfully");
+        alert(
+          `Claim submitted successfully. Outcome: ${response.data.parameter[0].resource.outcome}`
+        );
+        console.log("response", response);
+        console.log("outcome", response.data.parameter[0].resource.outcome);
       })
       .catch((error) => {
         console.error("Error submitting claim", error);
@@ -253,10 +262,9 @@ const ClaimForm = () => {
 };
 
 export default function DrugClaimPage() {
-  const query = useQuery();
-  const questionnaireId = query.get("questionnaireId");
   const medicationFormData = useSelector(
-    (state: any) => state.medicationFormData
+    (state: { medicationFormData: { medication: string; quantity: string } }) =>
+      state.medicationFormData
   );
 
   console.log("medicationFormData", medicationFormData);
@@ -264,7 +272,7 @@ export default function DrugClaimPage() {
     <div style={{ marginLeft: 50, marginBottom: 50 }}>
       <div className="page-heading">Claim Insurance</div>
       <ClaimForm />
-      <style jsx>{`
+      <style>{`
         .card {
           height: 100%;
           display: flex;

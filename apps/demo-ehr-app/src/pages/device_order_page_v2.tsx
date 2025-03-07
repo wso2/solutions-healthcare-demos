@@ -36,8 +36,16 @@ const PrescribeDeviceForm = () => {
     setFormData({ ...formData, [name]: value });
   };
 
-  const handleSelectChange = (selectedOption: any, actionMeta: any) => {
-    setFormData({ ...formData, [actionMeta.name]: selectedOption.value });
+  const handleSelectChange = (
+    newValue: { value: string; label: string } | null,
+    actionMeta: { name?: string }
+  ) => {
+    if (actionMeta.name) {
+      setFormData({
+        ...formData,
+        [actionMeta.name]: newValue ? newValue.value : "",
+      });
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -173,7 +181,7 @@ export default function DeviceOrderPageV2() {
       <div>
         <PrescribeDeviceCard />
       </div>
-      <style jsx>{`
+      <style>{`
         .card {
           height: 100%;
           display: flex;

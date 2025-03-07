@@ -24,7 +24,12 @@ import { baseUrl, paths } from "../config/urlConfigs";
 import Select from "react-select";
 import DatePicker from "react-datepicker";
 import { useDispatch, useSelector } from "react-redux";
-import { updateRequest, updateRequestUrl, updateRequestMethod, resetCdsRequest } from "../redux/cdsRequestSlice";
+import {
+  updateRequest,
+  updateRequestUrl,
+  updateRequestMethod,
+  resetCdsRequest,
+} from "../redux/cdsRequestSlice";
 import { updateCdsResponse, resetCdsResponse } from "../redux/cdsResponseSlice";
 
 const useQuery = () => {
@@ -35,13 +40,23 @@ const QuestionnniarForm = ({
   questionnaireId,
   isQuestionnaireResponseSubmited,
   setIsQuestionnaireResponseSubmited,
+}: {
+  questionnaireId: string;
+  isQuestionnaireResponseSubmited: boolean;
+  setIsQuestionnaireResponseSubmited: React.Dispatch<
+    React.SetStateAction<boolean>
+  >;
 }) => {
   const dispatch = useDispatch();
-  const [questions, setQuestions] = useState<any[]>([]);
-  const [formData, setFormData] = useState<{ [key: string]: any }>({});
+  const [questions, setQuestions] = useState<
+    { linkId: string; text: string; type: string }[]
+  >([]);
+  const [formData, setFormData] = useState<{
+    [key: string]: string | number | boolean;
+  }>({});
   // const [isQuestionnaireResponseSubmited, setIsQuestionnaireResponseSubmited] =
   //   useState(false)
-  
+
   // Prepare the request body
   const requestBody = {
     resourceType: "Parameters",
@@ -69,14 +84,16 @@ const QuestionnniarForm = ({
     dispatch(resetCdsResponse());
     // Fetch the questionnaire data from the API
     axios
-    .post(baseUrl + paths.questionnaire_package, requestBody, {
-      headers: {
-        "Content-Type": "application/fhir+json",
-      },
-    })
+      .post(baseUrl + paths.questionnaire_package, requestBody, {
+        headers: {
+          "Content-Type": "application/fhir+json",
+        },
+      })
       .then((response) => {
         const questionnaire = response.data;
-        setQuestions(questionnaire.parameter[0].resource.entry[0].resource.item || []);
+        setQuestions(
+          questionnaire.parameter[0].resource.entry[0].resource.item || []
+        );
 
         dispatch(updateRequestUrl(paths.questionnaire_package));
         dispatch(updateRequestMethod("POST"));
@@ -129,15 +146,15 @@ const QuestionnniarForm = ({
           {
             valueQuestionnaireResponseBoolean:
               typeof formData[question.linkId] === "boolean"
-                ? formData[question.linkId]
+                ? (formData[question.linkId] as boolean)
                 : undefined,
             valueQuestionnaireResponseNumber:
               typeof formData[question.linkId] === "number"
-                ? formData[question.linkId]
+                ? (formData[question.linkId] as number)
                 : undefined,
             valueQuestionnaireResponseString:
               typeof formData[question.linkId] === "string"
-                ? formData[question.linkId]
+                ? (formData[question.linkId] as string)
                 : undefined,
           },
         ],
@@ -145,7 +162,22 @@ const QuestionnniarForm = ({
     };
   };
 
-  const submitQuestionnaireResponse = (questionnaireResponse: any) => {
+  const submitQuestionnaireResponse = (questionnaireResponse: {
+    resourceType: string;
+    questionnaire: string;
+    status: string;
+    subject: { reference: string };
+    author: { reference: string };
+    item: {
+      linkId: string;
+      text: string;
+      answer: {
+        valueQuestionnaireResponseBoolean?: boolean;
+        valueQuestionnaireResponseNumber?: number;
+        valueQuestionnaireResponseString?: string;
+      }[];
+    }[];
+  }) => {
     dispatch(resetCdsRequest());
     dispatch(resetCdsResponse());
     dispatch(updateRequest(questionnaireResponse));
@@ -187,10 +219,9 @@ const QuestionnniarForm = ({
     console.log("Questionnaire Response:", questionnaireResponse);
 
     submitQuestionnaireResponse(questionnaireResponse);
-
   };
 
-  const renderFormField = (question: any) => {
+  const renderFormField = (question: { linkId: string; text: string; type: string }) => {
     switch (question.type) {
       case "boolean":
         return (
@@ -215,7 +246,7 @@ const QuestionnniarForm = ({
           <Form.Control
             type="number"
             name={question.linkId}
-            value={formData[question.linkId] || ""}
+            // value={formData[question.linkId] || ""}
             onChange={handleInputChange}
           />
         );
@@ -225,7 +256,7 @@ const QuestionnniarForm = ({
           <Form.Control
             type="text"
             name={question.linkId}
-            value={formData[question.linkId] || ""}
+            // value={formData[question.linkId] || ""}
             onChange={handleInputChange}
           />
         );
@@ -260,7 +291,9 @@ const QuestionnniarForm = ({
         <Button
           variant="success"
           style={{ marginTop: "30px", marginRight: "20px", float: "right" }}
-          onClick={() => window.open("/dashboard/drug-order-v2/claim", "_blank")}
+          onClick={() =>
+            window.open("/dashboard/drug-order-v2/claim", "_blank")
+          }
           disabled={!isQuestionnaireResponseSubmited}
         >
           Visit Claim Submission
@@ -271,16 +304,22 @@ const QuestionnniarForm = ({
 };
 
 const PrescribedForm = () => {
-  const query = useQuery();
   const medicationFormData = useSelector(
-    (state: any) => state.medicationFormData
+    (state: {
+      medicationFormData: {
+        treatingSickness: string;
+        medication: string;
+        quantity: string;
+        frequency: string;
+        startDate: Date;
+      };
+    }) => state.medicationFormData
   );
   console.log("medicationFormData", medicationFormData);
   const treatingSickness = medicationFormData.treatingSickness;
   const medication = medicationFormData.medication;
   const quantity = medicationFormData.quantity;
   const frequency = medicationFormData.frequency;
-  const startDate = medicationFormData.startDate;
 
   return (
     <Card style={{ marginTop: "30px", padding: "20px" }}>
@@ -383,7 +422,15 @@ export default function DrugPiorAuthPage() {
   const query = useQuery();
   const questionnaireId = query.get("questionnaireId");
   const medicationFormData = useSelector(
-    (state: any) => state.medicationFormData
+    (state: {
+      medicationFormData: {
+        treatingSickness: string;
+        medication: string;
+        quantity: string;
+        frequency: string;
+        startDate: Date;
+      };
+    }) => state.medicationFormData
   );
   const [isQuestionnaireResponseSubmited, setIsQuestionnaireResponseSubmited] =
     useState(false);
@@ -401,7 +448,7 @@ export default function DrugPiorAuthPage() {
         isQuestionnaireResponseSubmited={isQuestionnaireResponseSubmited}
         setIsQuestionnaireResponseSubmited={setIsQuestionnaireResponseSubmited}
       />
-      <style jsx>{`
+      <style>{`
         .card {
           height: 100%;
           display: flex;

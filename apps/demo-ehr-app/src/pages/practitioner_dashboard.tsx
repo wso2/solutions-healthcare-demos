@@ -21,7 +21,7 @@ import { ServiceCardListProps } from "../components/interfaces/card";
 import MultiActionAreaCard from "../components/serviceCard";
 import { useContext } from "react";
 import { ExpandedContext } from "../utils/expanded_context";
-import { useSelector, useDispatch } from "react-redux";
+import { useSelector } from "react-redux";
 import Form from "react-bootstrap/Form";
 
 function ServiceCardList({ services, expanded }: ServiceCardListProps) {

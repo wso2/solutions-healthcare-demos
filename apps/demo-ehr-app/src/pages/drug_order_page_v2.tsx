@@ -20,7 +20,7 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import "react-datepicker/dist/react-datepicker.css";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
-import Select from "react-select";
+import Select, { ActionMeta, SingleValue } from "react-select";
 import Card from "react-bootstrap/Card";
 import DatePicker from "react-datepicker";
 import { useDispatch, useSelector } from "react-redux";
@@ -45,11 +45,19 @@ import { CdsCard, CdsResponse } from "../components/interfaces/cdsCard";
 import axios from "axios";
 import { baseUrl, paths } from "../config/urlConfigs";
 
-const PrescribeForm = ({ setCdsCards }) => {
+const PrescribeForm = ({
+  setCdsCards,
+}: {
+  setCdsCards: React.Dispatch<React.SetStateAction<CdsCard[]>>;
+}) => {
   const dispatch = useDispatch();
   const medicationFormData = useSelector(
-    (state: any) => state.medicationFormData
+    (state: {
+      medicationFormData: { [key: string]: string | number | Date | null };
+    }) => state.medicationFormData
   );
+
+  console.log("Init Medication Form Data: ", medicationFormData);
 
   const [patientId] = useState("john-smith");
   const [practionerId] = useState("456");
@@ -60,9 +68,12 @@ const PrescribeForm = ({ setCdsCards }) => {
     dispatch(updateMedicationFormData({ [name]: value }));
   };
 
-  const handleSelectChange = (selectedOption: any, actionMeta: any) => {
+  const handleSelectChange = (
+    selectedOption: SingleValue<{ value: string | null }>,
+    actionMeta: ActionMeta<{ value: string | null }>
+  ) => {
     dispatch(
-      updateMedicationFormData({ [actionMeta.name]: selectedOption.value })
+      updateMedicationFormData({ [actionMeta.name as string]: selectedOption ? selectedOption.value : null })
     );
   };
 
@@ -83,8 +94,8 @@ const PrescribeForm = ({ setCdsCards }) => {
     const payload = CHECK_PAYER_REQUIREMENTS_REQUEST_BODY(
       patientId,
       practionerId,
-      medicationFormData.medication,
-      medicationFormData.quantity
+      medicationFormData.medication as string,
+      medicationFormData.quantity as number
     );
     console.log("Payload: \n", payload);
     setCdsCards([]);
@@ -97,9 +108,7 @@ const PrescribeForm = ({ setCdsCards }) => {
       .then<CdsResponse>((res) => {
         setCdsCards(res.data.cards);
 
-        dispatch(
-          updateCdsResponse({ cards: res, systemActions: {} })
-        );
+        dispatch(updateCdsResponse({ cards: res, systemActions: {} }));
 
         return res.data;
       })
@@ -114,12 +123,7 @@ const PrescribeForm = ({ setCdsCards }) => {
     dispatch(resetCdsRequest());
     dispatch(resetCdsResponse());
 
-    const payload = CREATE_MEDICATION_REQUEST_BODY(
-      patientId,
-      practionerId,
-      medicationFormData.medication,
-      medicationFormData.quantity
-    );
+    const payload = CREATE_MEDICATION_REQUEST_BODY();
     console.log("Medication Request Payload: \n", payload);
     dispatch(updateRequestMethod("POST"));
     dispatch(updateRequestUrl(paths.medication_request));
@@ -131,9 +135,7 @@ const PrescribeForm = ({ setCdsCards }) => {
         },
       })
       .then<CdsResponse>((res) => {
-        dispatch(
-          updateCdsResponse({ cards: res, systemActions: {} })
-        );
+        dispatch(updateCdsResponse({ cards: res, systemActions: {} }));
         setIsSubmited(true);
         return res.data;
       })
@@ -240,7 +242,7 @@ const PrescribeForm = ({ setCdsCards }) => {
               <Form.Label>Starting Date</Form.Label>
               <br />
               <DatePicker
-                selected={medicationFormData.startDate}
+                selected={medicationFormData.startDate instanceof Date ? medicationFormData.startDate : null}
                 onChange={handleDateSelectChange}
                 dateFormat="yyyy/MM/dd"
                 className="form-control"
@@ -274,7 +276,11 @@ const PrescribeForm = ({ setCdsCards }) => {
   );
 };
 
-const PrescribeMedicineCard = ({ setCdsCards }) => {
+const PrescribeMedicineCard = ({
+  setCdsCards,
+}: {
+  setCdsCards: React.Dispatch<React.SetStateAction<CdsCard[]>>;
+}) => {
   return (
     <div
       style={{
@@ -287,7 +293,7 @@ const PrescribeMedicineCard = ({ setCdsCards }) => {
   );
 };
 
-const PayerRequirementsCard = ({ cdsCards }) => {
+const PayerRequirementsCard = ({ cdsCards }: { cdsCards: CdsCard[] }) => {
   return (
     <div
       style={{
@@ -303,10 +309,11 @@ const PayerRequirementsCard = ({ cdsCards }) => {
   );
 };
 
-const RequirementCard = ({ requirementsResponsCard }) => {
-  const medicationFormData = useSelector(
-    (state: any) => state.medicationFormData
-  );
+const RequirementCard = ({
+  requirementsResponsCard,
+}: {
+  requirementsResponsCard: CdsCard;
+}) => {
   return (
     <div>
       <Card style={{ marginTop: "30px", padding: "20px" }}>
@@ -359,9 +366,10 @@ const RequirementCard = ({ requirementsResponsCard }) => {
               )}
             </div>
             <ul>
-              {requirementsResponsCard.suggestions.map((suggestion, index) => (
-                <li key={index}>{suggestion.label}</li>
-              ))}
+              {requirementsResponsCard.suggestions &&
+                requirementsResponsCard.suggestions.map((suggestion, index) => (
+                  <li key={index}>{suggestion.label}</li>
+                ))}
             </ul>
             {requirementsResponsCard.links &&
               requirementsResponsCard.links.length > 0 && (
@@ -423,7 +431,7 @@ export default function DrugOrderPageV2() {
         }}
       ></div>
       <PayerRequirementsCard cdsCards={cdsCards} />
-      <style jsx>{`
+      <style>{`
         .card {
           height: 100%;
           display: flex;

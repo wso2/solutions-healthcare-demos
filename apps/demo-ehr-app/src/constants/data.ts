@@ -1074,10 +1074,6 @@ export const CLAIM_REQUEST_BODY = (
 };
 
 export const CREATE_MEDICATION_REQUEST_BODY = (
-  patientId: string,
-  practitionerId: string,
-  medicationName: string,
-  quantity: number
 ) => {
   return {
     resourceType: "MedicationRequest",
