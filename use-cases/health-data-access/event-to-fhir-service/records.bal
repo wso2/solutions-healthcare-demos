@@ -39,6 +39,10 @@ public type HL7Data record {
     string mllpStr;
 };
 
+public type CCDAData record {
+    string ccdaStr;
+};
+
 public type Identifier record {
     IdType id_type;
     string id_value;
