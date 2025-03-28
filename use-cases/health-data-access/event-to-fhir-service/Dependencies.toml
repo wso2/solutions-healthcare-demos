@@ -5,7 +5,7 @@
 
 [ballerina]
 dependencies-toml-version = "2"
-distribution-version = "2201.10.2"
+distribution-version = "2201.10.3"
 
 [[package]]
 org = "ballerina"
@@ -61,7 +61,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "http"
-version = "2.12.4"
+version = "2.12.8"
 dependencies = [
 	{org = "ballerina", name = "auth"},
 	{org = "ballerina", name = "cache"},
@@ -97,9 +97,6 @@ version = "1.6.3"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"},
 	{org = "ballerina", name = "lang.value"}
-]
-modules = [
-	{org = "ballerina", packageName = "io", moduleName = "io"}
 ]
 
 [[package]]
@@ -144,15 +141,6 @@ dependencies = [
 org = "ballerina"
 name = "lang.decimal"
 version = "0.0.0"
-dependencies = [
-	{org = "ballerina", name = "jballerina.java"}
-]
-
-[[package]]
-org = "ballerina"
-name = "lang.error"
-version = "0.0.0"
-scope = "testOnly"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"}
 ]
@@ -272,24 +260,10 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "tcp"
-version = "1.11.2"
+version = "1.11.3"
 dependencies = [
 	{org = "ballerina", name = "crypto"},
 	{org = "ballerina", name = "jballerina.java"}
-]
-
-[[package]]
-org = "ballerina"
-name = "test"
-version = "0.0.0"
-scope = "testOnly"
-dependencies = [
-	{org = "ballerina", name = "jballerina.java"},
-	{org = "ballerina", name = "lang.array"},
-	{org = "ballerina", name = "lang.error"}
-]
-modules = [
-	{org = "ballerina", packageName = "test", moduleName = "test"}
 ]
 
 [[package]]
@@ -364,7 +338,7 @@ modules = [
 [[package]]
 org = "ballerinax"
 name = "health.fhir.r4"
-version = "5.2.1"
+version = "5.2.2"
 dependencies = [
 	{org = "ballerina", name = "constraint"},
 	{org = "ballerina", name = "http"},
@@ -385,7 +359,7 @@ modules = [
 [[package]]
 org = "ballerinax"
 name = "health.fhir.r4.international401"
-version = "2.2.0"
+version = "2.2.2"
 dependencies = [
 	{org = "ballerina", name = "constraint"},
 	{org = "ballerina", name = "log"},
@@ -410,6 +384,16 @@ dependencies = [
 
 [[package]]
 org = "ballerinax"
+name = "health.fhir.r4.uscore501"
+version = "1.4.0"
+dependencies = [
+	{org = "ballerina", name = "constraint"},
+	{org = "ballerina", name = "log"},
+	{org = "ballerinax", name = "health.fhir.r4"}
+]
+
+[[package]]
+org = "ballerinax"
 name = "health.fhir.r4.validator"
 version = "4.3.0"
 dependencies = [
@@ -423,6 +407,20 @@ dependencies = [
 ]
 modules = [
 	{org = "ballerinax", packageName = "health.fhir.r4.validator", moduleName = "health.fhir.r4.validator"}
+]
+
+[[package]]
+org = "ballerinax"
+name = "health.fhir.r4utils.ccdatofhir"
+version = "2.1.0"
+dependencies = [
+	{org = "ballerina", name = "io"},
+	{org = "ballerina", name = "log"},
+	{org = "ballerinax", name = "health.fhir.r4"},
+	{org = "ballerinax", name = "health.fhir.r4.uscore501"}
+]
+modules = [
+	{org = "ballerinax", packageName = "health.fhir.r4utils.ccdatofhir", moduleName = "health.fhir.r4utils.ccdatofhir"}
 ]
 
 [[package]]
@@ -466,7 +464,7 @@ modules = [
 [[package]]
 org = "ballerinax"
 name = "health.hl7v23"
-version = "3.1.0"
+version = "3.1.1"
 dependencies = [
 	{org = "ballerina", name = "log"},
 	{org = "ballerinax", name = "health.hl7v2"}
@@ -557,14 +555,13 @@ name = "event_to_fhir"
 version = "1.0.0"
 dependencies = [
 	{org = "ballerina", name = "http"},
-	{org = "ballerina", name = "io"},
 	{org = "ballerina", name = "log"},
-	{org = "ballerina", name = "test"},
 	{org = "ballerinai", name = "observe"},
 	{org = "ballerinax", name = "health.clients.fhir"},
 	{org = "ballerinax", name = "health.fhir.r4"},
 	{org = "ballerinax", name = "health.fhir.r4.international401"},
 	{org = "ballerinax", name = "health.fhir.r4.validator"},
+	{org = "ballerinax", name = "health.fhir.r4utils.ccdatofhir"},
 	{org = "ballerinax", name = "health.hl7v2.utils.v2tofhirr4"}
 ]
 modules = [

@@ -19,6 +19,7 @@ import ballerinax/health.fhir.r4;
 import ballerinax/health.fhir.r4.validator;
 import ballerinax/health.hl7v2.utils.v2tofhirr4;
 import ballerinax/health.fhir.r4.international401;
+import ballerinax/health.fhir.r4utils.ccdatofhir;
 
 # Mapper function to map health data to FHIR resources
 #
@@ -56,6 +57,27 @@ public isolated function mapToFhir(string eventType, anydata payload) returns an
                             log:printInfo(string `FHIR resource: ${fhirResource.toJsonString()}`, mappedData = fhirResource);
                             return fhirResource;
                         }
+                    }
+                }
+            }
+        }
+        "ccda_data" => {
+            CCDAData|error ccdaDataRecord = payload.cloneWithType();
+            if ccdaDataRecord is error {
+                return r4:createFHIRError("Error occurred while cloning the payload", r4:ERROR, r4:INVALID);
+            }
+            xml|error ccdData = ccdaDataRecord.ccdaStr.cloneWithType();
+            if ccdData is error {
+                return r4:createFHIRError("Error occurred while parsing the payload to xml", r4:ERROR, r4:INVALID);
+            }
+            r4:Bundle|r4:FHIRError fhirPayload = ccdatofhir:ccdaToFhir(ccdData);
+            if fhirPayload is r4:Bundle {
+                r4:BundleEntry[] entries = <r4:BundleEntry[]>fhirPayload.entry;
+                foreach var entry in entries {
+                    map<anydata> fhirResource = <map<anydata>>entry?.'resource;
+                    if fhirResource["resourceType"] == "Patient" {
+                        log:printInfo(string `FHIR resource: ${fhirResource.toJsonString()}`, mappedData = fhirResource);
+                        return fhirResource;
                     }
                 }
             }

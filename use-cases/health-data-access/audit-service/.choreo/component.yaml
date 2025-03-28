@@ -1,0 +1,11 @@
+schemaVersion: 1.1
+endpoints:
+    - name: audit-service-api
+      displayName: Audit Service API
+      service:
+        basePath: /
+        port: 9093
+      type: REST
+      networkVisibilities:
+        - Project
+      schemaFilePath: oas/AuditServiceAPI.yaml
