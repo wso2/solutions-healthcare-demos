@@ -18,22 +18,6 @@ import ballerina/log;
 import ballerinax/health.clients.fhir;
 import ballerinax/health.fhir.r4;
 
-http:OAuth2ClientCredentialsGrantConfig ehrSystemAuthConfig = {
-    tokenUrl: tokenUrl,
-    clientId: client_id,
-    clientSecret: client_secret,
-    scopes: scopes,
-    optionalParams: {
-        "resource": fhirServerUrl
-    }
-};
-
-fhir:FHIRConnectorConfig ehrSystemConfig = {
-    baseURL: fhirServerUrl,
-    mimeType: fhir:FHIR_JSON,
-    authConfig: ehrSystemAuthConfig
-};
-
 isolated fhir:FHIRConnector fhirConnectorObj = check new ({
     baseURL: fhirServerUrl,
     mimeType: fhir:FHIR_JSON,
