@@ -1,0 +1,20 @@
+{
+    "folders": [
+        {
+            "path": "use-cases/davinci-crd/cds-service"
+        },
+        {
+            "path": "use-cases/health-data-access/audit-service"
+        },
+        {
+            "path": "use-cases/health-data-access/event-to-fhir-service"
+        },
+        {
+            "path": "use-cases/health-data-access/patient-service"
+        },
+        {
+            "path": "use-cases/health-data-access/hl7-service"
+        }
+    ]
+}
+
