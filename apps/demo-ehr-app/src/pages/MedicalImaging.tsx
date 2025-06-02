@@ -1,4 +1,4 @@
-// Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+// Copyright (c) 2024 - 2025, WSO2 LLC. (http://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -42,7 +42,7 @@ import { Card } from "@chakra-ui/react";
 import axios from "axios";
 import { updateCdsResponse } from "../redux/cdsResponseSlice";
 import MedicalImagingSign from "./MedicalImagingSign";
-import { CDS_CHOREO_BACKEND_URL } from "../config/config";
+import { baseUrl, paths } from "../config/urlConfigs";
 
 interface Coding {
   id?: string;
@@ -212,7 +212,7 @@ function MedicalImaging() {
     setCdsCards([]);
     setEnableSubmitButton(false);
     axios
-      .post<CdsResponse>(CDS_CHOREO_BACKEND_URL + "/radiology-order", payload)
+      .post<CdsResponse>(baseUrl + paths.radiology_order, payload)
       .then<CdsResponse>((res) => {
         setCdsCards(res.data.cards);
 
