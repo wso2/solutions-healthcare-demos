@@ -1,4 +1,4 @@
-// Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+// Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
 
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -18,23 +18,19 @@ import ballerina/log;
 import ballerinax/health.clients.fhir;
 import ballerinax/health.fhir.r4;
 
-http:OAuth2ClientCredentialsGrantConfig ehrSystemAuthConfig = {
-    tokenUrl: tokenUrl,
-    clientId: client_id,
-    clientSecret: client_secret,
-    scopes: scopes,
-    optionalParams: {
-        "resource": fhirServerUrl
-    }
-};
-
-fhir:FHIRConnectorConfig ehrSystemConfig = {
+isolated fhir:FHIRConnector fhirConnectorObj = check new ({
     baseURL: fhirServerUrl,
     mimeType: fhir:FHIR_JSON,
-    authConfig: ehrSystemAuthConfig
-};
-
-isolated fhir:FHIRConnector fhirConnectorObj = check new (ehrSystemConfig);
+    authConfig: {
+        tokenUrl: tokenUrl,
+        clientId: client_id,
+        clientSecret: client_secret,
+        scopes: scopes,
+        optionalParams: {
+            "resource": fhirServerUrl
+        }
+    }
+});
 
 public isolated function createResource(json payload) returns r4:FHIRError|fhir:FHIRResponse {
     lock {
