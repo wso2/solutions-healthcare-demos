@@ -143,17 +143,17 @@ service /mpi on new http:Listener(9090) {
             r4:ParametersParameter[] parts = [];
             
             parts.push({
-                name: "systemId",
+                name: "sourceSystem",
                 valueString: mapping.systemId
             });
             
             parts.push({
-                name: "systemPatientId",
+                name: "candidateId",
                 valueString: mapping.systemPatientId
             });
             
             r4:ParametersParameter param = {
-                name: "mapping",
+                name: "candidate",
                 part: parts
             };
             
