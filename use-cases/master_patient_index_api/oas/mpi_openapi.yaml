@@ -3,13 +3,9 @@ info:
   title: Master Patient Index API
   version: 0.1.0
   description: FHIR-compliant Master Patient Index for patient matching and mapping management
-tags:
-  - name: PatientMatch
 paths:
   /match:
     post:
-      tags:
-        - PatientMatch
       summary: FHIR Patient Match Operation
       description: Find matching patients based on provided patient data using weighted scoring algorithm
       operationId: patientMatch
@@ -53,8 +49,6 @@ paths:
 
   /{uniquePatientId}/mappings:
     get:
-      tags:
-        - PatientMatch
       summary: Get patient mappings for a specific unique patient ID
       description: Retrieve all system mappings for a given unique patient identifier
       operationId: getPatientMappings
@@ -83,8 +77,6 @@ paths:
                 $ref: '#/components/schemas/ErrorPayload'
     
     post:
-      tags:
-        - PatientMatch
       summary: Add a new patient mapping for a specific unique patient ID
       description: Add a system-specific patient mapping to the unique patient identifier
       operationId: addPatientMapping
