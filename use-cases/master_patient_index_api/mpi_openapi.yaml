@@ -1,0 +1,373 @@
+openapi: 3.0.1
+info:
+  title: Master Patient Index API
+  version: 0.1.0
+  description: FHIR-compliant Master Patient Index for patient matching and mapping management
+servers:
+- url: "{server}:{port}/mpi"
+  variables:
+    server:
+      default: http://localhost
+    port:
+      default: "9090"
+paths:
+  /match:
+    post:
+      summary: FHIR Patient Match Operation
+      description: Find matching patients based on provided patient data using weighted scoring algorithm
+      operationId: patientMatch
+      requestBody:
+        required: true
+        content:
+          application/fhir+json:
+            schema:
+              $ref: '#/components/schemas/PatientMatchRequestData'
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatientMatchRequestData'
+      responses:
+        "200":
+          description: Bundle of matching patients with scores
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Bundle'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Bundle'
+        "400":
+          description: Bad request - invalid parameters
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/FHIRError'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FHIRError'
+        "500":
+          description: Internal server error
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/FHIRError'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FHIRError'
+
+  /{uniquePatientId}/mappings:
+    get:
+      summary: Get patient mappings for a specific unique patient ID
+      description: Retrieve all system mappings for a given unique patient identifier
+      operationId: getPatientMappings
+      parameters:
+        - name: uniquePatientId
+          in: path
+          required: true
+          description: Unique patient identifier
+          schema:
+            type: string
+      responses:
+        "200":
+          description: FHIR Parameters containing patient mappings
+          content:
+            application/fhir+json:
+              schema:
+                $ref: '#/components/schemas/Parameters'
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Parameters'
+        "404":
+          description: Patient not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+    
+    post:
+      summary: Add a new patient mapping for a specific unique patient ID
+      description: Add a system-specific patient mapping to the unique patient identifier
+      operationId: addPatientMapping
+      parameters:
+        - name: uniquePatientId
+          in: path
+          required: true
+          description: Unique patient identifier
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SystemPatientMapping'
+      responses:
+        "201":
+          description: Patient mapping added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemPatientMapping'
+        "400":
+          description: Bad request - invalid mapping data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+        "409":
+          description: Conflict - mapping already exists
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorPayload'
+components:
+  schemas:
+    PatientMatchRequestData:
+      type: object
+      required:
+      - resourceType
+      - parameter
+      properties:
+        resourceType:
+          type: string
+          enum: ["Parameters"]
+        id:
+          type: string
+        parameter:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParametersParameter'
+      description: FHIR Parameters for patient match request
+    
+    ParametersParameter:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+        resource:
+          $ref: '#/components/schemas/Patient'
+        valueInteger:
+          type: integer
+        valueBoolean:
+          type: boolean
+        valueString:
+          type: string
+      description: FHIR Parameters parameter
+    
+    Patient:
+      type: object
+      required:
+      - resourceType
+      properties:
+        resourceType:
+          type: string
+          enum: ["Patient"]
+        id:
+          type: string
+        name:
+          type: array
+          items:
+            $ref: '#/components/schemas/HumanName'
+        gender:
+          type: string
+          enum: ["male", "female", "other", "unknown"]
+        birthDate:
+          type: string
+          format: date
+      description: FHIR Patient resource
+    
+    HumanName:
+      type: object
+      properties:
+        family:
+          type: string
+        given:
+          type: array
+          items:
+            type: string
+      description: FHIR HumanName datatype
+    
+    Parameters:
+      type: object
+      required:
+      - resourceType
+      - parameter
+      properties:
+        resourceType:
+          type: string
+          enum: ["Parameters"]
+        parameter:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParametersParameterWithParts'
+      description: FHIR Parameters resource
+    
+    ParametersParameterWithParts:
+      type: object
+      required:
+      - name
+      properties:
+        name:
+          type: string
+        part:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParametersParameterPart'
+      description: FHIR Parameters parameter with parts
+    
+    ParametersParameterPart:
+      type: object
+      required:
+      - name
+      - valueString
+      properties:
+        name:
+          type: string
+        valueString:
+          type: string
+      description: FHIR Parameters parameter part
+    
+    Bundle:
+      type: object
+      required:
+      - resourceType
+      - type
+      - total
+      - entry
+      properties:
+        resourceType:
+          type: string
+          enum: ["Bundle"]
+        type:
+          type: string
+          enum: ["searchset"]
+        total:
+          type: integer
+        timestamp:
+          type: string
+        entry:
+          type: array
+          items:
+            $ref: '#/components/schemas/BundleEntry'
+      description: FHIR Bundle resource
+    
+    BundleEntry:
+      type: object
+      properties:
+        resource:
+          $ref: '#/components/schemas/Patient'
+        search:
+          $ref: '#/components/schemas/BundleEntrySearch'
+      description: FHIR Bundle entry
+    
+    BundleEntrySearch:
+      type: object
+      properties:
+        mode:
+          type: string
+          enum: ["match"]
+        score:
+          type: number
+          format: float
+      description: FHIR Bundle entry search
+    
+    SystemPatientMapping:
+      type: object
+      required:
+      - systemPatientId
+      - systemId
+      - resourceUrl
+      - firstName
+      - dateOfBirth
+      - gender
+      properties:
+        systemPatientId:
+          type: string
+          description: The system specific patient ID
+        systemId:
+          type: string
+          description: The system ID
+        resourceUrl:
+          type: string
+          description: The resource URL
+        firstName:
+          type: string
+          description: Patient first name
+        lastName:
+          type: string
+          description: Patient last name
+        dateOfBirth:
+          type: string
+          format: date
+          description: Patient date of birth
+        gender:
+          type: string
+          enum: ["male", "female", "other", "unknown"]
+          description: Patient gender
+        address:
+          type: string
+          description: Patient address
+        phoneNumber:
+          type: string
+          description: Patient phone number
+        meta:
+          type: object
+          additionalProperties: true
+          description: Additional details about the mapping
+      description: System-specific patient mapping with demographics
+    
+    FHIRError:
+      type: object
+      required:
+      - resourceType
+      - issue
+      properties:
+        resourceType:
+          type: string
+          enum: ["OperationOutcome"]
+        issue:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperationOutcomeIssue'
+      description: FHIR OperationOutcome for errors
+    
+    OperationOutcomeIssue:
+      type: object
+      required:
+      - severity
+      - code
+      properties:
+        severity:
+          type: string
+          enum: ["fatal", "error", "warning", "information"]
+        code:
+          type: string
+        diagnostics:
+          type: string
+      description: FHIR OperationOutcome issue
+    
+    ErrorPayload:
+      type: object
+      required:
+      - message
+      - method
+      - path
+      - reason
+      - status
+      - timestamp
+      properties:
+        timestamp:
+          type: string
+        status:
+          type: integer
+          format: int64
+        reason:
+          type: string
+        message:
+          type: string
+        path:
+          type: string
+        method:
+          type: string
+      description: HTTP error response payload
