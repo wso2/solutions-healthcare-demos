@@ -1,0 +1,8 @@
+[package]
+org = "sameerag"
+name = "lis_api"
+version = "0.1.0"
+title = "LIS_API"
+
+[build-options]
+sticky = true
