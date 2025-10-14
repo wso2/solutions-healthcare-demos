@@ -8,4 +8,5 @@ endpoints:
       type: REST
       networkVisibilities:
         - Project
+        - Public
       schemaFilePath: oas/mpi_openapi.yaml
