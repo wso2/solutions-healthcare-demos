@@ -3,7 +3,7 @@ endpoints:
     - name: master-patient-index-api
       displayName: Master Patient Index API
       service:
-        basePath: /
+        basePath: /mpi
         port: 9090
       type: REST
       networkVisibilities:
