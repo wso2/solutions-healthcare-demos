@@ -144,6 +144,15 @@ final r4:ResourceAPIConfig patientApiConfig = {
                     }
                 }
             }
+        },
+        {
+            name: "everything",
+            active: true,
+            information: {
+                description: "Fetch all the related resources for a patient",
+                builtin: false,
+                documentation: "http://hl7.org/fhir/R4/patient-operation-everything.html"
+            }
         }
     ],
     serverConfig: (),

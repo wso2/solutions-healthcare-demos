@@ -12,6 +12,51 @@ final isolated map<fhirClient:FHIRConnector> backendClients = {};
 // Initialize HTTP clients for non-FHIR backend systems
 final isolated map<http:Client> httpClients = {};
 
+// Initialize MPI HTTP client
+final http:Client mpiClient = check initializeMpiClient();
+
+// Function to initialize MPI client
+isolated function initializeMpiClient() returns http:Client|error {
+    http:ClientConfiguration mpiHttpConfig = {};
+    
+    // Add authentication for MPI based on auth type
+    match mpiAuthType {
+        BASIC => {
+            if mpiUsername is string && mpiPassword is string {
+                http:CredentialsConfig basicAuth = {
+                    username: <string>mpiUsername,
+                    password: <string>mpiPassword
+                };
+                mpiHttpConfig.auth = basicAuth;
+            } else {
+                log:printError("Basic auth configured for MPI but username or password is missing");
+            }
+        }
+        OAUTH2_CLIENT_CREDENTIALS => {
+            if mpiTokenUrl is string && mpiClientId is string && mpiClientSecret is string {
+                http:OAuth2ClientCredentialsGrantConfig oauth2Config = {
+                    tokenUrl: <string>mpiTokenUrl,
+                    clientId: <string>mpiClientId,
+                    clientSecret: <string>mpiClientSecret
+                };
+                
+                if mpiScopes is string[] {
+                    oauth2Config.scopes = <string[]>mpiScopes;
+                }
+                
+                mpiHttpConfig.auth = oauth2Config;
+            } else {
+                log:printError("OAuth2 client credentials configured for MPI but required fields are missing");
+            }
+        }
+        NONE => {
+            // No authentication required
+        }
+    }
+    
+    return check new http:Client(mpiBaseUrl, mpiHttpConfig);
+}
+
 function init() returns error? {
     // Initialize clients for each configured backend
     foreach string systemName in backendConfigs.keys() {
@@ -234,6 +279,86 @@ service fhirr4:Service / on new fhirr4:Listener(config = patientApiConfig) {
 
         return performEverythingOperation(id, parametersResult);
     }
+
+    isolated resource function get fhir/r4/Patient/[string id]/\$everything(r4:FHIRContext context) returns r4:Bundle|r4:FHIRError {
+        // Call MPI API to get patient mappings
+        international401:Parameters|r4:FHIRError mpiParameters = fetchPatientMappingsFromMPI(id);
+        
+        if mpiParameters is r4:FHIRError {
+            return mpiParameters;
+        }
+        
+        return performEverythingOperation(id, mpiParameters);
+    }
+}
+
+// Helper function to replace placeholder in string
+isolated function replacePlaceholder(string template, string placeholder, string value) returns string {
+    string result = template;
+    int? searchIndex = string:indexOf(result, placeholder);
+    
+    while searchIndex is int {
+        int index = searchIndex;
+        string before = result.substring(0, index);
+        string after = result.substring(index + placeholder.length());
+        result = before + value + after;
+        searchIndex = string:indexOf(result, placeholder);
+    }
+    
+    return result;
+}
+
+// Helper function to fetch patient mappings from MPI
+isolated function fetchPatientMappingsFromMPI(string patientId) returns international401:Parameters|r4:FHIRError {
+    // Build the MPI path by replacing {patientId} placeholder
+    string mpiPath = replacePlaceholder(mpiMappingsPath, "{patientId}", patientId);
+    log:printInfo(string `MPI path: ${mpiPath}`);
+    
+    http:Response|error response = mpiClient->get(mpiPath);
+    
+    if response is error {
+        log:printError(string `Failed to call MPI API for patient ${patientId}`, response);
+        return r4:createFHIRError(
+            message = string `Failed to retrieve patient mappings from MPI: ${response.message()}`,
+            errServerity = r4:ERROR,
+            code = r4:PROCESSING
+        );
+    }
+    
+    if response.statusCode != 200 {
+        log:printError(string `MPI API returned non-200 status code: ${response.statusCode}`);
+        return r4:createFHIRError(
+            message = string `MPI API returned status code: ${response.statusCode}`,
+            errServerity = r4:ERROR,
+            code = r4:PROCESSING
+        );
+    }
+    
+    json|error responsePayload = response.getJsonPayload();
+    
+    if responsePayload is error {
+        log:printError("Failed to parse MPI API response as JSON", responsePayload);
+        return r4:createFHIRError(
+            message = "Failed to parse MPI API response",
+            errServerity = r4:ERROR,
+            code = r4:PROCESSING
+        );
+    }
+    
+    // Parse the JSON response into a FHIR Parameters resource
+    anydata|r4:FHIRParseError parsedParameters = parser:parse(responsePayload, international401:Parameters);
+    
+    if parsedParameters is r4:FHIRParseError {
+        log:printError("Failed to parse MPI response as FHIR Parameters", parsedParameters);
+        return r4:createFHIRError(
+            message = "Failed to parse MPI response as FHIR Parameters resource",
+            errServerity = r4:ERROR,
+            code = r4:PROCESSING
+        );
+    }
+    
+    log:printInfo(string `Successfully fetched patient mappings from MPI for patient: ${patientId}`);
+    return <international401:Parameters>parsedParameters;
 }
 
 // Helper function to perform the $everything operation
