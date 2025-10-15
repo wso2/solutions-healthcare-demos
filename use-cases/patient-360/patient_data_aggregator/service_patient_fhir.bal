@@ -429,7 +429,7 @@ isolated function performEverythingOperation(string patientId, international401:
                 }
 
                 // Get related resources for this patient
-                string[] relatedResourceTypes = ["Observation", "Condition", "MedicationRequest", "Encounter", "DiagnosticReport"];
+                string[] relatedResourceTypes = ["Observation", "Condition", "MedicationStatement", "Encounter", "AllergyIntolerance"];
 
                 foreach string resourceType in relatedResourceTypes {
                     map<string[]> searchParams = {
