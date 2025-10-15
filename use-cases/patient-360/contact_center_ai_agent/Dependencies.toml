@@ -88,7 +88,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "data.xmldata"
-version = "1.5.1"
+version = "1.5.2"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"},
 	{org = "ballerina", name = "lang.object"}
@@ -358,12 +358,28 @@ dependencies = [
 ]
 
 [[package]]
+org = "ballerinax"
+name = "ai.anthropic"
+version = "1.1.2"
+dependencies = [
+	{org = "ballerina", name = "ai"},
+	{org = "ballerina", name = "constraint"},
+	{org = "ballerina", name = "http"},
+	{org = "ballerina", name = "jballerina.java"},
+	{org = "ballerina", name = "lang.array"}
+]
+modules = [
+	{org = "ballerinax", packageName = "ai.anthropic", moduleName = "ai.anthropic"}
+]
+
+[[package]]
 org = "joel"
 name = "call_center_agent"
 version = "0.1.0"
 dependencies = [
 	{org = "ballerina", name = "ai"},
-	{org = "ballerina", name = "http"}
+	{org = "ballerina", name = "http"},
+	{org = "ballerinax", name = "ai.anthropic"}
 ]
 modules = [
 	{org = "joel", packageName = "call_center_agent", moduleName = "call_center_agent"}
