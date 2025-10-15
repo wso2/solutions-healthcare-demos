@@ -110,7 +110,7 @@ paths:
       - everything
       parameters:
       - name: id
-        in: query
+        in: path
         description: The ID of the patient for whom information is required.
         required: true
         schema:
