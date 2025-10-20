@@ -20,22 +20,63 @@ import "./index.css";
 import { StrictMode } from "react";
 import { AuthProvider } from "@asgardeo/auth-react";
 
-const config = {
-  signInRedirectURL: import.meta.env.VITE_REACT_APP_REDIRECT_URL || window.location.origin,
-  signOutRedirectURL: import.meta.env.VITE_REACT_APP_REDIRECT_URL || window.location.origin,
-  clientID: import.meta.env.VITE_REACT_APP_ASGARDEO_CLIENT_ID,
-  clientSecret: import.meta.env.VITE_REACT_APP_ASGARDEO_CLIENT_SECRET,
-  baseUrl: import.meta.env.VITE_REACT_APP_ASGARDEO_BASE_URL,
-  scope: ["openid", "profile", "email", "patient.read"],
-  grantType: "client_credentials",
-  enablePKCE: true,
-  storage: "sessionStorage" as const
-};
+// Type declaration for window.config
+declare global {
+  interface Window {
+    config?: {
+      mpiServiceURL: string;
+      dataAggregatorURL: string;
+      asgardeo: {
+        clientId: string;
+        clientSecret: string;
+        baseUrl: string;
+      };
+      patientMatch: {
+        count: number;
+        onlySingleMatch: boolean;
+        onlyCertainMatches: boolean;
+      };
+    };
+  }
+}
 
-createRoot(document.getElementById("root")!).render(
-  <StrictMode>
-    <AuthProvider config={config}>
-      <App />
-    </AuthProvider>
-  </StrictMode>
-);
+// Function to initialize the app once config is loaded
+function initializeApp() {
+  const config = {
+    signInRedirectURL: window.location.origin,
+    signOutRedirectURL: window.location.origin,
+    clientID: window.config?.asgardeo?.clientId || import.meta.env.VITE_REACT_APP_ASGARDEO_CLIENT_ID,
+    clientSecret: window.config?.asgardeo?.clientSecret || import.meta.env.VITE_REACT_APP_ASGARDEO_CLIENT_SECRET,
+    baseUrl: window.config?.asgardeo?.baseUrl || import.meta.env.VITE_REACT_APP_ASGARDEO_BASE_URL,
+    scope: ["openid", "profile", "email", "patient.read"],
+    grantType: "client_credentials",
+    enablePKCE: true,
+    storage: "sessionStorage" as const
+  };
+
+  createRoot(document.getElementById("root")!).render(
+    <StrictMode>
+      <AuthProvider config={config}>
+        <App />
+      </AuthProvider>
+    </StrictMode>
+  );
+}
+
+// Wait for config to be loaded, or initialize immediately if already available
+if (window.config) {
+  initializeApp();
+} else {
+  // Wait for DOM content to be loaded (config.js should be loaded by then)
+  document.addEventListener('DOMContentLoaded', () => {
+    // Give a small delay to ensure config.js is executed
+    setTimeout(() => {
+      if (window.config) {
+        initializeApp();
+      } else {
+        console.warn('Config not loaded, using environment variables as fallback');
+        initializeApp();
+      }
+    }, 100);
+  });
+}
