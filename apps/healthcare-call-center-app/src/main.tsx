@@ -26,6 +26,7 @@ declare global {
     config?: {
       mpiServiceURL: string;
       dataAggregatorURL: string;
+      agentChatServiceURL: string;
       asgardeo: {
         clientId: string;
         clientSecret: string;

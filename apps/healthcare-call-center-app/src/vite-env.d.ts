@@ -19,6 +19,7 @@
 interface Config {
   mpiServiceURL: string;
   dataAggregatorURL: string;
+  agentChatServiceURL: string;
   asgardeo: {
     clientId: string;
     clientSecret: string;
