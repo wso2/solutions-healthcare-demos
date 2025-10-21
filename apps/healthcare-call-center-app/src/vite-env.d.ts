@@ -15,3 +15,25 @@
 // under the License.
 
 /// <reference types="vite/client" />
+
+interface Config {
+  mpiServiceURL: string;
+  dataAggregatorURL: string;
+  agentChatServiceURL: string;
+  asgardeo: {
+    clientId: string;
+    clientSecret: string;
+    baseUrl: string;
+  };
+  patientMatch: {
+    count: number;
+    onlySingleMatch: boolean;
+    onlyCertainMatches: boolean;
+  };
+}
+
+declare global {
+  interface Window {
+    config: Config;
+  }
+}

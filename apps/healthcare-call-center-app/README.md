@@ -15,42 +15,25 @@ This project is a React and TypeScript-based web application designed to assist 
     npm run dev
     ```
 
-### Required Environment Variables
-Copy and paste the following into a new `.env` file at the project root, then adjust values as needed:
+### Required Configuration
+Configure the following settings in your application by adding them to a `config.js` file or embedding them directly into your HTML before loading the main application script:
 
 ```bash
-# ==============================
-# Backend endpoints & proxies
-# ==============================
-# Note: These URLs are proxied in vite.config.ts. You only need to provide the base URLs here.
-# Eg: You don't need to include /Patient/$match or /$everything here.
-
-# MPI (Master Patient Index API) URL (proxied at /mpi)
-VITE_MPI_SERVICE_URL=http://localhost:8081
-# Data Aggregator (FHIR Server) URL (proxied at /data)
-VITE_DATA_AGGREGATOR_URL=http://localhost:8000
-
-# Call Center AI Agent base URL (proxied at /api)
-VITE_CALL_CENTER_AI_AGENT_URL=http://localhost:9090
-
-# ==============================
-# Patient $match defaults
-# ==============================
-VITE_PATIENT_MATCH_COUNT=1
-VITE_PATIENT_MATCH_ONLY_SINGLE_MATCH=true
-VITE_PATIENT_MATCH_ONLY_CERTAIN_MATCH=true
-
-# ==============================
-# Asgardeo Authentication
-# ==============================
-# Redirect URL you configured in Asgardeo (add this exact URL there too) 
-# This is optional to configure. If not set, defaults to window.location.origin
-VITE_REACT_APP_REDIRECT_URL=http://localhost:8080
-
-# Your Asgardeo application credentials
-VITE_REACT_APP_ASGARDEO_CLIENT_ID=your-client-id-here
-VITE_REACT_APP_ASGARDEO_CLIENT_SECRET=your-client-secret-here
-VITE_REACT_APP_ASGARDEO_BASE_URL=https://api.asgardeo.io/t/your-organization-name
+window.config = {
+    mpiServiceURL: '<MPI_SERVICE_URL>',
+    dataAggregatorURL: '<DATA_AGGREGATOR_URL>',
+    agentChatServiceURL: '<AGENT_CHAT_SERVICE_URL>',
+    asgardeo: {
+        clientId: '<ASGARDEO_CLIENT_ID>',
+        clientSecret: '<ASGARDEO_CLIENT_SECRET>',
+        baseUrl: '<ASGARDEO_BASE_URL>',
+    },
+    patientMatch: {
+        count: <NUMBER_OF_MATCHES>,
+        onlySingleMatch: true,
+        onlyCertainMatches: true
+    }
+}
 ```
 
 ## Key Features

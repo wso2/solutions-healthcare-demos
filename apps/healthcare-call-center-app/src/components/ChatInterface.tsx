@@ -67,7 +67,7 @@ const ChatInterface = ({ patientId, chatContext }: ChatInterfaceProps) => {
 
   const makeRequest = useCallback(async (message: string) => {
     const messageToSend = message + `\n Patient ID: ${patientId}`;
-    const response = await fetch("/api/CallCenterAgent/chat", {
+    const response = await fetch(`${window.config?.agentChatServiceURL}/chat`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

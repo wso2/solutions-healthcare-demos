@@ -132,7 +132,7 @@ const PatientSearch = () => {
       };
 
       // Send request to FHIR patient match endpoint
-      const response = await fetch( "/mpi/match" , {
+      const response = await fetch( `${window.config?.mpiServiceURL}/match` , {
         method: "POST",
         headers: {
           "Content-Type": "application/fhir+json",

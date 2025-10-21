@@ -256,7 +256,7 @@ const PatientIPS = () => {
         setLoading(true);
         setError(null);
         
-        const response = await fetch(`/data/Patient/${patientId}/$everything`,
+        const response = await fetch(`${window.config?.dataAggregatorURL}/Patient/${patientId}/$everything`,
           {
             method: "GET",
             headers: {
