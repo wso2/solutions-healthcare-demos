@@ -26,23 +26,6 @@ export default defineConfig(({ mode }) => {
     server: {
       host: "::",
       port: 8080,
-      proxy: {
-        '/api': {
-          target: env.VITE_CALL_CENTER_AI_AGENT_URL || 'http://localhost:9090',
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api/, '')
-        },
-        '/data': {
-          target: env.VITE_DATA_AGGREGATOR_URL || 'http://0.0.0.0:8000',
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/data/, '')
-        },
-        '/mpi': {
-          target: env.VITE_MPI_SERVICE_URL || 'http://0.0.0.0:8000',
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/mpi/, '')
-        }
-      }
     },
     plugins: [react()],
     resolve: {
