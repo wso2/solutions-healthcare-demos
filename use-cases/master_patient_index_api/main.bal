@@ -39,7 +39,7 @@ const SEARCH_SET = "searchset";
 
 service /mpi on new http:Listener(9090) {
 
-    resource function post 'match(@http:Payload PatientMatchRequestData patientMatchRequestData) returns r4:FHIRError|http:Response {
+    resource function post 'match(@http:Payload PatientMatchRequestData patientMatchRequestData) returns r4:FHIRError|http:BadRequest|http:Response {
 
         json[] parametersArray = patientMatchRequestData.'parameter;
         
@@ -81,6 +81,22 @@ service /mpi on new http:Listener(9090) {
                 break;
             }
         }
+
+        // Get onlySingleMatch parameter (optional, default to false)
+        boolean onlySingleMatch = false; // default value
+        foreach json param in parametersArray {
+            json|error nameResult = param.name;
+            if nameResult is json && nameResult == "onlySingleMatch" {
+                json|error boolResult = param.valueBoolean;
+                if boolResult is json {
+                    boolean|error onlySingleMatchResult = boolResult.cloneWithType();
+                    if onlySingleMatchResult is boolean {
+                        onlySingleMatch = onlySingleMatchResult;
+                    }
+                }
+                break;
+            }
+        }
         
         // Get onlyCertainMatches parameter (optional, default to false)
         boolean onlyCertainMatches = false; // default value
@@ -107,8 +123,16 @@ service /mpi on new http:Listener(9090) {
             return throwFHIRError("Error occurred while getting the matching patients from MPI.", cause = patientArray);
         }
         http:Response response = new;
-        if onlyCertainMatches is true && patientArray.length() > 1 {
-            response.setJsonPayload("Multiple matching patients found while onlyCertainMatches flag is true");
+        if onlySingleMatch && patientArray.length() > 1 {
+            log:printDebug("onlySingleMatch is true but multiple matches found, returning the best match only.");
+            patientArray.setLength(1);
+        }
+        if onlyCertainMatches && patientArray.length() > 1 {
+            return <http:BadRequest>{
+                body: {
+                    message: "Multiple matching patients found while onlyCertainMatches flag is true"
+                }
+            };
         }
         if patientArray.length() >= patientCount {
             patientArray.setLength(patientCount);
