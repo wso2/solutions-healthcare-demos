@@ -15,9 +15,9 @@
 // under the License.
 
 import ballerina/http;
+import ballerina/lang.array;
 import ballerina/log;
 import ballerina/time;
-import ballerina/lang.array;
 import ballerinax/health.fhir.r4;
 import ballerinax/health.fhir.r4.international401;
 
@@ -35,14 +35,14 @@ final map<SystemPatientMapping[]> patientMappingStore = {
     ]
 };
 
-const SEARCH_SET = "searchset"; 
+const SEARCH_SET = "searchset";
 
 service /mpi on new http:Listener(9090) {
 
     resource function post 'match(@http:Payload PatientMatchRequestData patientMatchRequestData) returns r4:FHIRError|http:BadRequest|http:Response {
 
         json[] parametersArray = patientMatchRequestData.'parameter;
-        
+
         // Get resource parameter (required)
         json? resourceParam = ();
         foreach json param in parametersArray {
@@ -52,20 +52,20 @@ service /mpi on new http:Listener(9090) {
                 break;
             }
         }
-        
+
         if resourceParam is () {
-            return throwFHIRError("Required parameter 'resource' not found in the request.", ());
+            return throwBadRequestFHIRError("Required parameter 'resource' not found in the request.", ());
         }
-        
+
         json|error resourceResult = resourceParam.'resource;
         if resourceResult is error {
-            return throwFHIRError("Error occurred while getting the resource from the request.", cause = resourceResult);
+            return throwBadRequestFHIRError("Error occurred while getting the resource from the request.", cause = resourceResult);
         }
         international401:Patient|error sourcePatient = resourceResult.cloneWithType();
         if sourcePatient is error {
-            return throwFHIRError("Error occurred while getting the source patient from the request.", cause = sourcePatient);
+            return throwBadRequestFHIRError("Error occurred while getting the source patient from the request.", cause = sourcePatient);
         }
-        
+
         // Get count parameter (optional, default to 10)
         int patientCount = 10; // default value
         foreach json param in parametersArray {
@@ -97,7 +97,7 @@ service /mpi on new http:Listener(9090) {
                 break;
             }
         }
-        
+
         // Get onlyCertainMatches parameter (optional, default to false)
         boolean onlyCertainMatches = false; // default value
         foreach json param in parametersArray {
@@ -120,7 +120,7 @@ service /mpi on new http:Listener(9090) {
             return response;
         }
         if patientArray is error {
-            return throwFHIRError("Error occurred while getting the matching patients from MPI.", cause = patientArray);
+            return throwBadRequestFHIRError("Error occurred while getting the matching patients from MPI.", cause = patientArray);
         }
         http:Response response = new;
         if onlySingleMatch && patientArray.length() > 1 {
@@ -148,48 +148,49 @@ service /mpi on new http:Listener(9090) {
 
     }
 
-    resource function get [string uniquePatientId]/mappings() returns r4:Parameters|http:NotFound {
+    resource function get [string uniquePatientId]/mappings() returns r4:Parameters|http:Response {
         log:printInfo("Received request for patient ID: " + uniquePatientId);
-        SystemPatientMapping[]? mappings = patientMappingStore.get(uniquePatientId);
-        if mappings is () {
-            return <http:NotFound>{
-                body: {
-                    message: string `Patient ID ${uniquePatientId} not found`
+
+        if patientMappingStore.hasKey(uniquePatientId) {
+            SystemPatientMapping[]? mappings = patientMappingStore.get(uniquePatientId);
+
+            log:printInfo(string `Returning mappings ${mappings.toBalString()} for patient ID: ${uniquePatientId}`);
+
+            // Convert to FHIR Parameters format
+            r4:ParametersParameter[] parameters = [];
+            if mappings is SystemPatientMapping[] {
+                foreach SystemPatientMapping mapping in mappings {
+                    r4:ParametersParameter[] parts = [];
+
+                    parts.push({
+                        name: "sourceSystem",
+                        valueString: mapping.systemId
+                    });
+
+                    parts.push({
+                        name: "candidateId",
+                        valueString: mapping.systemPatientId
+                    });
+
+                    r4:ParametersParameter param = {
+                        name: "candidate",
+                        part: parts
+                    };
+
+                    parameters.push(param);
                 }
+            }
+
+            r4:Parameters fhirParameters = {
+                resourceType: "Parameters",
+                'parameter: parameters
             };
+
+            return fhirParameters;
+        } else {
+            r4:OperationOutcome operationOutcome = throwNotFoundFHIRError(string `Patient ID ${uniquePatientId} not found`);
+            return operationOutcomeToResponse(operationOutcome);
         }
-        log:printInfo(string `Returning mappings ${mappings.toBalString()} for patient ID: ${uniquePatientId}`);
-        
-        // Convert to FHIR Parameters format
-        r4:ParametersParameter[] parameters = [];
-        
-        foreach SystemPatientMapping mapping in mappings {
-            r4:ParametersParameter[] parts = [];
-            
-            parts.push({
-                name: "sourceSystem",
-                valueString: mapping.systemId
-            });
-            
-            parts.push({
-                name: "candidateId",
-                valueString: mapping.systemPatientId
-            });
-            
-            r4:ParametersParameter param = {
-                name: "candidate",
-                part: parts
-            };
-            
-            parameters.push(param);
-        }
-        
-        r4:Parameters fhirParameters = {
-            resourceType: "Parameters",
-            'parameter: parameters
-        };
-        
-        return fhirParameters;
     }
 
     resource function post [string uniquePatientId]/mappings(SystemPatientMapping newMapping) returns SystemPatientMapping|http:BadRequest|http:Conflict|http:Created {
@@ -239,11 +240,11 @@ service /mpi on new http:Listener(9090) {
 
     function getMatchingPatients(international401:Patient patient) returns error|r4:BundleEntry[] {
         r4:BundleEntry[] matchedPatients = [];
-        
+
         // Extract search criteria from the input patient
         string? searchFirstName = ();
         string? searchLastName = ();
-        
+
         if patient.name is r4:HumanName[] {
             r4:HumanName[] names = <r4:HumanName[]>patient.name;
             if names.length() > 0 {
@@ -259,27 +260,27 @@ service /mpi on new http:Listener(9090) {
         }
         string? searchGender = patient.gender;
         string? searchDateOfBirth = patient.birthDate;
-        
+
         log:printInfo(string `Searching for patients with: firstName=${searchFirstName ?: "N/A"}, lastName=${searchLastName ?: "N/A"}, gender=${searchGender ?: "N/A"}, dob=${searchDateOfBirth ?: "N/A"}`);
-        
+
         // Search through all patient mappings
         foreach string uniquePatientId in patientMappingStore.keys() {
             SystemPatientMapping[]? mappings = patientMappingStore.get(uniquePatientId);
             if mappings is () {
                 continue;
             }
-            
+
             // Check each mapping for matches
             foreach SystemPatientMapping mapping in mappings {
                 int matchScore = 0;
                 boolean isMatch = false;
-                
+
                 // Exact match on first name (case insensitive)
                 if searchFirstName is string && mapping.firstName.toLowerAscii() == searchFirstName.toLowerAscii() {
                     matchScore += 30;
                     isMatch = true;
                 }
-                
+
                 // Exact match on last name (case insensitive)
                 if searchLastName is string && mapping.lastName is string {
                     string lastName = <string>mapping.lastName;
@@ -288,22 +289,22 @@ service /mpi on new http:Listener(9090) {
                         isMatch = true;
                     }
                 }
-                
+
                 // Exact match on date of birth
                 if searchDateOfBirth is string && mapping.dateOfBirth == searchDateOfBirth {
                     matchScore += 25;
                     isMatch = true;
                 }
-                
+
                 // Exact match on gender
                 if searchGender is string && mapping.gender.toLowerAscii() == searchGender.toLowerAscii() {
                     matchScore += 15;
                 }
-                
+
                 // Only include if we have a meaningful match (score >= 25 indicates at least one strong match)
                 if isMatch && matchScore >= 25 {
                     log:printInfo(string `Found match for patient ${uniquePatientId} with score ${matchScore}: ${mapping.firstName} ${mapping.lastName ?: ""}`);
-                    
+
                     // Create FHIR Patient resource from mapping
                     international401:Patient matchedPatient = {
                         resourceType: "Patient",
@@ -317,7 +318,7 @@ service /mpi on new http:Listener(9090) {
                         gender: <international401:PatientGender>mapping.gender,
                         birthDate: mapping.dateOfBirth
                     };
-                    
+
                     // Add address if available
                     if mapping.address is string {
                         matchedPatient.address = [
@@ -326,7 +327,7 @@ service /mpi on new http:Listener(9090) {
                             }
                         ];
                     }
-                    
+
                     // Add phone if available
                     if mapping.phoneNumber is string {
                         matchedPatient.telecom = [
@@ -336,7 +337,7 @@ service /mpi on new http:Listener(9090) {
                             }
                         ];
                     }
-                    
+
                     // Create bundle entry with match score
                     r4:BundleEntry entry = {
                         'resource: matchedPatient,
@@ -345,27 +346,47 @@ service /mpi on new http:Listener(9090) {
                             score: <decimal>matchScore / 100.0 // Normalize score to 0-1 range
                         }
                     };
-                    
+
                     matchedPatients.push(entry);
                 }
             }
         }
-        
+
         // Sort by match score (highest first)
         r4:BundleEntry[] sortedMatches = matchedPatients.sort(array:DESCENDING, isolated function(r4:BundleEntry entry) returns decimal {
             return entry.search?.score ?: 0.0;
         });
-        
+
         log:printInfo(string `Found ${sortedMatches.length()} matching patients`);
         return sortedMatches;
     }
 }
 
-isolated function throwFHIRError(string message, error? cause) returns r4:FHIRError {
+isolated function throwBadRequestFHIRError(string message, error? cause = ()) returns r4:FHIRError {
     if cause is error {
         return r4:createFHIRError(message = message, errServerity = r4:ERROR,
                 code = r4:TRANSIENT_EXCEPTION, diagnostic = cause.detail().toString(), cause = cause, httpStatusCode = http:STATUS_BAD_REQUEST);
     }
     return r4:createFHIRError(message = message, errServerity = r4:ERROR,
             code = r4:TRANSIENT_EXCEPTION, httpStatusCode = http:STATUS_BAD_REQUEST);
+}
+
+isolated function throwNotFoundFHIRError(string message, error? cause = ()) returns r4:OperationOutcome {
+    r4:FHIRError fhirError;
+    if cause is error {
+        fhirError = r4:createFHIRError(message = message, errServerity = r4:ERROR,
+                code = r4:PROCESSING_NOT_FOUND, diagnostic = cause.detail().toString(), cause = cause, httpStatusCode = http:STATUS_NOT_FOUND);
+    }
+    fhirError = r4:createFHIRError(message = message, errServerity = r4:ERROR,
+            code = r4:PROCESSING_NOT_FOUND, httpStatusCode = http:STATUS_NOT_FOUND);
+
+    return r4:errorToOperationOutcome(fhirError);
+}
+
+isolated function operationOutcomeToResponse(r4:OperationOutcome operationOutcome) returns http:Response {
+    http:Response response = new;
+    response.statusCode = http:STATUS_NOT_FOUND;
+    response.setJsonPayload(operationOutcome.toJson());
+
+    return response;
 }
