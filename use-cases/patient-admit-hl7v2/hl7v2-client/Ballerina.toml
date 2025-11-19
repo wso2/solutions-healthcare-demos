@@ -1,0 +1,9 @@
+[package]
+org = "isurusamaranayake"
+name = "hl7_sender"
+version = "0.1.0"
+distribution = "2201.10.2"
+
+[build-options]
+observabilityIncluded = true
+optimizeDependencyCompilation = true
