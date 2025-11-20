@@ -1,8 +1,8 @@
 [package]
-org = "isurusamaranayake"
-name = "hl7_sender"
+org = "wso2"
+name = "adt_a01_to_fhir_service"
 version = "0.1.0"
-distribution = "2201.10.2"
+distribution = "2201.12.10"
 
 [build-options]
 observabilityIncluded = true

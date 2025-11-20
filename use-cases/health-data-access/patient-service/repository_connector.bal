@@ -80,7 +80,7 @@ public isolated function update(json payload) returns r4:FHIRError|fhir:FHIRResp
 
 public isolated function patchResource(string 'resource, string id, json payload) returns r4:FHIRError|fhir:FHIRResponse{
     lock {
-            fhir:FHIRResponse|fhir:FHIRError fhirResponse = fhirConnectorObj->patch('resource, id, payload.clone());
+            fhir:FHIRResponse|fhir:FHIRError fhirResponse = fhirConnectorObj->patch('type = 'resource, id =id, data = payload.clone());
 
             if fhirResponse is fhir:FHIRError{
                 log:printError(fhirResponse.toBalString());
@@ -108,7 +108,7 @@ public isolated function delete(string 'resource, string id) returns r4:FHIRErro
 
 public isolated function search(string 'resource, map<string[]>? searchParameters = ()) returns r4:FHIRError|fhir:FHIRResponse{
     lock {
-        fhir:FHIRResponse|fhir:FHIRError response = fhirConnectorObj->search('resource, searchParameters.clone());
+        fhir:FHIRResponse|fhir:FHIRError response = fhirConnectorObj->search('resource, searchParameters=searchParameters.clone());
 
         if response is fhir:FHIRError {
             log:printError(response.toBalString());

@@ -32,7 +32,7 @@ MRG|3891256742^^^SIMULATOR MRN^MRN|2590157853^^^SIMULATOR MRN^MRN||22cfc81a-fec8
 PV1|1|I|RenalWard^MainRoom^Bed 1^Simulated Hospital^^BED^Main Building^5|28b|||2001^Wolf^Kathy^^Dr^^^DRNBR^PRSNL^^^ORGDR|||MED|||||||||6145914547062969032^^^^visitid||||||||||||||||||||||ARRIVED|||2020-05-08T13:06:43`;
 
 configurable string serverAddress = "localhost";
-configurable int serverPort = 3000;
+configurable int serverPort = 8000;
 
 public function main(string messageType = "ADT_A01") returns error? {
 

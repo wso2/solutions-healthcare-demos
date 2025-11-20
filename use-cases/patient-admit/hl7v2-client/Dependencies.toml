@@ -5,7 +5,7 @@
 
 [ballerina]
 dependencies-toml-version = "2"
-distribution-version = "2201.13.1"
+distribution-version = "2201.12.10"
 
 [[package]]
 org = "ballerina"
@@ -97,7 +97,7 @@ modules = [
 
 [[package]]
 org = "isurusamaranayake"
-name = "hl7_sender"
+name = "hl7v2_client"
 version = "0.1.0"
 dependencies = [
 	{org = "ballerina", name = "io"},
@@ -106,6 +106,6 @@ dependencies = [
 	{org = "ballerinai", name = "observe"}
 ]
 modules = [
-	{org = "isurusamaranayake", packageName = "hl7_sender", moduleName = "hl7_sender"}
+	{org = "isurusamaranayake", packageName = "hl7v2_client", moduleName = "hl7v2_client"}
 ]
 

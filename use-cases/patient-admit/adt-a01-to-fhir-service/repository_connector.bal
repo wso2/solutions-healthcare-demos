@@ -3,15 +3,15 @@ import ballerina/log;
 import ballerinax/health.clients.fhir;
 import ballerinax/health.fhir.r4;
 
-// http:OAuth2ClientCredentialsGrantConfig ehrSystemAuthConfig = {
-//     tokenUrl: backendAuthTokenURL,
-//     clientId: backendClientId,
-//     clientSecret: backendClientSecret,
-//     scopes: scopes,
-//     optionalParams: {
-//         "resource": fhirServerUrl
-//     }
-// };
+http:OAuth2ClientCredentialsGrantConfig ehrSystemAuthConfig = {
+    tokenUrl: tokenUrl is string ?tokenUrl:"",
+    clientId: client_id is string ?client_id:"",
+    clientSecret: client_secret is string ?client_secret:"",
+    scopes: scopes is string[] ?scopes:[],
+    optionalParams: {
+        "resource": fhirServerUrl is string ?fhirServerUrl:""
+    }
+};
 
 fhir:FHIRConnectorConfig ehrSystemConfig = {
     baseURL: fhirServerUrl,
@@ -41,7 +41,7 @@ public isolated function sendToFhirRepo(json fhirResource) returns int {
     fhir:FHIRResponse|fhir:FHIRError fhirResponse = fhirConnector->create(fhirResource);
     if fhirResponse is fhir:FHIRResponse {
         log:printInfo(string `FHIR response: ${fhirResponse.toString()}`);
-        log:printInfo(string `Location: ${fhirResponse.serverResponseHeaders.get("Location")}`);
+        log:printInfo(string `Location: ${fhirResponse.serverResponseHeaders.get("location")}`);
         return fhirResponse.httpStatusCode;
     } else if fhirResponse is fhir:FHIRError {
         log:printError(string `FHIR error: ${fhirResponse.toString()}`);
