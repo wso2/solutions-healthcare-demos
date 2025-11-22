@@ -11,17 +11,6 @@ LABEL version="latest"
 
 # Choreo requires a numeric UID between 10000-20000
 # The official HAPI image runs as UID 1000, so we need to switch to a Choreo-compliant UID
-# Create a user with a known UID/GID within range 10000-20000.
-# This is required by Choreo to run the container as a non-root user.
-RUN adduser \
-    --disabled-password \
-    --gecos "" \
-    --home "/nonexistent" \
-    --shell "/sbin/nologin" \
-    --no-create-home \
-    --uid 10014 \
-    "choreo"
-# Use the above created unprivileged user
 USER 10014
 
 # Expose port for FHIR API
