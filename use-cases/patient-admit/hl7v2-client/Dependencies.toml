@@ -96,7 +96,7 @@ modules = [
 ]
 
 [[package]]
-org = "isurusamaranayake"
+org = "wso2"
 name = "hl7v2_client"
 version = "0.1.0"
 dependencies = [
@@ -106,6 +106,6 @@ dependencies = [
 	{org = "ballerinai", name = "observe"}
 ]
 modules = [
-	{org = "isurusamaranayake", packageName = "hl7v2_client", moduleName = "hl7v2_client"}
+	{org = "wso2", packageName = "hl7v2_client", moduleName = "hl7v2_client"}
 ]
 

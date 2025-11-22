@@ -41,7 +41,7 @@ public isolated function sendToFhirRepo(json fhirResource) returns int {
     fhir:FHIRResponse|fhir:FHIRError fhirResponse = fhirConnector->create(fhirResource);
     if fhirResponse is fhir:FHIRResponse {
         log:printInfo(string `FHIR response: ${fhirResponse.toString()}`);
-        log:printInfo(string `Location: ${fhirResponse.serverResponseHeaders.get("location")}`);
+        log:printInfo(string `Location: ${fhirResponse.serverResponseHeaders.get(location_header_key)}`);
         return fhirResponse.httpStatusCode;
     } else if fhirResponse is fhir:FHIRError {
         log:printError(string `FHIR error: ${fhirResponse.toString()}`);

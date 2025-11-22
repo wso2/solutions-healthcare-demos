@@ -25,6 +25,7 @@ configurable string tokenUrl = ?;
 configurable string[] scopes = ?;
 configurable string client_id = ?;
 configurable string client_secret = ?;
+configurable string location_header_key = "location";
 
 service on new tcp:Listener(8000) {
     remote function onConnect(tcp:Caller caller) returns tcp:ConnectionService {

@@ -1,0 +1,159 @@
+# HAPI FHIR JPA Server Configuration (OPTIONAL)
+#
+# NOTE: This file is NOT used by default with the minimal Dockerfile setup.
+# The official hapiproject/hapi image comes with sensible defaults that work out of the box.
+#
+# This file is provided as a reference for advanced customization scenarios.
+# To use this configuration:
+# 1. Modify the Dockerfile to copy this file to /app/config/application.yaml
+# 2. Ensure proper file permissions (chown to hapi user, UID 1000)
+# 3. Set SPRING_CONFIG_LOCATION environment variable
+#
+# For simple customizations, use environment variables instead.
+# See: https://github.com/hapifhir/hapi-fhir-jpaserver-starter#environment-variables
+
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:h2:file:./target/database/h2}
+    username: ${SPRING_DATASOURCE_USERNAME:admin}
+    password: ${SPRING_DATASOURCE_PASSWORD:admin}
+    driverClassName: ${SPRING_DATASOURCE_DRIVER_CLASS_NAME:org.h2.Driver}
+    max-active: 15
+
+  jpa:
+    properties:
+      hibernate.format_sql: false
+      hibernate.show_sql: false
+      hibernate.dialect: org.hibernate.dialect.H2Dialect
+      hibernate.search.enabled: false
+      hibernate.jdbc.batch_size: 20
+      hibernate.cache.use_query_cache: false
+      hibernate.cache.use_second_level_cache: false
+
+hapi:
+  fhir:
+    # FHIR Version
+    fhir_version: R4
+
+    # Server settings
+    server_address: ${HAPI_FHIR_SERVER_ADDRESS:http://localhost:8080/fhir/}
+
+    # Subscriptions
+    subscription:
+      resthook_enabled: false
+      websocket_enabled: false
+      email:
+        from: noreply@hapifhir.io
+        host:
+        port: 0
+        username:
+        password:
+
+    # CORS
+    cors:
+      allow_Credentials: true
+      allowed_origin:
+        - '*'
+
+    # Search features
+    allow_cascade_deletes: true
+    allow_contains_searches: true
+    allow_external_references: true
+    allow_multiple_delete: true
+    allow_override_default_search_params: true
+    allow_placeholder_references: true
+    auto_create_placeholder_reference_targets: false
+
+    # Validation
+    validation:
+      requests_enabled: true
+      responses_enabled: false
+
+    # Paging
+    default_page_size: 20
+    max_page_size: 200
+
+    # Encoding
+    default_encoding: JSON
+    default_pretty_print: true
+
+    # Security
+    # OAuth/OpenID Connect can be configured here for Choreo integration
+    # oauth:
+    #   enabled: true
+    #   client_id: ${OAUTH_CLIENT_ID}
+    #   client_secret: ${OAUTH_CLIENT_SECRET}
+
+    # Logging
+    logger:
+      error_format: 'ERROR - ${requestVerb} ${requestUrl}'
+      format: >-
+        Path[${servletPath}] Source[${requestHeader.x-forwarded-for}]
+        Operation[${operationType} ${operationName} ${idOrResourceName}]
+        UA[${requestHeader.user-agent}] Params[${requestParameters}]
+        ResponseEncoding[${responseEncodingNoDefault}]
+      log_exceptions: true
+      name: fhirtest.access
+
+    # Narrative generation
+    narrative_enabled: true
+
+    # OpenAPI/Swagger
+    openapi_enabled: true
+
+    # Binary storage
+    binary_storage_enabled: true
+
+    # Bulk operations
+    bulk_export_enabled: false
+
+    # GraphQL
+    graphql_enabled: false
+
+    # Partitioning
+    partitioning:
+      allow_references_across_partitions: false
+      partitioning_include_in_search_hashes: false
+
+    # CDS Hooks
+    cdshooks:
+      enabled: false
+
+    # Client ID Strategy
+    client_id_strategy: ALPHANUMERIC
+
+    # Resource versioning
+    respect_forward_references: true
+
+    # Performance tuning
+    reuse_cached_search_results_millis: 60000
+    retain_cached_searches_mins: 60
+
+    # Email
+    email_from: noreply@hapifhir.io
+
+# Server configuration
+server:
+  port: 8080
+  servlet:
+    context-path: /
+  compression:
+    enabled: true
+
+# Actuator endpoints for monitoring
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+
+# Logging
+logging:
+  level:
+    root: INFO
+    ca.uhn.fhir: INFO
+    org.springframework: WARN
+    org.hibernate: WARN
