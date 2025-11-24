@@ -1,5 +1,4 @@
-
-// Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+// Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
 
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -38,7 +37,7 @@ service class HL7ServiceConnectionService {
     remote function onBytes(tcp:Caller caller, readonly & byte[] data) returns tcp:Error? {
         string|error fromBytes = string:fromBytes(data);
         if fromBytes is string {
-            log:printDebug(string `Received HL7 Message: ${fromBytes}`);
+            log:printDebug(string `Received HL7 Message from client: ${caller.remotePort.toString()}`);
         }
 
         // Uncomment the following section to use HL7 listener with a FHIR server as backend
@@ -72,7 +71,7 @@ service class HL7ServiceConnectionService {
 
         string|error resp = string:fromBytes(encodedMsg);
         if resp is string {
-            log:printDebug(string `Encoded HL7 ACK Response Message: ${resp}`);
+            log:printDebug(string `Encoded the HL7 ACK Response Message.`);
         }
 
         // Echoes back the data to the client from which the data is received.
