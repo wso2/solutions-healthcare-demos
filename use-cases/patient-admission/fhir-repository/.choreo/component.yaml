@@ -1,0 +1,90 @@
+# Choreo Component Configuration for HAPI FHIR JPA Server
+# This component acts as the FHIR repository for healthcare data
+
+schemaVersion: "1.2"
+
+# Component metadata
+metadata:
+  name: fhir-repository
+  displayName: HAPI FHIR Repository
+  description: HAPI FHIR JPA Server for storing and retrieving FHIR resources (Patient, Encounter, etc.)
+
+# Endpoints configuration
+endpoints:
+  - name: fhir-api
+    displayName: FHIR REST API
+    service:
+      basePath: /fhir
+      port: 8080
+    type: REST
+    networkVisibilities:
+      - Project
+      - Public
+    schema:
+      openApiFilePath: ""
+
+# Container build configuration
+build:
+  dockerfile:
+    path: Dockerfile
+    context: .
+
+# Environment variables that can be configured
+environmentVariables:
+  - name: SPRING_DATASOURCE_URL
+    description: Database connection URL (defaults to H2 in-memory)
+    defaultValue: "jdbc:h2:mem:testdb"
+
+  - name: SPRING_DATASOURCE_DRIVER_CLASS_NAME
+    description: Database driver class name
+    defaultValue: "org.h2.Driver"
+
+  - name: SPRING_DATASOURCE_USERNAME
+    description: Database username
+    defaultValue: "sa"
+
+  - name: HAPI_FHIR_SERVER_ADDRESS
+    description: FHIR server base URL (will be auto-configured by Choreo)
+
+  - name: HAPI_FHIR_DEFAULT_PAGE_SIZE
+    description: Default page size for search results
+    defaultValue: "20"
+
+  - name: HAPI_FHIR_MAX_PAGE_SIZE
+    description: Maximum page size for search results
+    defaultValue: "200"
+
+  - name: HAPI_FHIR_ALLOW_MULTIPLE_DELETE
+    description: Allow multiple resource deletion
+    defaultValue: "false"
+
+  - name: HAPI_FHIR_ALLOW_EXTERNAL_REFERENCES
+    description: Allow external references
+    defaultValue: "true"
+
+  - name: HAPI_FHIR_CORS_ENABLED
+    description: Enable CORS
+    defaultValue: "true"
+
+  - name: JAVA_OPTS
+    description: JVM options
+    defaultValue: "-Xms512m -Xmx2048m"
+
+# Resource requirements
+resources:
+  requests:
+    memory: "1Gi"
+    cpu: "500m"
+  limits:
+    memory: "2Gi"
+    cpu: "1000m"
+
+# Health check configuration
+healthCheck:
+  httpGet:
+    path: /fhir/metadata
+    port: 8080
+  initialDelaySeconds: 60
+  periodSeconds: 30
+  timeoutSeconds: 10
+  failureThreshold: 3

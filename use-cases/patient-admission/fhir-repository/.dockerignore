@@ -1,0 +1,54 @@
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Documentation
+README.md
+*.md
+
+# IDE
+.vscode
+.idea
+*.iml
+.DS_Store
+
+# Build artifacts (will be built inside container)
+target/
+*.jar
+*.war
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
+*.swp
+*~
+
+# Node modules (if any)
+node_modules/
+npm-debug.log*
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Testing
+coverage/
+.nyc_output/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Choreo (keep .choreo for metadata)
+# .choreo
+
+# Application data
+data/
+*.db
+*.h2.db

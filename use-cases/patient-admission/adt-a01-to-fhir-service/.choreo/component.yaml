@@ -1,0 +1,10 @@
+schemaVersion: "1.2"
+endpoints:
+    - name: hl7v2-fhir-integration
+      displayName: Process hl7 adt messages
+      service:
+        basePath: /
+        port: 8000
+      type: TCP
+      networkVisibilities:
+        - Project

@@ -1,0 +1,91 @@
+import ballerina/http;
+import ballerina/log;
+import ballerinax/health.clients.fhir;
+import ballerinax/health.fhir.r4;
+
+http:OAuth2ClientCredentialsGrantConfig ehrSystemAuthConfig = {
+    tokenUrl: tokenUrl is string ?tokenUrl:"",
+    clientId: client_id is string ?client_id:"",
+    clientSecret: client_secret is string ?client_secret:"",
+    scopes: scopes is string[] ?scopes:[],
+    optionalParams: {
+        "resource": fhirServerUrl is string ?fhirServerUrl:""
+    }
+};
+
+fhir:FHIRConnectorConfig ehrSystemConfig = {
+    baseURL: fhirServerUrl,
+    mimeType: fhir:FHIR_JSON
+    // authConfig: ehrSystemAuthConfig
+};
+
+isolated final fhir:FHIRConnector fhirConnector = check new (ehrSystemConfig);
+
+public isolated function extractBundleAndSendToFhirRepo(r4:Bundle bundle) returns int|error {
+
+    r4:BundleEntry[] entries = <r4:BundleEntry[]>bundle.entry;
+    foreach var entry in entries {
+        map<anydata> fhirResource = <map<anydata>>entry?.'resource;
+        int sendToFhirRepoResult = sendToFhirRepo(fhirResource.toJson());
+        if sendToFhirRepoResult != 201 {
+            log:printWarn(string `Failed to send FHIR resource to the FHIR repository: ${fhirResource.toJsonString()}`);
+            return error("Failed to send FHIR resource to the FHIR repository");
+        } else {
+            log:printDebug(string `FHIR resource sent to the FHIR repository: ${fhirResource.toJsonString()}`);
+            return sendToFhirRepoResult;
+        }
+    }
+    return error("No resources found in the FHIR bundle");
+}
+
+public isolated function sendToFhirRepo(json fhirResource) returns int {
+
+    fhir:FHIRResponse|fhir:FHIRError fhirResponse = fhirConnector->create(fhirResource);
+    if fhirResponse is fhir:FHIRResponse {
+        log:printInfo(string `FHIR response: ${fhirResponse.toString()}`);
+        log:printInfo(string `Location: ${fhirResponse.serverResponseHeaders.get(location_header_key)}`);
+        return fhirResponse.httpStatusCode;
+    } else if fhirResponse is fhir:FHIRError {
+        log:printError(string `Error in sending to FHIR Repository. FHIR error: ${fhirResponse.toString()}. \n Resource: ${fhirResource.toJsonString()}`);
+        return http:INTERNAL_SERVER_ERROR.status.code;
+    }
+}
+
+public isolated function searchInFhirRepo(string resourceType, string paramName, string paramValue) returns json|xml {
+
+    map<string[]> searchParameters = {};
+    searchParameters[paramName] = [paramValue];
+
+    fhir:FHIRResponse|fhir:FHIRError fhirResponse = fhirConnector->search(resourceType, searchParameters = searchParameters);
+    if fhirResponse is fhir:FHIRResponse {
+        log:printInfo(string `FHIR response: ${fhirResponse.toString()}`);
+        return fhirResponse.'resource;
+    } else if fhirResponse is fhir:FHIRError {
+        log:printError(string `FHIR error: ${fhirResponse.toString()}`);
+        return http:INTERNAL_SERVER_ERROR.status.code;
+    }
+}
+
+public isolated function getById(string resourceType, string id) returns json|xml {
+
+    fhir:FHIRResponse|fhir:FHIRError fhirResponse = fhirConnector->getById(resourceType, id, fhir:FHIR_JSON);
+    if fhirResponse is fhir:FHIRResponse {
+        log:printInfo(string `FHIR response: ${fhirResponse.toString()}`);
+        return fhirResponse.'resource;
+    } else if fhirResponse is fhir:FHIRError {
+        log:printError(string `FHIR error: ${fhirResponse.toString()}`);
+        return http:INTERNAL_SERVER_ERROR.status.code;
+    }
+}
+
+public isolated function update(json fhirResource) returns int {
+
+    fhir:FHIRResponse|fhir:FHIRError fhirResponse = fhirConnector->update(fhirResource, fhir:FHIR_JSON);
+    if fhirResponse is fhir:FHIRResponse {
+        log:printInfo(string `FHIR response: ${fhirResponse.toString()}`);
+        return fhirResponse.httpStatusCode;
+    } else if fhirResponse is fhir:FHIRError {
+        log:printError(string `FHIR error: ${fhirResponse.toString()}`);
+        return http:INTERNAL_SERVER_ERROR.status.code;
+    }
+}
