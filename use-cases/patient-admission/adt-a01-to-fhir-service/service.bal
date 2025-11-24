@@ -17,7 +17,6 @@
 import ballerina/io;
 import ballerina/tcp;
 import ballerinax/health.hl7v2;
-import ballerinax/health.fhir.r4.international401;
 import ballerina/log;
 
 configurable string fhirServerUrl = ?;
@@ -52,24 +51,13 @@ service class HL7ServiceConnectionService {
             return error(string `Error occurred while parsing the received message: ${parsedMsg.message()}`,
             parsedMsg);
         }
-        international401:Patient|error patientResource = extractPatientFromADT_A01(parsedMsg);
-        international401:Encounter|error encounterResource = extractEncounterFromADT_A01(parsedMsg);
-
-        // Send the message to the relevant processor
-
-        if patientResource is error {
-            log:printError(string `Error occurred while extracting patient from ADT_A01 message: ${patientResource.message()}`);
-            return error(string `Error occurred while extracting patient from ADT_A01 message: ${patientResource.message()}`, patientResource);
-
-        }
         do {
-            boolean|error extractFHIRBundleAndPersistResult = extractFHIRBundleAndPersist(parsedMsg);
-            if extractFHIRBundleAndPersistResult is boolean {
-                log:printInfo("Successfully extracted FHIR bundle and persisted to FHIR repository");
-            } else {
+            error? extractFHIRBundleAndPersistResult = extractFHIRBundleAndPersist(parsedMsg);
+            if extractFHIRBundleAndPersistResult is error {
                 log:printError(string `Error occurred while extracting FHIR bundle and persisting to FHIR repository: ${extractFHIRBundleAndPersistResult.message()}`);
+            } else {
+                log:printInfo("Successfully extracted FHIR bundle and persisted to FHIR repository");
             }
-            // log:printInfo(string `Sent HL7 message to processor: ${fhirServerUrl}, Response: ${response.statusCode.toString()}`);
         } on fail var e {
             log:printError(string `Error occurred while sending HL7 message to processor: ${fhirServerUrl}, Error: ${e.message()}`);
 

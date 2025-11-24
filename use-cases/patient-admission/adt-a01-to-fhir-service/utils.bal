@@ -65,28 +65,9 @@ public isolated function generateAckMessage(hl7v2:Message message) returns byte[
     }
 }
 
-public isolated function extractPatientFromADT_A01(hl7v2:Message adtA01) returns international401:Patient|error {
+public isolated function extractFHIRBundleAndPersist(hl7v2:Message adtA01) returns error? {
 
-    json v2tofhirResult = check v2tofhirr4:v2ToFhir(adtA01);
-
-    r4:Bundle bundle = <r4:Bundle>check r4parser:parse(v2tofhirResult);
-
-    if bundle is r4:Bundle {
-        r4:BundleEntry[] entries = <r4:BundleEntry[]>bundle.entry;
-        foreach var entry in entries {
-            map<anydata> fhirResource = <map<anydata>>entry?.'resource;
-            if fhirResource["resourceType"].toString() == "Patient" {
-                international401:Patient patientResource = <international401:Patient>check r4parser:parse(fhirResource.toJson());
-                return patientResource;
-
-            }
-        }
-        return error("Patient resource not found in the FHIR bundle");
-    }
-}
-
-public isolated function extractEncounterFromADT_A01(hl7v2:Message adtA01) returns international401:Encounter|error {
-
+    int[] statusCodes = [];
     json v2tofhirResult = check v2tofhirr4:v2ToFhir(adtA01);
 
     r4:Bundle bundle = <r4:Bundle>check r4parser:parse(v2tofhirResult);
@@ -97,19 +78,30 @@ public isolated function extractEncounterFromADT_A01(hl7v2:Message adtA01) retur
             map<anydata> fhirResource = <map<anydata>>entry?.'resource;
             if fhirResource["resourceType"].toString() == "Encounter" {
                 international401:Encounter encounterResource = <international401:Encounter>check r4parser:parse(fhirResource.toJson());
-                return encounterResource;
-
+                // Modify encounterResource here before sending to FHIR repository if needed
+                int sendToFhirRepoResult = sendToFhirRepo(encounterResource.toJson());
+                statusCodes.push(sendToFhirRepoResult);
+                log:printInfo(string `Sent Encounter resource to FHIR repository with response code: ${sendToFhirRepoResult}`);
+            } else if fhirResource["resourceType"].toString() == "Patient" {
+                international401:Patient patientResource = <international401:Patient>check r4parser:parse(fhirResource.toJson());
+                // Modify Patient resource here before sending to FHIR repository if needed
+                int sendToFhirRepoResult = sendToFhirRepo(patientResource.toJson());
+                statusCodes.push(sendToFhirRepoResult);
+                log:printInfo(string `Sent Patient resource to FHIR repository with response code: ${sendToFhirRepoResult}`);
+                
+            } else {
+                log:printWarn(`Unsupported resource type: ${fhirResource["resourceType"].toString()}`);
             }
         }
-        return error("Encounter resource not found in the FHIR bundle");
+        if statusCodes.length()==0 {
+            return error("No Patient or Encounter resources found in the FHIR bundle");
+        }
+        foreach int i in statusCodes {
+            if i != 201 {
+                log:printError("Failed to send one or more resources to the FHIR repository. Check debug logs for details.");
+                return error("Failed to send one or more resources to the FHIR repository");
+            }
+        }
+        log:printInfo("All resources sent to FHIR repository successfully");
     }
-}
-
-public isolated function extractFHIRBundleAndPersist(hl7v2:Message adtA01) returns boolean|error {
-
-    json v2tofhirResult = check v2tofhirr4:v2ToFhir(adtA01);
-
-    r4:Bundle bundle = <r4:Bundle>check r4parser:parse(v2tofhirResult);
-
-    return extractBundleAndSendToFhirRepo(bundle);
 }

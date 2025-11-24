@@ -21,19 +21,21 @@ fhir:FHIRConnectorConfig ehrSystemConfig = {
 
 isolated final fhir:FHIRConnector fhirConnector = check new (ehrSystemConfig);
 
-public isolated function extractBundleAndSendToFhirRepo(r4:Bundle bundle) returns boolean {
+public isolated function extractBundleAndSendToFhirRepo(r4:Bundle bundle) returns int|error {
 
     r4:BundleEntry[] entries = <r4:BundleEntry[]>bundle.entry;
     foreach var entry in entries {
         map<anydata> fhirResource = <map<anydata>>entry?.'resource;
         int sendToFhirRepoResult = sendToFhirRepo(fhirResource.toJson());
         if sendToFhirRepoResult != 201 {
-            log:printWarn(string `[MAINTENANCE_REQUIRED] Failed to send FHIR resource to the FHIR repository: ${fhirResource.toJsonString()}`);
+            log:printWarn(string `Failed to send FHIR resource to the FHIR repository: ${fhirResource.toJsonString()}`);
+            return error("Failed to send FHIR resource to the FHIR repository");
         } else {
-            log:printDebug(string `[NORMAL FHIR resource sent to the FHIR repository: ${fhirResource.toJsonString()}`);
+            log:printDebug(string `FHIR resource sent to the FHIR repository: ${fhirResource.toJsonString()}`);
+            return sendToFhirRepoResult;
         }
     }
-    return true;
+    return error("No resources found in the FHIR bundle");
 }
 
 public isolated function sendToFhirRepo(json fhirResource) returns int {
@@ -44,7 +46,7 @@ public isolated function sendToFhirRepo(json fhirResource) returns int {
         log:printInfo(string `Location: ${fhirResponse.serverResponseHeaders.get(location_header_key)}`);
         return fhirResponse.httpStatusCode;
     } else if fhirResponse is fhir:FHIRError {
-        log:printError(string `FHIR error: ${fhirResponse.toString()}`);
+        log:printError(string `Error in sending to FHIR Repository. FHIR error: ${fhirResponse.toString()}. \n Resource: ${fhirResource.toJsonString()}`);
         return http:INTERNAL_SERVER_ERROR.status.code;
     }
 }
