@@ -43,7 +43,7 @@ service class HL7ServiceConnectionService {
 
         // Uncomment the following section to use HL7 listener with a FHIR server as backend
 
-        // // HL7 Listner with FHIR server as backend
+        // HL7 Listener with FHIR server as backend
         hl7v2:Message|error parsedMsg = hl7v2:parse(data);
         if parsedMsg is error {
             log:printError(string `Error occurred while parsing the received message: ${parsedMsg.message()}`);
