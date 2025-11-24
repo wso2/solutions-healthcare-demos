@@ -15,9 +15,9 @@
 // specific language governing permissions and limitations
 // under the License.
 import ballerina/io;
+import ballerina/log;
 import ballerina/tcp;
 import ballerinax/health.hl7v2;
-import ballerina/log;
 
 configurable string fhirServerUrl = ?;
 configurable string tokenUrl = ?;
@@ -44,7 +44,7 @@ service class HL7ServiceConnectionService {
 
         // Uncomment the following section to use HL7 listener with a FHIR server as backend
 
-        // // HL7 Listner with FHIR server as backend
+        // HL7 Listener with FHIR server as backend
         hl7v2:Message|error parsedMsg = hl7v2:parse(data);
         if parsedMsg is error {
             log:printError(string `Error occurred while parsing the received message: ${parsedMsg.message()}`);

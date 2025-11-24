@@ -1,0 +1,2 @@
+[workspace]
+packages = ["adt-a01-to-fhir-service", "hl7v2-client"]
