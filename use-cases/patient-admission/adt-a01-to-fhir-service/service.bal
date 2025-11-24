@@ -14,10 +14,9 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-import ballerina/io;
+import ballerina/log;
 import ballerina/tcp;
 import ballerinax/health.hl7v2;
-import ballerina/log;
 
 configurable string fhirServerUrl = ?;
 configurable string tokenUrl = ?;
@@ -28,7 +27,7 @@ configurable string location_header_key = "location";
 
 service on new tcp:Listener(8000) {
     remote function onConnect(tcp:Caller caller) returns tcp:ConnectionService {
-        io:println("Client connected to HL7 server: ", caller.remotePort.toString());
+        log:printDebug(string `Client connected to HL7 server: ${caller.remotePort.toString()}`);
         return new HL7ServiceConnectionService();
     }
 }
@@ -39,7 +38,7 @@ service class HL7ServiceConnectionService {
     remote function onBytes(tcp:Caller caller, readonly & byte[] data) returns tcp:Error? {
         string|error fromBytes = string:fromBytes(data);
         if fromBytes is string {
-            io:println("Received HL7 Message: ", fromBytes);
+            log:printDebug(string `Received HL7 Message: ${fromBytes}`);
         }
 
         // Uncomment the following section to use HL7 listener with a FHIR server as backend
@@ -83,11 +82,11 @@ service class HL7ServiceConnectionService {
     }
 
     remote function onError(tcp:Error err) {
-        io:println(string `An error occurred while receiving HL7 message: ${err.message()}. Stack trace: `,
-                err.stackTrace());
+        log:printError(string `An error occurred while receiving HL7 message: ${err.message()}. Stack trace: `,
+                err);
     }
 
     remote function onClose() {
-        io:println("Client left");
+        log:printDebug("Client left");
     }
 }
