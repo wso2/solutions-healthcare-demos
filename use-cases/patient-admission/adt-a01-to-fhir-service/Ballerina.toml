@@ -2,7 +2,7 @@
 org = "wso2"
 name = "adt_a01_to_fhir_service"
 version = "0.1.0"
-distribution = "2201.13.1"
+distribution = "2201.12.10"
 
 [build-options]
 observabilityIncluded = true
