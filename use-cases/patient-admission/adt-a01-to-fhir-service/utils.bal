@@ -1,3 +1,20 @@
+
+// Copyright (c) 2025, WSO2 LLC. (http://www.wso2.com).
+
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+
+// http://www.apache.org/licenses/LICENSE-2.0
+
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 import ballerina/log;
 import ballerina/uuid;
 import ballerinax/health.fhir.r4;
@@ -48,7 +65,7 @@ public isolated function generateAckMessage(hl7v2:Message message) returns byte[
         };
         ack = hl7v23Ack;
         hl7Version = hl7v23:VERSION;
-    }  else {
+    } else {
         log:printError(string `Received message is not an ADT_A01 message: ${message.toString()}`);
     }
 
@@ -88,12 +105,12 @@ public isolated function extractFHIRBundleAndPersist(hl7v2:Message adtA01) retur
                 int sendToFhirRepoResult = sendToFhirRepo(patientResource.toJson());
                 statusCodes.push(sendToFhirRepoResult);
                 log:printInfo(string `Sent Patient resource to FHIR repository with response code: ${sendToFhirRepoResult}`);
-                
+
             } else {
                 log:printWarn(`Unsupported resource type: ${fhirResource["resourceType"].toString()}`);
             }
         }
-        if statusCodes.length()==0 {
+        if statusCodes.length() == 0 {
             return error("No Patient or Encounter resources found in the FHIR bundle");
         }
         foreach int i in statusCodes {
