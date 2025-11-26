@@ -18,6 +18,8 @@ import ballerina/http;
 import ballerina/log;
 import ballerinax/health.clients.fhir;
 import ballerinax/health.fhir.r4;
+import ballerina/tcp;
+import ballerinax/health.hl7v2;
 
 # FHIR server configurations
 configurable string fhirServerUrl = ?;
@@ -62,3 +64,40 @@ service / on new http:Listener(9090) {
     }
 }
 
+
+service on new tcp:Listener(3000) {
+    remote function onConnect(tcp:Caller caller) returns tcp:ConnectionService {
+        log:printInfo("Client connected to HL7 server: " + caller.remotePort.toString());
+        return new HL7ServiceConnectionService();
+    }
+}
+
+service class HL7ServiceConnectionService {
+    *tcp:ConnectionService;
+
+    remote function onBytes(tcp:Caller caller, readonly & byte[] data) returns tcp:Error? {
+        string|error fromBytes = string:fromBytes(data);
+        if fromBytes is string {
+            log:printInfo("Received HL7 Message: " + fromBytes);
+        }
+
+        hl7v2:Message|error parsedMsg = hl7v2:parse(data).ensureType();
+        if parsedMsg is error {
+            return error(string `Error occurred while parsing the received message: ${parsedMsg.message()}`, 
+            parsedMsg);
+        }
+        anydata|r4:FHIRError mapToFhirResult = mapToFhir("hl7_data", parsedMsg);
+        if mapToFhirResult is anydata {
+            log:printInfo(string `FHIR resource mapped: ${mapToFhirResult.toJsonString()}`, mappedData = mapToFhirResult.toJson());
+        }
+        log:printInfo(string `Parsed HL7 message: ${parsedMsg.toJsonString()}`);
+    }
+
+    remote function onError(tcp:Error err) {
+        log:printInfo(string `An error occurred while receiving HL7 message: ${err.message()}. Stack trace: `);
+    }
+
+    remote function onClose() {
+        log:printInfo("Client left");
+    }
+}
