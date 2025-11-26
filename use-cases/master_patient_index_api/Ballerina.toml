@@ -1,0 +1,4 @@
+[package]
+org = "wso2"
+name = "master_patient_index_api"
+version = "0.1.0"

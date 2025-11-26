@@ -1,0 +1,12 @@
+schemaVersion: "1.2"
+endpoints:
+    - name: master-patient-index-api
+      displayName: Master Patient Index API
+      service:
+        basePath: /mpi
+        port: 9090
+      type: REST
+      networkVisibilities:
+        - Project
+        - Public
+      schemaFilePath: oas/mpi_openapi.yaml
