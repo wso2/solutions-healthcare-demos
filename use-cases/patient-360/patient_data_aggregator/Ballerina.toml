@@ -1,0 +1,8 @@
+[package]
+org = "sameerag"
+name = "patient_data_aggregator"
+version = "0.1.0"
+title = "patient-data-aggregator"
+
+[build-options]
+sticky = true
