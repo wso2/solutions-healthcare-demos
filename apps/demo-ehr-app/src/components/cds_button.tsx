@@ -1,4 +1,4 @@
-// Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+// Copyright (c) 2024-2025, WSO2 LLC. (http://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -17,19 +17,25 @@
 import { useContext } from "react";
 import { Box, Button } from "@mui/material";
 import { ExpandedContext } from "../utils/expanded_context";
+import { SCREEN_HEIGHT } from "../constants/page";
 
 export const DevPortalExpandButton = () => {
-  const { toggleExpanded } = useContext(ExpandedContext);
+  const { toggleExpanded, expanded } = useContext(ExpandedContext);
 
   return (
-    <Box sx={{ display: "flex", alignItems: "center", height: "70vh" }}>
+    <Box sx={{ display: "flex", alignItems: "center", height: (SCREEN_HEIGHT-80)}}>
       <Button
-        variant="outlined"
         sx={{
           writingMode: "vertical-rl",
           transform: "rotate(180deg)",
-          height: "70vh",
+          height: "90%",
           minWidth: "2vw",
+          borderRadius: 50,
+          color: "white",
+          backgroundColor: expanded? "#4C585B" :"#7E99A3",
+          ":hover": {
+            backgroundColor: expanded? "#7E99A3" : "#4C585B",
+          },
         }}
         onClick={toggleExpanded}
       >

@@ -1,4 +1,4 @@
-// Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+// Copyright (c) 2024-2025, WSO2 LLC. (http://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -19,35 +19,34 @@ export const SERVICE_CARD_DETAILS = [
     serviceImagePath: "/patient_view_service.png",
     serviceName: "View Patient",
     serviceDescription:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud ",
+      "Access and manage patient records, including personal details, medical history, and treatment plans.",
     path: "/dashboard/patient",
   },
   {
     serviceImagePath: "/appointment_book_service.png",
     serviceName: "Book an Appointment",
     serviceDescription:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud ",
+      "Easily schedule and manage appointments with healthcare providers.",
     path: "/dashboard/appointment-schedule",
   },
   {
     serviceImagePath: "/drug_order_service.png",
     serviceName: "Order Drugs",
     serviceDescription:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud ",
-    path: "/dashboard/drug-order",
+      "Order and manage medications for patients, ensuring timely and accurate delivery.",
+    path: "/dashboard/drug-order-v2",
   },
   {
     serviceImagePath: "/order_device_service.png",
     serviceName: "Order Devices",
-    serviceDescription:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud ",
-    path: "/dashboard/device-order",
+    serviceDescription: "Order and manage medical devices for patient care.",
+    path: "/dashboard/device-order-v2",
   },
   {
     serviceImagePath: "/medical_imaging.png",
     serviceName: "Schedule Medical Imaging",
     serviceDescription:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud ",
+      "Schedule and manage medical imaging appointments, including CT scans, X-rays, and MRIs.",
     path: "/dashboard/medical-imaging",
   },
 ];
@@ -140,81 +139,60 @@ export const DEVICE = [
     name: "Glucometer",
     imagePath: "/gloco_meter.png",
     description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud",
+      "A device used to measure blood glucose levels, essential for diabetes management.",
     large_description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-    dosages: ["50mg", "100mg", "150mg", "250mg"],
-    path: "/dashboard/drug-order/glucometer",
+      "The glucometer is a portable device that measures blood glucose levels. It is crucial for individuals with diabetes to monitor their blood sugar levels regularly. The device provides quick and accurate readings, helping users manage their condition effectively.",
+    dosages: ["N/A"],
+    path: "/dashboard/device-order/glucometer",
   },
   {
-    name: "Glucometer",
-    imagePath: "/gloco_meter.png",
+    name: "Blood Pressure Monitor",
+    imagePath: "/blood_pressure_monitor.png",
     description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud",
+      "Accurately measure and monitor blood pressure levels with this easy-to-use device.",
     large_description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-    dosages: ["50mg", "100mg", "150mg", "250mg"],
-    path: "/dashboard/drug-order/glucometer",
+      "This blood pressure monitor provides accurate readings and stores historical data for tracking. It features a large display and easy-to-use interface, making it ideal for home use.",
+    dosages: ["N/A"],
+    path: "/dashboard/device-order/blood-pressure-monitor",
   },
   {
-    name: "Glucometer",
-    imagePath: "/gloco_meter.png",
+    name: "Pulse Oximeter",
+    imagePath: "/pulse_oximeter.png",
     description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud",
+      "Quickly measure blood oxygen saturation levels and pulse rate with this compact device.",
     large_description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-    dosages: ["50mg", "100mg", "150mg", "250mg"],
-    path: "/dashboard/drug-order/glucometer",
+      "The pulse oximeter is a non-invasive device that measures blood oxygen saturation levels and pulse rate. It is compact, portable, and easy to use, making it perfect for both home and clinical use.",
+    dosages: ["N/A"],
+    path: "/dashboard/device-order/pulse-oximeter",
   },
   {
-    name: "Glucometer",
-    imagePath: "/gloco_meter.png",
+    name: "Thermometer",
+    imagePath: "/thermometer.png",
     description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud",
+      "Get accurate body temperature readings with this digital thermometer.",
     large_description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-    dosages: ["50mg", "100mg", "150mg", "250mg"],
-    path: "/dashboard/drug-order/glucometer",
+      "This digital thermometer provides quick and accurate body temperature readings. It features a clear display and is suitable for all ages, making it an essential tool for monitoring health at home.",
+    dosages: ["N/A"],
+    path: "/dashboard/device-order/thermometer",
   },
   {
-    name: "Glucometer",
-    imagePath: "/gloco_meter.png",
+    name: "Nebulizer",
+    imagePath: "/nebulizer.jpg",
     description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud",
+      "Effectively deliver medication to the lungs with this portable nebulizer.",
     large_description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-    dosages: ["50mg", "100mg", "150mg", "250mg"],
-    path: "/dashboard/drug-order/glucometer",
+      "The nebulizer is designed to convert liquid medication into a fine mist for inhalation. It is portable, easy to use, and ideal for patients with respiratory conditions such as asthma or COPD.",
+    dosages: ["N/A"],
+    path: "/dashboard/device-order/nebulizer",
   },
   {
-    name: "Glucometer",
-    imagePath: "/gloco_meter.png",
-    description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud",
+    name: "ECG Machine",
+    imagePath: "/ecg_machine.webp",
+    description: "Monitor heart activity with this advanced ECG machine.",
     large_description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-    dosages: ["50mg", "100mg", "150mg", "250mg"],
-    path: "/dashboard/drug-order/glucometer",
-  },
-  {
-    name: "Glucometer",
-    imagePath: "/gloco_meter.png",
-    description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud",
-    large_description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-    dosages: ["50mg", "100mg", "150mg", "250mg"],
-    path: "/dashboard/drug-order/glucometer",
-  },
-  {
-    name: "Glucometer",
-    imagePath: "/gloco_meter.png",
-    description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud",
-    large_description:
-      "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.",
-    dosages: ["50mg", "100mg", "150mg", "250mg"],
-    path: "/dashboard/drug-order/glucometer",
+      "This ECG machine provides detailed readings of heart activity, helping to diagnose and monitor cardiac conditions. It is equipped with advanced features and is suitable for both clinical and home use.",
+    dosages: ["N/A"],
+    path: "/dashboard/device-order/ecg-machine",
   },
 ];
 
@@ -966,6 +944,292 @@ export const CT_SCAN_SERVICE_REQUEST = {
   authoredOn: "2019-09-20T15:42:13+02:00",
 };
 
+export const CLAIM_REQUEST_BODY = (
+  patient: string,
+  provider: string,
+  insurer: string,
+  use: string,
+  supportingInfo: string,
+  category: string,
+  medication: string,
+  quantity: string,
+  unitPrice: string
+) => {
+  return {
+    resourceType: "Parameters",
+    parameter: [
+      {
+        name: "resource",
+        resource: {
+          resourceType: "Bundle",
+          type: "collection",
+          entry: [
+            {
+              resource: {
+                resourceType: "Claim",
+                identifier: [
+                  {
+                    system: "http://hospital.org/claims",
+                    value: "PA-20250302-001",
+                  },
+                ],
+                status: "active",
+                type: {
+                  coding: [
+                    {
+                      system:
+                        "http://terminology.hl7.org/CodeSystem/claim-type",
+                      code: "professional",
+                      display: "Professional",
+                    },
+                  ],
+                },
+                use: `${use}`,
+                priority: {
+                  coding: [
+                    {
+                      system:
+                        "http://terminology.hl7.org/CodeSystem/processpriority",
+                      code: "stat",
+                      display: "Immediate",
+                    },
+                  ],
+                },
+                patient: {
+                  reference: `${patient}`,
+                },
+                created: "2025-03-02",
+                insurer: {
+                  reference: `${insurer}`,
+                },
+                provider: {
+                  reference: `${provider}`,
+                },
+                insurance: [
+                  {
+                    sequence: 1,
+                    focal: true,
+                    coverage: {
+                      reference: "Coverage/insurance-coverage",
+                    },
+                  },
+                ],
+                supportingInfo: [
+                  {
+                    sequence: 1,
+                    category: {
+                      coding: [
+                        {
+                          system:
+                            "http://terminology.hl7.org/CodeSystem/claiminformationcategory",
+                          code: "info",
+                          display: "Supporting Information",
+                        },
+                      ],
+                    },
+                    valueReference: {
+                      reference: `${supportingInfo}`,
+                    },
+                  },
+                ],
+                item: [
+                  {
+                    sequence: 1,
+                    category: {
+                      coding: [
+                        {
+                          system:
+                            "http://terminology.hl7.org/CodeSystem/ex-benefitcategory",
+                          code: "pharmacy",
+                          display: `${category}`,
+                        },
+                      ],
+                    },
+                    productOrService: {
+                      coding: [
+                        {
+                          system: "http://www.nlm.nih.gov/research/umls/rxnorm",
+                          code: "1746007",
+                          display: `${medication}`,
+                        },
+                      ],
+                    },
+                    servicedDate: "2025-03-02",
+                    unitPrice: {
+                      value: +`${unitPrice}`.split(" ")[0],
+                      currency: `${unitPrice}`.split(" ")[1],
+                    },
+                    quantity: {
+                      value: +`${quantity}`,
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    ],
+  };
+};
+
+export const CREATE_MEDICATION_REQUEST_BODY = (
+) => {
+  return {
+    resourceType: "MedicationRequest",
+    subject: {
+      reference: "Patient/101",
+    },
+    medicationReference: {
+      reference: "Medication/aimovig-70mg",
+    },
+    dispenseRequest: {
+      quantity: {
+        value: 1.0,
+        unit: "injection",
+        system: "http://unitsofmeasure.org",
+        code: "injection",
+      },
+      expectedSupplyDuration: {
+        unit: "days",
+        system: "http://unitsofmeasure.org",
+        code: "d",
+        value: 30.0,
+      },
+    },
+    requester: {
+      reference: "Practitioner/456",
+    },
+    authoredOn: "2025-03-02",
+    medicationCodeableConcept: {
+      coding: [
+        {
+          system: "http://www.nlm.nih.gov/research/umls/rxnorm",
+          code: "1746007",
+          display: "Aimovig 70 mg Injection",
+        },
+      ],
+      text: "Aimovig 70 mg Injection",
+    },
+    intent: "order",
+    dosageInstruction: [
+      {
+        timing: {
+          repeat: {
+            boundsPeriod: {
+              start: "2025-03-02",
+            },
+            frequency: 1,
+            period: 1.0,
+            periodUnit: "mo",
+          },
+        },
+        doseAndRate: [
+          {
+            doseQuantity: {
+              value: 70.0,
+              unit: "mg",
+              system: "http://unitsofmeasure.org",
+              code: "mg",
+            },
+          },
+        ],
+        text: "Inject 70 mg subcutaneously once a month",
+      },
+    ],
+    status: "active",
+  };
+};
+
+export const CHECK_PAYER_REQUIREMENTS_REQUEST_BODY = (
+  patientId: string,
+  practitionerId: string,
+  medicationName: string,
+  quantity: number
+) => {
+  return {
+    hook: "order-sign",
+    hookInstance: "98765-wxyz-43210-lmno",
+    context: {
+      userId: `PractitionerRole/${practitionerId}`,
+      patientId: `${patientId}`,
+      draftOrders: {
+        resourceType: "Bundle",
+        meta: {
+          profile: ["http://hl7.org/fhir/StructureDefinition/Bundle"],
+        },
+        type: "collection",
+        entry: [
+          {
+            resource: {
+              resourceType: "MedicationRequest",
+              subject: {
+                reference: "Patient/john-smith",
+              },
+              medicationCodeableConcept: {
+                coding: [
+                  {
+                    system: "http://www.nlm.nih.gov/research/umls/rxnorm",
+                    code: "1746007",
+                    display: `${medicationName}`,
+                  },
+                ],
+                text: `${medicationName}`,
+              },
+              dispenseRequest: {
+                quantity: {
+                  value: quantity,
+                  unit: "mL",
+                  system: "http://unitsofmeasure.org",
+                  code: "mL",
+                },
+                numberOfRepeatsAllowed: 1,
+                expectedSupplyDuration: {
+                  unit: "days",
+                  system: "http://unitsofmeasure.org",
+                  code: "d",
+                  value: 30.0,
+                },
+              },
+              id: "medication-request-001",
+              intent: "order",
+              dosageInstruction: [
+                {
+                  text: "Inject 70 mg once a month",
+                  timing: {
+                    repeat: {
+                      boundsPeriod: {
+                        start: "2025-03-02",
+                      },
+                      frequency: 1,
+                      period: 1.0,
+                      periodUnit: "mo",
+                    },
+                  },
+                  doseAndRate: [
+                    {
+                      doseQuantity: {
+                        value: 70.0,
+                        unit: "mg",
+                        system: "http://unitsofmeasure.org",
+                        code: "mg",
+                      },
+                    },
+                  ],
+                },
+              ],
+              meta: {
+                lastUpdated: "2025-03-02T10:00:00.000Z",
+              },
+              status: "draft",
+            },
+          },
+        ],
+      },
+    },
+  };
+};
+
 export const ORDER_SIGN_CDS_REQUEST = {
   hookInstance: "d1577c69-dfbe-44ad-ba6d-3e05e953b2ea",
   fhirServer: "http://hapi.fhir.org/baseR4sd",
@@ -1211,3 +1475,96 @@ export const response = {
     },
   ],
 };
+
+export const FREQUENCY_OPTIONS = [
+  {
+    label: "Daily",
+    options: [
+      { value: "Once a day", label: "Once a day" },
+      { value: "Twice a day", label: "Twice a day" },
+      { value: "Thrice a day", label: "Thrice a day" },
+    ],
+  },
+  {
+    label: "Weekly",
+    options: [
+      { value: "Once a week", label: "Once a week" },
+      { value: "Twice a week", label: "Twice a week" },
+    ],
+  },
+  {
+    label: "Monthly",
+    options: [
+      { value: "Once a month", label: "Once a month" },
+      { value: "Twice a month", label: "Twice a month" },
+    ],
+  },
+];
+
+export const TREATMENT_OPTIONS = [
+  {
+    value: "Migraine Prevention",
+    label: "Migraine Prevention",
+  },
+  {
+    value: "Gastroesophageal Reflux Disease",
+    label: "Gastroesophageal Reflux Disease",
+  },
+  { value: "Vertigo", label: "Vertigo" },
+  { value: "Urinary tract Infection", label: "Urinary tract Infection" },
+  { value: "Mechanical Pain", label: "Mechanical Pain" },
+];
+
+export const MEDICATION_OPTIONS = [
+  {
+    label: "Aimovig",
+    options: [
+      {
+        code: "1746007",
+        value: "Aimovig 70 mg Injection",
+        label: "Aimovig 70 mg Injection",
+      },
+      {
+        code: "1746008",
+        value: "Aimovig 140 mg Injection",
+        label: "Aimovig 140 mg Injection",
+      },
+    ],
+  },
+  {
+    label: "Omeprazole",
+    options: [
+      { value: "Omeprazole 10 mg", label: "Omeprazole 10 mg" },
+      { value: "Omeprazole 20 mg", label: "Omeprazole 20 mg" },
+      { value: "Omeprazole 40 mg", label: "Omeprazole 40 mg" },
+    ],
+  },
+  {
+    label: "Esmoprazole",
+    options: [
+      { value: "Esmoprazole 20 mg", label: "Esmoprazole 20 mg" },
+      { value: "Esmoprazole 40 mg", label: "Esmoprazole 40 mg" },
+    ],
+  },
+  {
+    label: "Stemetil",
+    options: [{ value: "Stemetil 5 mg", label: "Stemetil 5 mg" }],
+  },
+  {
+    label: "Ciprofloxacin",
+    options: [{ value: "Ciprofloxacin 500 mg", label: "Ciprofloxacin 500 mg" }],
+  },
+  {
+    label: "Nitrofurantion",
+    options: [
+      { value: "Nitrofurantion 50 mg", label: "Ciprofloxacin 50 mg" },
+      { value: "Nitrofurantion 100 mg", label: "Ciprofloxacin 100 mg" },
+    ],
+  },
+  {
+    label: "Diclofenac Sodium",
+    options: [
+      { value: "Diclofenac Sodium 50 mg", label: "Diclofenac Sodium 50 mg" },
+    ],
+  },
+];
