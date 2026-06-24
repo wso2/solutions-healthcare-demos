@@ -21,7 +21,7 @@ def build_router(
 ) -> APIRouter:
     """Build a CRUD router for one HealthKit object type.
 
-    Every HealthKit object follows the same collector contract: ingest a batch
+    Every HealthKit object follows the same ingest contract: ingest a batch
     of records, list recent records, and fetch a single record by its UUID.
     This factory wires those three operations for a given model triple so each
     object type does not repeat the boilerplate.

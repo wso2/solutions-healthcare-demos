@@ -55,7 +55,7 @@ class SampleSource(SQLModel):
     """Provenance fields shared by every ingested HealthKit object.
 
     These mirror the `source`, `device`, and `metadata` information that
-    HealthKit attaches to each sample so the collector keeps the same context
+    HealthKit attaches to each sample so the simulator keeps the same context
     the on-device store would expose.
     """
 
@@ -71,7 +71,7 @@ class SampleSource(SQLModel):
 
 
 class RecordIdentity(SQLModel):
-    """Identity columns assigned by the collector when a record is stored."""
+    """Identity columns assigned by the simulator when a record is stored."""
 
     id: int | None = Field(default=None, primary_key=True)
     uuid: str = Field(default_factory=new_uuid, index=True, unique=True)
