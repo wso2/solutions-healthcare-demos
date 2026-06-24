@@ -1,0 +1,24 @@
+COMPOSE := docker compose
+
+.DEFAULT_GOAL := help
+
+.PHONY: help build up down ps clean
+
+help: ## List available targets
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
+		| awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
+
+build: ## Build all stack images
+	$(COMPOSE) build
+
+up: ## Build and start the stack in the background
+	$(COMPOSE) up -d --build
+
+down: ## Stop and remove the stack containers
+	$(COMPOSE) down
+
+ps: ## Show stack service status
+	$(COMPOSE) ps
+
+clean: ## Stop the stack and remove volumes
+	$(COMPOSE) down -v
