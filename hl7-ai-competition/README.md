@@ -12,3 +12,13 @@ run on Ballerina.
 
 Earlier stages: [v1](assets/architecture-diagram-v1.png),
 [whiteboard sketch](assets/whiteboard-sketch.png).
+
+## Pre-commit hooks
+
+ruff runs on staged files at commit time. The config lives at
+`hl7-ai-competition/.pre-commit-config.yaml`; install the hook pointing at it
+once, from the fork root (needs `pre-commit`, e.g. `uv tool install pre-commit`):
+
+```sh
+pre-commit install -c hl7-ai-competition/.pre-commit-config.yaml
+```

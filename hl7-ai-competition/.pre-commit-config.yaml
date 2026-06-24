@@ -15,6 +15,6 @@ repos:
     hooks:
       - id: ruff-check
         args: [--fix]
-        files: ^apple-healthkit-simulator/
+        files: ^hl7-ai-competition/apple-healthkit-simulator/
       - id: ruff-format
-        files: ^apple-healthkit-simulator/
+        files: ^hl7-ai-competition/apple-healthkit-simulator/
