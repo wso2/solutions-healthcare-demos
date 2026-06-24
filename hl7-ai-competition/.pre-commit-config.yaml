@@ -18,3 +18,18 @@ repos:
         files: ^hl7-ai-competition/apple-healthkit-simulator/
       - id: ruff-format
         files: ^hl7-ai-competition/apple-healthkit-simulator/
+
+  - repo: local
+    hooks:
+      - id: biome-format
+        name: biome format (whatsapp-simulator)
+        entry: bash -c 'cd hl7-ai-competition/whatsapp-simulator && bunx biome format --write .'
+        language: system
+        files: ^hl7-ai-competition/whatsapp-simulator/
+        pass_filenames: false
+      - id: knip
+        name: knip (whatsapp-simulator)
+        entry: bash -c 'cd hl7-ai-competition/whatsapp-simulator && bunx knip'
+        language: system
+        files: ^hl7-ai-competition/whatsapp-simulator/
+        pass_filenames: false
