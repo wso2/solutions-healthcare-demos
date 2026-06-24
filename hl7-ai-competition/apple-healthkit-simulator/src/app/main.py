@@ -18,7 +18,7 @@ def create_app() -> FastAPI:
     settings = get_settings()
     app = FastAPI(
         title=settings.app_name,
-        summary="Collector service that ingests simulated Apple HealthKit data into a local store.",
+        summary="Ingests simulated Apple HealthKit data into a local store.",
         version="0.1.0",
         lifespan=lifespan,
     )

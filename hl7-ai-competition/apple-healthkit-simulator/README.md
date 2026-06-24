@@ -1,7 +1,7 @@
 # apple-healthkit-simulator
 
-Collector service that ingests simulated Apple HealthKit data into a local
-SQLite store. FastAPI + SQLModel, managed with uv.
+Ingests simulated Apple HealthKit data into a local SQLite store.
+FastAPI + SQLModel, managed with uv.
 
 HealthKit is a permissioned, typed health-data store. This service mirrors that
 object model on the server side: it accepts the common HealthKit object types
@@ -38,15 +38,17 @@ API docs at `http://127.0.0.1:8000/docs`. The SQLite file is created at
 
 ## Run with Docker
 
-From the repository root:
+From the `hl7-ai-competition` root (docker stack):
 
 ```sh
-make up        # build and start the collector on :8000
-make logs
-make down
+make up        # build and start the apple-healthkit-simulator on :8000
+make ps        # show status
+make down      # stop it
 ```
 
 ## Develop
+
+From this directory (`apple-healthkit-simulator/`):
 
 ```sh
 make lint      # ruff check

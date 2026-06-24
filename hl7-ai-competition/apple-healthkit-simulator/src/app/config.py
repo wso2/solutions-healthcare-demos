@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
-    """Runtime settings for the collector service."""
+    """Runtime settings for the apple-healthkit-simulator."""
 
     model_config = SettingsConfigDict(env_prefix="HEALTHKIT_", env_file=".env", extra="ignore")
 

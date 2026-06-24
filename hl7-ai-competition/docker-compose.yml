@@ -1,9 +1,9 @@
 services:
-  collector:
+  apple-healthkit-simulator:
     build:
       context: ./apple-healthkit-simulator
     image: apple-healthkit-simulator:latest
-    container_name: healthkit-collector
+    container_name: apple-healthkit-simulator
     ports:
       - "8000:8000"
     environment:
