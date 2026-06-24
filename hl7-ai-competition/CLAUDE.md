@@ -46,24 +46,19 @@ Work should happen through normal feature branches and pull requests.
 - Keep PRs small and reviewable. The PR should describe the important behavior
   change, verification performed, and any known review or test gaps.
 
-### Review Loop
+### Upstream Review
 
-The project uses an agent-then-user review loop on each PR.
+Work targets the upstream `wso2/solutions-healthcare-demos` repo through pull
+requests from our fork. The maintainers own review, thread resolution, and
+merge, so the agent does not poll for comments, resolve threads, or merge.
 
-- Open the PR as a draft. The entire agent-and-user back-and-forth happens while
-  the PR stays in draft status.
-- While the PR is in draft, the agent watches the PR for new comments on a short
-  poll (around every 10 seconds) and handles them as they arrive — do not wait
-  for a manual nudge.
-- The user reviews and leaves inline comments from their own account.
-- Work through each comment: resolve it with a fix when it can be resolved,
-  otherwise reply on the comment — answer it, or ask a clarifying question back.
-- The user's account and the agent's account are the same, so every reply the
-  agent posts must be clearly attributed to the agent (e.g. a trailer line like
-  `— Claude`) so a reader can tell agent replies from the user's own comments.
-- Once a comment is addressed — the fix committed and a reply posted — resolve
-  that comment thread. Do not leave addressed comments open.
-- Do not mark a comment resolved unless it is actually addressed.
+- Keep PRs small and follow the upstream contributing guidance and pull request
+  template.
+- Respond promptly to maintainer review comments. Push fixes as new commits; do
+  not force-push a PR under review unless a maintainer asks.
+- Mark agent-authored replies clearly (e.g. a `— Claude` trailer) so a reader
+  can tell them from the user's own comments.
+- Leave thread resolution and merge to the maintainers.
 
 ## Commit Discipline
 
@@ -109,7 +104,7 @@ messages, PR titles and bodies, review replies, and docs.
   by the user, not by an AI. Reference existing commits, PRs, and docs in the
   repo for tone, structure, and length, and mirror that.
 - Voice attribution is the one exception: agent review replies must still be
-  marked as the agent (see the review loop). Commit/PR prose stays in the
+  marked as the agent (see Upstream Review). Commit/PR prose stays in the
   user's voice.
 
 ## Fact Checking
