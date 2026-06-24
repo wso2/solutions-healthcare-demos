@@ -1,0 +1,26 @@
+services:
+  collector:
+    build:
+      context: ./apple-healthkit-simulator
+    image: apple-healthkit-simulator:latest
+    container_name: healthkit-collector
+    ports:
+      - "8000:8000"
+    environment:
+      HEALTHKIT_DATABASE_URL: "sqlite:///./data/healthkit.db"
+    volumes:
+      - healthkit-data:/app/data
+    healthcheck:
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+
+volumes:
+  healthkit-data:
