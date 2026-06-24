@@ -50,7 +50,7 @@ From this directory (needs Bun):
 
 ```sh
 bun install
-bun dev            # http://localhost:3000
+bun dev # http://localhost:3000
 ```
 
 Tooling: `bun run format` (biome), `bun run lint` (eslint, antfu config),
@@ -61,7 +61,7 @@ Tooling: `bun run format` (biome), `bun run lint` (eslint, antfu config),
 From the `hl7-ai-competition` directory:
 
 ```sh
-make up            # docker compose up -d --build
+make up # docker compose up -d --build
 ```
 
 The UI is served on http://localhost:3000.
