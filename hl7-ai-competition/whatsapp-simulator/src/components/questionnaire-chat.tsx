@@ -1,35 +1,15 @@
 "use client";
 
-import type { Question, Questionnaire } from "@/lib/questionnaire";
-import type { ReplyRef } from "@/lib/transcript";
+import type { Message, Outcome, Phase } from "@/lib/chat";
+import type { Questionnaire } from "@/lib/questionnaire";
 
-import { Reply, Send, X } from "lucide-react";
+import type { ReplyRef } from "@/lib/transcript";
+import { Send, X } from "lucide-react";
 import * as React from "react";
 
-type Phase =
-  | "loading"
-  | "notfound"
-  | "active"
-  | "submitting"
-  | "done"
-  | "error";
-
-interface Message {
-  key: string;
-  role: "bot" | "user";
-  text: string;
-  time: string;
-  questionId?: string;
-  replyTo?: ReplyRef;
-}
-
-interface Outcome {
-  delivered: boolean;
-  deliveryError?: string;
-}
-
-const BOT_NAME = "Care Team";
-const BOT_INITIALS = "CL";
+import { Notice, Status } from "@/components/chat/chat-status";
+import { MessageRow } from "@/components/chat/message-row";
+import { BOT_INITIALS, BOT_NAME, introMessages, now } from "@/lib/chat";
 
 export function QuestionnaireChat({ id }: { id: string }) {
   const [phase, setPhase] = React.useState<Phase>("loading");
@@ -200,7 +180,7 @@ export function QuestionnaireChat({ id }: { id: string }) {
           className="flex flex-1 flex-col gap-0.5 overflow-y-auto px-4 pb-2 pt-5"
         >
           {messages.map((message, index) => (
-            <Row
+            <MessageRow
               key={message.key}
               message={message}
               previous={messages[index - 1]}
@@ -281,164 +261,4 @@ export function QuestionnaireChat({ id }: { id: string }) {
       </div>
     </div>
   );
-}
-
-function Row({
-  message,
-  previous,
-  canReply,
-  onReply,
-}: {
-  message: Message;
-  previous?: Message;
-  canReply: boolean;
-  onReply: () => void;
-}) {
-  const me = message.role === "user";
-  const senderChanged = !previous || previous.role !== message.role;
-  const showAvatar = !me && senderChanged;
-
-  return (
-    <div
-      className="group flex items-start gap-[9px]"
-      style={{
-        marginTop: senderChanged ? 12 : 2,
-        flexDirection: me ? "row-reverse" : "row",
-      }}
-    >
-      <div className="w-7 shrink-0">
-        {showAvatar && (
-          <div className="flex size-7 items-center justify-center rounded-full bg-[#e4e4e7] text-[11px] font-semibold text-[#52525b]">
-            {BOT_INITIALS}
-          </div>
-        )}
-      </div>
-      <div
-        className="flex min-w-0 flex-col"
-        style={{ alignItems: me ? "flex-end" : "flex-start" }}
-      >
-        {message.replyTo && (
-          <div
-            className="-mb-1 flex max-w-[min(78vw,440px)] gap-1 overflow-hidden whitespace-nowrap border-l-2 border-[#d4d4d8] px-2.5 pb-2 pt-1 text-xs"
-            style={{ marginLeft: me ? 0 : 4, marginRight: me ? 4 : 0 }}
-          >
-            <span className="font-medium opacity-80">{BOT_NAME}</span>
-            <span className="opacity-[0.55]">
-              {truncate(message.replyTo.questionText, 52)}
-            </span>
-          </div>
-        )}
-        <div
-          className="flex items-center gap-[7px]"
-          style={{ flexDirection: me ? "row-reverse" : "row" }}
-        >
-          <div
-            className={
-              me
-                ? "max-w-[min(78vw,440px)] whitespace-pre-wrap break-words rounded-[13px] rounded-br-[4px] bg-[#0a0a0a] px-3 py-2 text-sm leading-normal text-[#fafafa]"
-                : "max-w-[min(78vw,440px)] whitespace-pre-wrap break-words rounded-[13px] rounded-bl-[4px] bg-[#f4f4f5] px-3 py-2 text-sm leading-normal text-[#18181b]"
-            }
-          >
-            {message.text}
-          </div>
-          {canReply && (
-            <button
-              type="button"
-              onClick={onReply}
-              aria-label="Reply"
-              className="flex size-6 shrink-0 items-center justify-center rounded-md border border-[#ececed] bg-white text-[#8a8a8e] opacity-0 transition hover:bg-[#f7f7f8] hover:text-[#0a0a0a] group-hover:opacity-100"
-            >
-              <Reply className="size-3" />
-            </button>
-          )}
-        </div>
-        <div className="mt-[3px] px-[3px] text-[11px] text-[#a1a1aa]">
-          {message.time}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Status({ phase, outcome }: { phase: Phase; outcome: Outcome | null }) {
-  if (phase === "submitting") {
-    return <p className="text-center text-sm text-[#8a8a8e]">Sending...</p>;
-  }
-  if (phase === "error") {
-    return (
-      <p className="text-center text-sm text-red-600">
-        Something went wrong. Please try again later.
-      </p>
-    );
-  }
-  if (outcome && !outcome.delivered) {
-    return (
-      <p className="text-center text-sm text-amber-600">
-        Conversation ended, but the callback could not be reached
-        {outcome.deliveryError ? `: ${outcome.deliveryError}` : "."}
-      </p>
-    );
-  }
-  return (
-    <p className="text-center text-sm text-[#8a8a8e]">
-      Conversation ended. Your replies have been sent.
-    </p>
-  );
-}
-
-function Notice({ text }: { text: string }) {
-  return (
-    <div className="flex h-dvh items-center justify-center bg-white p-6 text-center text-sm text-[#8a8a8e]">
-      {text}
-    </div>
-  );
-}
-
-function introMessages(questionnaire: Questionnaire): Message[] {
-  const time = now();
-  const intro: Message[] = [
-    {
-      key: "greeting",
-      role: "bot",
-      text: "Hi, your care team has a few questions. Hover a question to reply to it, then tap End conversation when you are done.",
-      time,
-    },
-  ];
-  if (questionnaire.description) {
-    intro.push({
-      key: "description",
-      role: "bot",
-      text: questionnaire.description,
-      time,
-    });
-  }
-  for (const question of questionnaire.questions) {
-    intro.push({
-      key: `q-${question.id}`,
-      role: "bot",
-      text: questionText(question),
-      time,
-      questionId: question.id,
-    });
-  }
-  return intro;
-}
-
-function questionText(question: Question): string {
-  if (question.type === "choice" && question.options) {
-    const options = question.options.map((option) => `- ${option}`).join("\n");
-    return `${question.text}\n\n${options}`;
-  }
-  return question.text;
-}
-
-function truncate(value: string, max: number): string {
-  return value.length > max ? `${value.slice(0, max)}…` : value;
-}
-
-function now(): string {
-  return new Date().toLocaleTimeString([], {
-    hour: "numeric",
-    minute: "2-digit",
-  });
 }
