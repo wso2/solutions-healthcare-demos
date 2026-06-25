@@ -1,7 +1,10 @@
 import type { Questionnaire } from "@/lib/questionnaire";
 import type { ChatMessage } from "@/lib/transcript";
 
-type SessionStatus = "pending" | "completed";
+export enum SessionStatus {
+  Pending = "pending",
+  Completed = "completed",
+}
 
 export interface Session {
   id: string;
@@ -32,7 +35,7 @@ export function createSession(
     id: crypto.randomUUID(),
     questionnaire,
     callbackUrl,
-    status: "pending",
+    status: SessionStatus.Pending,
     createdAt: now,
   };
   sessions.set(session.id, session);
