@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
+import { logger } from "@/lib/logger";
 import { questionnaireSchema } from "@/lib/questionnaire";
 import { createSession } from "@/lib/sessions";
 
@@ -22,24 +23,32 @@ const createBody = z.object({
 });
 
 export async function POST(request: Request) {
-  const parsed = createBody.safeParse(await request.json().catch(() => null));
-  if (!parsed.success) {
+  try {
+    const parsed = createBody.safeParse(await request.json().catch(() => null));
+    if (!parsed.success) {
+      return NextResponse.json(
+        { error: parsed.error.issues[0]?.message ?? "invalid request body" },
+        { status: 400 },
+      );
+    }
+
+    const { questionnaire, callbackUrl } = parsed.data;
+    const session = createSession(
+      questionnaire,
+      callbackUrl,
+      new Date().toISOString(),
+    );
+
+    const path = `/q/${session.id}`;
     return NextResponse.json(
-      { error: parsed.error.issues[0]?.message ?? "invalid request body" },
-      { status: 400 },
+      { id: session.id, path, url: new URL(path, request.url).toString() },
+      { status: 201 },
+    );
+  } catch (error) {
+    logger.error("failed to create session", error);
+    return NextResponse.json(
+      { error: "internal server error" },
+      { status: 500 },
     );
   }
-
-  const { questionnaire, callbackUrl } = parsed.data;
-  const session = createSession(
-    questionnaire,
-    callbackUrl,
-    new Date().toISOString(),
-  );
-
-  const path = `/q/${session.id}`;
-  return NextResponse.json(
-    { id: session.id, path, url: new URL(path, request.url).toString() },
-    { status: 201 },
-  );
 }
