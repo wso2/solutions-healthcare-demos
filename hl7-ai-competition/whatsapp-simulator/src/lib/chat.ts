@@ -1,4 +1,4 @@
-import type { Question, Questionnaire } from "@/lib/questionnaire";
+import type { Questionnaire } from "@/lib/questionnaire";
 import type { ReplyRef } from "@/lib/transcript";
 
 export type Phase =
@@ -48,20 +48,12 @@ export function introMessages(questionnaire: Questionnaire): Message[] {
     intro.push({
       key: `q-${question.id}`,
       role: "bot",
-      text: questionText(question),
+      text: question.text,
       time,
       questionId: question.id,
     });
   }
   return intro;
-}
-
-function questionText(question: Question): string {
-  if (question.type === "choice" && question.options) {
-    const options = question.options.map((option) => `- ${option}`).join("\n");
-    return `${question.text}\n\n${options}`;
-  }
-  return question.text;
 }
 
 export function truncate(value: string, max: number): string {

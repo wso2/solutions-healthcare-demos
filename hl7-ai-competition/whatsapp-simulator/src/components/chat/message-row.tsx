@@ -1,8 +1,13 @@
 import type { Message } from "@/lib/chat";
-
 import { Reply } from "lucide-react";
+import Markdown from "react-markdown";
+
+import remarkGfm from "remark-gfm";
 
 import { BOT_INITIALS, BOT_NAME, truncate } from "@/lib/chat";
+
+const MARKDOWN_CLASSES =
+  "break-words [&_a]:underline [&_code]:rounded [&_code]:bg-black/5 [&_code]:px-1 [&_code]:py-0.5 [&_h1]:text-base [&_h1]:font-semibold [&_h2]:text-sm [&_h2]:font-semibold [&_li]:my-0.5 [&_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-5 [&_p]:m-0 [&_p+p]:mt-2 [&_strong]:font-semibold [&_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-5";
 
 export function MessageRow({
   message,
@@ -56,11 +61,19 @@ export function MessageRow({
           <div
             className={
               me
-                ? "max-w-[min(78vw,440px)] whitespace-pre-wrap break-words rounded-[13px] rounded-br-[4px] bg-[#0a0a0a] px-3 py-2 text-sm leading-normal text-[#fafafa]"
-                : "max-w-[min(78vw,440px)] whitespace-pre-wrap break-words rounded-[13px] rounded-bl-[4px] bg-[#f4f4f5] px-3 py-2 text-sm leading-normal text-[#18181b]"
+                ? "max-w-[min(78vw,440px)] rounded-[13px] rounded-br-[4px] bg-[#0a0a0a] px-3 py-2 text-sm leading-normal text-[#fafafa]"
+                : "max-w-[min(78vw,440px)] rounded-[13px] rounded-bl-[4px] bg-[#f4f4f5] px-3 py-2 text-sm leading-normal text-[#18181b]"
             }
           >
-            {message.text}
+            {me ? (
+              <span className="whitespace-pre-wrap break-words">
+                {message.text}
+              </span>
+            ) : (
+              <div className={MARKDOWN_CLASSES}>
+                <Markdown remarkPlugins={[remarkGfm]}>{message.text}</Markdown>
+              </div>
+            )}
           </div>
           {canReply && (
             <button
