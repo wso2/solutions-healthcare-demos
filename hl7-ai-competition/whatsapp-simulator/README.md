@@ -36,13 +36,13 @@ on restart.
   "title": "Daily heart check-in",
   "description": "optional",
   "questions": [
-    { "id": "breath", "text": "How is your breathlessness?", "type": "choice", "options": ["None", "Mild", "Severe"], "required": true }
+    { "id": "breath", "text": "How is your **breathlessness** today?" }
   ]
 }
 ```
 
-`type` is one of `text`, `choice`, `boolean`, `number`. It only drives how a
-question is presented; every reply is recorded verbatim.
+A question is just an `id` and `text`. The `text` is rendered as Markdown in the
+chat; every reply is recorded verbatim.
 
 ## Develop
 

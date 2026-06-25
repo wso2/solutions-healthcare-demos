@@ -1,11 +1,6 @@
-type QuestionType = "text" | "choice" | "boolean" | "number";
-
-export interface Question {
+interface Question {
   id: string;
   text: string;
-  type: QuestionType;
-  options?: string[];
-  required?: boolean;
 }
 
 export interface Questionnaire {
@@ -13,13 +8,6 @@ export interface Questionnaire {
   description?: string;
   questions: Question[];
 }
-
-const QUESTION_TYPES: ReadonlySet<string> = new Set([
-  "text",
-  "choice",
-  "boolean",
-  "number",
-]);
 
 export function parseQuestionnaire(input: unknown): Questionnaire {
   if (typeof input !== "object" || input === null) {
@@ -75,31 +63,8 @@ function parseQuestion(
     throw new Error(`questions[${index}].text is required`);
   }
 
-  if (typeof q.type !== "string" || !QUESTION_TYPES.has(q.type)) {
-    throw new Error(
-      `questions[${index}].type must be one of text, choice, boolean, number`,
-    );
-  }
-
-  const question: Question = {
+  return {
     id: q.id,
     text: q.text,
-    type: q.type as QuestionType,
-    required: q.required === true,
   };
-
-  if (question.type === "choice") {
-    if (
-      !Array.isArray(q.options) ||
-      q.options.length === 0 ||
-      !q.options.every((opt) => typeof opt === "string")
-    ) {
-      throw new Error(
-        `questions[${index}].options must be a non-empty string array for choice questions`,
-      );
-    }
-    question.options = q.options as string[];
-  }
-
-  return question;
 }
