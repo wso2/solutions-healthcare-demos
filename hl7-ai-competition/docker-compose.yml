@@ -21,6 +21,14 @@ services:
       retries: 3
       start_period: 10s
     restart: unless-stopped
+    develop:
+      watch:
+        - path: ./apple-healthkit-simulator/pyproject.toml
+          action: rebuild
+        - path: ./apple-healthkit-simulator/uv.lock
+          action: rebuild
+        - path: ./apple-healthkit-simulator/src
+          action: rebuild
 
   whatsapp-simulator:
     build:
@@ -34,15 +42,24 @@ services:
     healthcheck:
       test:
         - "CMD"
-        - "wget"
-        - "--spider"
-        - "-q"
-        - "http://localhost:3000/"
+        - "bun"
+        - "-e"
+        - "fetch('http://localhost:3000/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
       interval: 30s
       timeout: 5s
       retries: 3
       start_period: 15s
     restart: unless-stopped
+    develop:
+      watch:
+        - path: ./whatsapp-simulator/package.json
+          action: rebuild
+        - path: ./whatsapp-simulator/bun.lock
+          action: rebuild
+        - path: ./whatsapp-simulator/next.config.ts
+          action: rebuild
+        - path: ./whatsapp-simulator/src
+          action: rebuild
 
 volumes:
   healthkit-data:
