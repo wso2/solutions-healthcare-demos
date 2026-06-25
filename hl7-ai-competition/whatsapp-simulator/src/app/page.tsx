@@ -1,5 +1,6 @@
 "use client";
 
+import ky from "ky";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
@@ -15,16 +16,15 @@ export default function Home() {
     setBusy(true);
     setError(null);
     try {
-      const res = await fetch("/api/sessions", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      const res = await ky.post("/api/sessions", {
+        json: {
           questionnaire: sampleQuestionnaire,
           callbackUrl: new URL(
             "/api/demo-callback",
             window.location.origin,
           ).toString(),
-        }),
+        },
+        throwHttpErrors: false,
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => null)) as {
@@ -47,8 +47,8 @@ export default function Home() {
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">WhatsApp Simulator</h1>
         <p className="text-muted-foreground">
-          Renders a pushed questionnaire as a chat, collects the answers, and
-          posts a FHIR QuestionnaireResponse back to the caller&apos;s callback
+          Renders a pushed questionnaire as a chat, collects the replies, and
+          posts the conversation transcript back to the caller&apos;s callback
           URL.
         </p>
       </div>
@@ -64,7 +64,8 @@ export default function Home() {
         </li>
         <li>The patient opens the returned link and answers in chat.</li>
         <li>
-          A FHIR QuestionnaireResponse is POSTed to the callback URL on submit.
+          The conversation transcript is POSTed to the callback URL on End
+          conversation.
         </li>
       </ol>
 

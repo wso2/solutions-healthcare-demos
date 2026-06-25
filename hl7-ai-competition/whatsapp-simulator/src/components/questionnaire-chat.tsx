@@ -4,6 +4,7 @@ import type { Message, Outcome, Phase } from "@/lib/chat";
 import type { Questionnaire } from "@/lib/questionnaire";
 
 import type { ReplyRef } from "@/lib/transcript";
+import ky from "ky";
 import { Send, X } from "lucide-react";
 import * as React from "react";
 
@@ -35,7 +36,9 @@ export function QuestionnaireChat({ id }: { id: string }) {
 
     async function load() {
       try {
-        const res = await fetch(`/api/sessions/${id}`);
+        const res = await ky.get(`/api/sessions/${id}`, {
+          throwHttpErrors: false,
+        });
         if (res.status === 404) {
           if (!cancelled) setPhase("notfound");
           return;
@@ -113,10 +116,8 @@ export function QuestionnaireChat({ id }: { id: string }) {
   async function end() {
     setPhase("submitting");
     try {
-      const res = await fetch(`/api/sessions/${id}/submit`, {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      const res = await ky.post(`/api/sessions/${id}/submit`, {
+        json: {
           messages: messages.map(
             ({ role, text, time, questionId, replyTo }) => ({
               role,
@@ -126,7 +127,8 @@ export function QuestionnaireChat({ id }: { id: string }) {
               replyTo,
             }),
           ),
-        }),
+        },
+        throwHttpErrors: false,
       });
       const data = (await res.json()) as Outcome & { error?: string };
       if (!res.ok) {
