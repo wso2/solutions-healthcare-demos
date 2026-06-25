@@ -2,7 +2,7 @@ COMPOSE := docker compose
 
 .DEFAULT_GOAL := help
 
-.PHONY: help build up down ps clean
+.PHONY: help build up watch down ps clean
 
 help: ## List available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -13,6 +13,9 @@ build: ## Build all stack images
 
 up: ## Build and start the stack in the background
 	$(COMPOSE) up -d --build
+
+watch: ## Start the stack in the foreground and rebuild on change
+	$(COMPOSE) up --build --watch
 
 down: ## Stop and remove the stack containers
 	$(COMPOSE) down
