@@ -17,14 +17,7 @@ export interface Session {
   deliveryError?: string;
 }
 
-const globalForSessions = globalThis as unknown as {
-  __whatsappSimulatorSessions?: Map<string, Session>;
-};
-
-const sessions: Map<string, Session> =
-  globalForSessions.__whatsappSimulatorSessions ?? new Map<string, Session>();
-
-globalForSessions.__whatsappSimulatorSessions = sessions;
+const sessions = new Map<string, Session>();
 
 export function createSession(
   questionnaire: Questionnaire,
