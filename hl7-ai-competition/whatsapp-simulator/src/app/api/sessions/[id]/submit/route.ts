@@ -1,8 +1,10 @@
 import type { CallbackPayload } from "@/lib/transcript";
+import ky from "ky";
 
 import { NextResponse } from "next/server";
+
 import { getSession } from "@/lib/sessions";
-import { parseTranscript } from "@/lib/transcript";
+import { submitSchema } from "@/lib/transcript";
 
 export const runtime = "nodejs";
 
@@ -24,23 +26,15 @@ export async function POST(
     );
   }
 
-  let body: unknown;
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "invalid JSON body" }, { status: 400 });
-  }
-
-  let messages;
-  try {
-    messages = parseTranscript((body as Record<string, unknown>)?.messages);
-  } catch (error) {
+  const parsed = submitSchema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "invalid transcript" },
+      { error: parsed.error.issues[0]?.message ?? "invalid request body" },
       { status: 400 },
     );
   }
 
+  const { messages } = parsed.data;
   const payload: CallbackPayload = {
     sessionId: session.id,
     title: session.questionnaire.title,
@@ -67,15 +61,12 @@ async function deliver(
   payload: CallbackPayload,
 ): Promise<string | undefined> {
   try {
-    const res = await fetch(callbackUrl, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(payload),
+    const res = await ky.post(callbackUrl, {
+      json: payload,
+      throwHttpErrors: false,
+      timeout: 10_000,
     });
-    if (!res.ok) {
-      return `callback responded ${res.status}`;
-    }
-    return undefined;
+    return res.ok ? undefined : `callback responded ${res.status}`;
   } catch (error) {
     return error instanceof Error ? error.message : "callback request failed";
   }

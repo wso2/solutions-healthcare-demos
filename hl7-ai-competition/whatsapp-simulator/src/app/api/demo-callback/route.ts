@@ -1,20 +1,10 @@
 import { NextResponse } from "next/server";
 
-const globalForCallback = globalThis as unknown as {
-  __whatsappSimulatorLastCallback?: unknown;
-};
-
 export const runtime = "nodejs";
 
 export async function POST(request: Request) {
-  globalForCallback.__whatsappSimulatorLastCallback = await request
-    .json()
-    .catch(() => null);
+  const payload = await request.json().catch(() => null);
+  // eslint-disable-next-line no-console
+  console.log("[demo-callback] received transcript:", JSON.stringify(payload));
   return NextResponse.json({ received: true });
-}
-
-export async function GET() {
-  return NextResponse.json({
-    lastCallback: globalForCallback.__whatsappSimulatorLastCallback ?? null,
-  });
 }
