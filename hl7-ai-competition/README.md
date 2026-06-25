@@ -21,7 +21,8 @@ Earlier stages: [v1](assets/architecture-diagram-v1.png),
   pushed questionnaire and posts the conversation transcript to a callback URL
   (port 3000).
 
-Run the stack with `make up` (or `docker compose up -d --build`).
+Run the stack with `make up`, or `make watch` to run it in the foreground and
+rebuild on change.
 
 ## Pre-commit hooks
 

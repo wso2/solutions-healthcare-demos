@@ -7,7 +7,8 @@ transcript is POSTed back to the callback URL when they end the conversation. A
 downstream agent is expected to combine the free-text replies.
 
 Next.js (App Router) on the Bun runtime. Sessions are held in memory and reset
-on restart.
+on restart. Request bodies are validated with zod, HTTP calls use ky, and logs
+go through consola.
 
 ## Flow
 
@@ -44,6 +45,12 @@ on restart.
 A question is just an `id` and `text`. The `text` is rendered as Markdown in the
 chat; every reply is recorded verbatim.
 
+## Demo
+
+The home page has a Launch demo button that seeds the sample questionnaire and
+points its callback at `/api/demo-callback`, an in-app receiver that logs each
+transcript it gets — handy for watching the full round-trip in the logs.
+
 ## Develop
 
 From this directory (needs Bun):
@@ -61,7 +68,8 @@ Tooling: `bun run format` (biome), `bun run lint` (eslint, antfu config),
 From the `hl7-ai-competition` directory:
 
 ```sh
-make up # docker compose up -d --build
+make up # start in the background
+make watch # foreground, rebuild on change
 ```
 
 The UI is served on http://localhost:3000.
