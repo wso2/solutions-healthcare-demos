@@ -144,3 +144,19 @@ the user's instructions or perform extra work outside the requested scope.
 - Report exactly what was changed and what was not verified.
 - Include the reason behind important implementation choices, especially when
   choosing a cheaper, simpler, safer, or more repo-native path.
+
+## Speed and Turnaround
+
+Optimize for turnaround time on what the user asks for. The time a requested
+task takes is a first-class concern, not an afterthought: deliver the same
+quality, but get there as fast as possible.
+
+- Parallelize aggressively. Run independent tool calls together in one turn, fan
+  work out across multiple agents at once, and push long-running commands to the
+  background so the session is never blocked waiting on them.
+- Use the platform's features to their fullest to do this: background bash
+  tasks, background and parallel subagents, batched tool calls — whatever
+  produces a correct result sooner.
+- Never trade correctness or the user's stated scope for speed. Fast and wrong
+  is not the goal; fast and right is. Optimizing for time means removing waiting
+  and serialization, not cutting corners on the work itself.
