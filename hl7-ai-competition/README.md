@@ -20,6 +20,9 @@ Earlier stages: [v1](assets/architecture-diagram-v1.png),
 - [whatsapp-simulator](whatsapp-simulator/) — Next.js chat UI that renders a
   pushed questionnaire and posts the conversation transcript to a callback URL
   (port 3000).
+- OpenEMR — open-source EHR run from the official `openemr/openemr` image with a
+  MySQL sidecar (internal only). Web UI on port 3001 (default login
+  `admin` / `pass`). First boot seeds the database and takes a few minutes.
 
 Run the stack with `make up`, or `make watch` to run it in the foreground and
 rebuild on change.
