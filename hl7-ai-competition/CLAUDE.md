@@ -7,6 +7,15 @@ helps generate, inspect, explain, and verify code under the lead's direction.
 Treat the workflow as pair programming between two engineers, with the user
 driving scope and decisions.
 
+## Project Context
+
+This work is the WSO2 Care Loop entry for the HL7 AI Competition, developed
+under the `hl7-ai-competition/` directory. The wider repository is a general
+WSO2 healthcare-demos repo, not specific to this competition. Keep changes
+scoped to `hl7-ai-competition/`, leave the rest of the repo alone, and make the
+competition context clear in commits and PRs so a reader coming from the general
+repo knows what the work is for.
+
 ## Operating Rules
 
 - **IMPORTANT: Follow the user's requested scope exactly. Do not defy explicit
