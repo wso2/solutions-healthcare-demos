@@ -21,6 +21,90 @@ services:
       retries: 3
       start_period: 10s
     restart: unless-stopped
+    develop:
+      watch:
+        - path: ./apple-healthkit-simulator/pyproject.toml
+          action: rebuild
+        - path: ./apple-healthkit-simulator/uv.lock
+          action: rebuild
+        - path: ./apple-healthkit-simulator/src
+          action: rebuild
+
+  whatsapp-simulator:
+    build:
+      context: ./whatsapp-simulator
+    image: whatsapp-simulator:latest
+    container_name: whatsapp-simulator
+    ports:
+      - "3000:3000"
+    environment:
+      NODE_ENV: production
+    healthcheck:
+      test:
+        - "CMD"
+        - "bun"
+        - "-e"
+        - "fetch('http://localhost:3000/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    develop:
+      watch:
+        - path: ./whatsapp-simulator/package.json
+          action: rebuild
+        - path: ./whatsapp-simulator/bun.lock
+          action: rebuild
+        - path: ./whatsapp-simulator/next.config.ts
+          action: rebuild
+        - path: ./whatsapp-simulator/src
+          action: rebuild
+
+  openemr-db:
+    image: mysql:8.4
+    container_name: openemr-db
+    command:
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - openemr-db:/var/lib/mysql
+    healthcheck:
+      test:
+        - "CMD"
+        - "mysqladmin"
+        - "ping"
+        - "-h"
+        - "localhost"
+        - "-proot"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    restart: unless-stopped
+
+  openemr:
+    image: openemr/openemr:8.0.0.3
+    container_name: openemr
+    ports:
+      - "3001:80"
+    environment:
+      MYSQL_HOST: openemr-db
+      MYSQL_ROOT_PASS: root
+      MYSQL_USER: openemr
+      MYSQL_PASS: openemr
+      OE_USER: admin
+      OE_PASS: pass
+    volumes:
+      - openemr-sites:/var/www/localhost/htdocs/openemr/sites
+    depends_on:
+      openemr-db:
+        condition: service_healthy
+    restart: unless-stopped
 
 volumes:
   healthkit-data:
+  openemr-db:
+  openemr-sites:

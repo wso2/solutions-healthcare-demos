@@ -13,11 +13,27 @@ run on Ballerina.
 Earlier stages: [v1](assets/architecture-diagram-v1.png),
 [whiteboard sketch](assets/whiteboard-sketch.png).
 
+## Components
+
+- [apple-healthkit-simulator](apple-healthkit-simulator/) — FastAPI service that
+  ingests Apple HealthKit samples (port 8000).
+- [whatsapp-simulator](whatsapp-simulator/) — Next.js chat UI that renders a
+  pushed questionnaire and posts the conversation transcript to a callback URL
+  (port 3000).
+- OpenEMR — open-source EHR run from the official `openemr/openemr` image with a
+  MySQL sidecar (internal only). Web UI on port 3001 (default login
+  `admin` / `pass`). First boot seeds the database and takes a few minutes.
+
+Run the stack with `make up`, or `make watch` to run it in the foreground and
+rebuild on change.
+
 ## Pre-commit hooks
 
-ruff runs on staged files at commit time. The config lives at
+ruff (apple-healthkit-simulator) and biome plus knip (whatsapp-simulator) run on
+staged files at commit time. The config lives at
 `hl7-ai-competition/.pre-commit-config.yaml`; install the hook pointing at it
-once, from the fork root (needs `pre-commit`, e.g. `uv tool install pre-commit`):
+once, from the fork root (needs `pre-commit`, e.g. `uv tool install pre-commit`;
+the whatsapp-simulator hooks also need `bun`):
 
 ```sh
 pre-commit install -c hl7-ai-competition/.pre-commit-config.yaml
