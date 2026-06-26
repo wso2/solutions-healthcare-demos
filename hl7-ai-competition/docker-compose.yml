@@ -97,11 +97,46 @@ services:
       MYSQL_PASS: openemr
       OE_USER: admin
       OE_PASS: pass
+      # Enable REST + FHIR APIs and password grant on first setup (OpenEMR
+      # globals applied via OPENEMR_SETTING_<global>).
+      OPENEMR_SETTING_rest_api: 1
+      OPENEMR_SETTING_rest_fhir_api: 1
+      OPENEMR_SETTING_site_addr_oath: "http://localhost"
+      OPENEMR_SETTING_oauth_password_grant: 1
     volumes:
       - openemr-sites:/var/www/localhost/htdocs/openemr/sites
     depends_on:
       openemr-db:
         condition: service_healthy
+    restart: unless-stopped
+
+  # FHIR R4 -> MCP bridge in front of OpenEMR. Behind the "fhir" profile so it
+  # starts only after bootstrap-fhir.sh mints a token. Uses internal plain HTTP:
+  # the client verifies TLS with no skip option, so HTTP sidesteps OpenEMR's
+  # self-signed cert; the bearer token is still required.
+  fhir-mcp-server:
+    # Built from the pinned upstream tag rather than the published image, which
+    # is arm64-only; building uses $TARGETPLATFORM so it works on any host arch.
+    build:
+      context: "https://github.com/wso2/fhir-mcp-server.git#0.10.0"
+    image: care-loop/fhir-mcp-server:0.10.0
+    container_name: fhir-mcp-server
+    profiles:
+      - fhir
+    ports:
+      - "8001:8000"
+    environment:
+      FHIR_MCP_HOST: 0.0.0.0
+      FHIR_MCP_PORT: 8000
+      FHIR_SERVER_BASE_URL: "http://openemr/apis/default/fhir"
+      # Static token mode (demo): bearer token from .fhir.env (TTL widened by
+      # bootstrap). Future: SMART auth-code grant so the server self-refreshes.
+      FHIR_SERVER_DISABLE_AUTHORIZATION: "True"
+    env_file:
+      - path: .fhir.env
+        required: false
+    depends_on:
+      - openemr
     restart: unless-stopped
 
 volumes:
