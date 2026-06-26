@@ -29,7 +29,7 @@ Earlier stages: [v1](assets/architecture-diagram-v1.png),
 Run the stack with `make up`, or `make watch` to run it in the foreground and
 rebuild on change.
 
-`make up` also runs `bootstrap-fhir.sh`, which registers and enables an OpenEMR
+`make up` also runs `scripts/bootstrap-fhir.sh`, which registers and enables an OpenEMR
 OAuth2 client, mints an access token, and writes it to `.fhir.env` (gitignored)
 for the bridge. The bridge starts under the `fhir` compose profile once the
 token exists. Re-run `make fhir` to mint a new token. The bridge reaches OpenEMR
