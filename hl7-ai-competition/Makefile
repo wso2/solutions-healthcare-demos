@@ -13,11 +13,11 @@ build: ## Build all stack images
 
 up: ## Build and start the stack (incl. FHIR MCP bridge) in the background
 	$(COMPOSE) up -d --build
-	./bootstrap-fhir.sh
+	./scripts/bootstrap-fhir.sh
 	$(COMPOSE) --profile fhir up -d
 
 fhir: ## (Re)mint the FHIR token and (re)start the MCP bridge
-	./bootstrap-fhir.sh
+	./scripts/bootstrap-fhir.sh
 	$(COMPOSE) --profile fhir up -d
 
 watch: ## Start the stack in the foreground and rebuild on change
