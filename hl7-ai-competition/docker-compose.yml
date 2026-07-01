@@ -30,6 +30,33 @@ services:
         - path: ./apple-healthkit-simulator/src
           action: rebuild
 
+  care-loop-heart-risk-service:
+    build:
+      context: ./care-loop-heart-risk-service
+    image: care-loop-heart-risk-service:latest
+    container_name: care-loop-heart-risk-service
+    ports:
+      - "8002:8000"
+    healthcheck:
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    develop:
+      watch:
+        - path: ./care-loop-heart-risk-service/pyproject.toml
+          action: rebuild
+        - path: ./care-loop-heart-risk-service/uv.lock
+          action: rebuild
+        - path: ./care-loop-heart-risk-service/src
+          action: rebuild
+
   whatsapp-simulator:
     build:
       context: ./whatsapp-simulator
