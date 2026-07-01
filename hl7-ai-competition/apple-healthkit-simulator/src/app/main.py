@@ -1,9 +1,9 @@
-import logging
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
+from loguru import logger
 from sqlmodel import Session
 
 from app.config import get_settings
@@ -12,28 +12,27 @@ from app.routers import all_routers
 from app.routers.vitals_cron import state as vitals_cron_state
 from app.vitals_forwarder import run_cycle
 
-logger = logging.getLogger("vitals_forwarder")
-
 
 async def _scheduled_forward_cycle() -> None:
     settings = get_settings()
     try:
         with Session(engine) as session:
             vitals_cron_state.last_result = await run_cycle(settings, session)
-        logger.info("vitals forward cycle complete: %s", vitals_cron_state.last_result)
-    except Exception:
+        logger.info("vitals forward cycle complete: {}", vitals_cron_state.last_result)
+    except Exception:  # noqa: BLE001 - a bad cycle must not kill the scheduler
         logger.exception("scheduled vitals forward cycle failed")
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
-    init_db()
     settings = get_settings()
+    init_db()
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
         _scheduled_forward_cycle, "interval", hours=settings.vitals_forward_interval_hours, next_run_time=None
     )
     scheduler.start()
+    logger.info("apple-healthkit-simulator started")
     yield
     scheduler.shutdown(wait=False)
 
