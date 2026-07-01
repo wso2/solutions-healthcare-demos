@@ -16,6 +16,10 @@ scoped to `hl7-ai-competition/`, leave the rest of the repo alone, and make the
 competition context clear in commits and PRs so a reader coming from the general
 repo knows what the work is for.
 
+For product and domain requirements (what the Care Loop is, who it's for, the
+problem it addresses), check `hl7-ai-competition/docs/` before making
+assumptions or asking the user.
+
 ## Operating Rules
 
 - **IMPORTANT: Follow the user's requested scope exactly. Do not defy explicit
@@ -57,10 +61,16 @@ Work should happen through normal feature branches and pull requests.
 
 ### Upstream Review
 
-Work targets the upstream `wso2/solutions-healthcare-demos` repo through pull
-requests from our fork. The maintainers own review, thread resolution, and
-merge, so the agent does not poll for comments, reply to reviewers, resolve
-threads, or merge.
+**IMPORTANT: Never open a pull request against the `upstream` remote.** All PRs
+go to our fork (the `origin` remote) only, targeting `ai-challenge` there,
+unless the user explicitly instructs otherwise for a specific PR. When using
+`gh pr create`, always pass `--repo` explicitly, set to the `origin` remote's
+repo, rather than relying on the default, since `gh` will otherwise infer the
+`upstream` remote's repo as the target.
+
+If work is later sent upstream for maintainer review, the maintainers own
+review, thread resolution, and merge, so the agent does not poll for comments,
+reply to reviewers, resolve threads, or merge.
 
 - Keep PRs small and follow the upstream contributing guidance and pull request
   template.
