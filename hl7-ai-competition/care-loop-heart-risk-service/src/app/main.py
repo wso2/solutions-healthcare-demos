@@ -2,6 +2,7 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
+from loguru import logger
 
 from app.config import get_settings
 from app.model import get_model
@@ -12,7 +13,8 @@ from app.routers import all_routers
 async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     # Warm the ONNX session at startup so the first request is not slow and a
     # missing or corrupt model fails fast here rather than on first prediction.
-    get_model()
+    model = get_model()
+    logger.info("care-loop-heart-risk-service started (model={})", model.name)
     yield
 
 

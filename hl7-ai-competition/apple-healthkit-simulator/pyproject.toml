@@ -10,6 +10,7 @@ dependencies = [
     "pydantic-settings>=2.5",
     "apscheduler>=3.10",
     "httpx>=0.27",
+    "loguru>=0.7",
 ]
 
 [project.optional-dependencies]
