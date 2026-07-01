@@ -12,6 +12,7 @@ from app.models.base import (
 
 
 class ActivitySummaryBase(SampleSource):
+    patient_id: int | None = Field(default=None, foreign_key="patient.id", index=True)
     date_value: date = Field(index=True, description="Calendar day the summary covers.")
     active_energy_burned: float = Field(default=0.0, description="Move ring value.")
     active_energy_goal: float = Field(default=0.0, description="Move ring goal.")
@@ -35,6 +36,7 @@ class ActivitySummaryRead(ActivitySummaryBase, RecordIdentity):
 
 
 class CharacteristicsBase(SampleSource):
+    patient_id: int | None = Field(default=None, foreign_key="patient.id", index=True)
     date_of_birth: date | None = Field(default=None, description="User date of birth.")
     biological_sex: BiologicalSex = Field(default=BiologicalSex.not_set)
     blood_type: BloodType = Field(default=BloodType.not_set)

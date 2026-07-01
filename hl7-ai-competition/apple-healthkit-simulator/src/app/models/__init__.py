@@ -18,6 +18,11 @@ from app.models.clinical import (
     ClinicalRecordCreate,
     ClinicalRecordRead,
 )
+from app.models.patient import (
+    Patient,
+    PatientCreate,
+    PatientRead,
+)
 from app.models.samples import (
     CategorySample,
     CategorySampleCreate,
@@ -54,6 +59,9 @@ __all__ = [
     "CorrelationCreate",
     "CorrelationRead",
     "FitzpatrickSkinType",
+    "Patient",
+    "PatientCreate",
+    "PatientRead",
     "QuantitySample",
     "QuantitySampleCreate",
     "QuantitySampleRead",

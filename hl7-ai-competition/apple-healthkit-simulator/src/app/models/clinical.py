@@ -5,6 +5,7 @@ from app.models.base import RecordIdentity, SampleSource
 
 
 class ClinicalRecordBase(SampleSource):
+    patient_id: int | None = Field(default=None, foreign_key="patient.id", index=True)
     fhir_resource_type: str = Field(
         index=True,
         description="FHIR resource type, e.g. 'Observation', 'Condition', 'MedicationRequest'.",

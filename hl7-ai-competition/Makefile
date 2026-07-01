@@ -2,7 +2,7 @@ COMPOSE := docker compose
 
 .DEFAULT_GOAL := help
 
-.PHONY: help build up watch down ps clean fhir
+.PHONY: help build up watch down ps clean seed
 
 help: ## List available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -11,24 +11,21 @@ help: ## List available targets
 build: ## Build all stack images
 	$(COMPOSE) build
 
-up: ## Build and start the stack (incl. FHIR MCP bridge) in the background
+up: ## Build and start the stack, then seed demo data
 	$(COMPOSE) up -d --build
-	./scripts/bootstrap-fhir.sh
-	$(COMPOSE) --profile fhir up -d
+	$(MAKE) seed
 
-fhir: ## (Re)mint the FHIR token and (re)start the MCP bridge
-	./scripts/bootstrap-fhir.sh
-	$(COMPOSE) --profile fhir up -d
+seed: ## Load demo patient data into apple-healthkit-simulator and fhir-server
+	bun scripts/seed/index.ts
 
 watch: ## Start the stack in the foreground and rebuild on change
 	$(COMPOSE) up --build --watch
 
-down: ## Stop and remove the stack containers (incl. FHIR MCP bridge)
-	$(COMPOSE) --profile fhir down
+down: ## Stop and remove the stack containers
+	$(COMPOSE) down
 
 ps: ## Show stack service status
-	$(COMPOSE) --profile fhir ps
+	$(COMPOSE) ps
 
-clean: ## Stop the stack, remove volumes and the minted token
-	$(COMPOSE) --profile fhir down -v
-	rm -f .fhir.env
+clean: ## Stop the stack and remove volumes
+	$(COMPOSE) down -v

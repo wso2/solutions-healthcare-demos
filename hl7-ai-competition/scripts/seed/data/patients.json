@@ -1,0 +1,2575 @@
+[
+  {
+    "patient": {
+      "mrn": "MRN-DEMO-0001",
+      "given_name": "Margaret",
+      "family_name": "Kowalski",
+      "date_of_birth": "1958-03-14",
+      "biological_sex": "female",
+      "blood_type": "O+",
+      "fitzpatrick_skin_type": "III",
+      "vitals_profile": "stable"
+    },
+    "healthkit": {
+      "characteristics": {
+        "source_name": "Health",
+        "date_of_birth": "1958-03-14",
+        "biological_sex": "female",
+        "blood_type": "O+",
+        "fitzpatrick_skin_type": "III",
+        "wheelchair_use": false
+      },
+      "quantity_samples": [
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 65,
+          "unit": "count/min",
+          "start_date": "2026-06-24T07:00:00Z",
+          "end_date": "2026-06-24T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 5800,
+          "unit": "count",
+          "start_date": "2026-06-24T00:00:00Z",
+          "end_date": "2026-06-24T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 4.64,
+          "unit": "km",
+          "start_date": "2026-06-24T00:00:00Z",
+          "end_date": "2026-06-24T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 66,
+          "unit": "count/min",
+          "start_date": "2026-06-25T07:00:00Z",
+          "end_date": "2026-06-25T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 5937,
+          "unit": "count",
+          "start_date": "2026-06-25T00:00:00Z",
+          "end_date": "2026-06-25T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 4.75,
+          "unit": "km",
+          "start_date": "2026-06-25T00:00:00Z",
+          "end_date": "2026-06-25T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 67,
+          "unit": "count/min",
+          "start_date": "2026-06-26T07:00:00Z",
+          "end_date": "2026-06-26T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 6074,
+          "unit": "count",
+          "start_date": "2026-06-26T00:00:00Z",
+          "end_date": "2026-06-26T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 4.86,
+          "unit": "km",
+          "start_date": "2026-06-26T00:00:00Z",
+          "end_date": "2026-06-26T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 65,
+          "unit": "count/min",
+          "start_date": "2026-06-27T07:00:00Z",
+          "end_date": "2026-06-27T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 6211,
+          "unit": "count",
+          "start_date": "2026-06-27T00:00:00Z",
+          "end_date": "2026-06-27T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 4.97,
+          "unit": "km",
+          "start_date": "2026-06-27T00:00:00Z",
+          "end_date": "2026-06-27T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 66,
+          "unit": "count/min",
+          "start_date": "2026-06-28T07:00:00Z",
+          "end_date": "2026-06-28T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 6348,
+          "unit": "count",
+          "start_date": "2026-06-28T00:00:00Z",
+          "end_date": "2026-06-28T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 5.08,
+          "unit": "km",
+          "start_date": "2026-06-28T00:00:00Z",
+          "end_date": "2026-06-28T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 67,
+          "unit": "count/min",
+          "start_date": "2026-06-29T07:00:00Z",
+          "end_date": "2026-06-29T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 6485,
+          "unit": "count",
+          "start_date": "2026-06-29T00:00:00Z",
+          "end_date": "2026-06-29T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 5.19,
+          "unit": "km",
+          "start_date": "2026-06-29T00:00:00Z",
+          "end_date": "2026-06-29T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 65,
+          "unit": "count/min",
+          "start_date": "2026-06-30T07:00:00Z",
+          "end_date": "2026-06-30T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 6622,
+          "unit": "count",
+          "start_date": "2026-06-30T00:00:00Z",
+          "end_date": "2026-06-30T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 5.3,
+          "unit": "km",
+          "start_date": "2026-06-30T00:00:00Z",
+          "end_date": "2026-06-30T23:59:00Z"
+        },
+        {
+          "source_name": "Health",
+          "device_name": "Withings Body+",
+          "quantity_type": "HKQuantityTypeIdentifierBodyMass",
+          "value": 70.8,
+          "unit": "kg",
+          "start_date": "2026-06-24T06:45:00Z",
+          "end_date": "2026-06-24T06:45:00Z"
+        },
+        {
+          "source_name": "Health",
+          "device_name": "Withings Body+",
+          "quantity_type": "HKQuantityTypeIdentifierBodyMass",
+          "value": 70.5,
+          "unit": "kg",
+          "start_date": "2026-06-27T06:45:00Z",
+          "end_date": "2026-06-27T06:45:00Z"
+        },
+        {
+          "source_name": "Health",
+          "device_name": "Withings Body+",
+          "quantity_type": "HKQuantityTypeIdentifierBodyMass",
+          "value": 70.2,
+          "unit": "kg",
+          "start_date": "2026-06-30T06:45:00Z",
+          "end_date": "2026-06-30T06:45:00Z"
+        }
+      ],
+      "category_samples": [
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-24T23:00:00Z",
+          "end_date": "2026-06-25T06:20:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        },
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-25T22:50:00Z",
+          "end_date": "2026-06-26T06:21:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        },
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-26T23:40:00Z",
+          "end_date": "2026-06-27T06:22:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        },
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-27T22:15:00Z",
+          "end_date": "2026-06-28T06:23:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        },
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-28T23:20:00Z",
+          "end_date": "2026-06-29T06:24:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        },
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-29T22:50:00Z",
+          "end_date": "2026-06-30T06:25:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        },
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-30T23:05:00Z",
+          "end_date": "2026-07-01T06:26:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        }
+      ],
+      "blood_pressure_correlations": [
+        {
+          "source_name": "Withings BPM Connect",
+          "start_date": "2026-06-24T07:05:00Z",
+          "end_date": "2026-06-24T07:05:00Z",
+          "systolic": {
+            "value": 112,
+            "unit": "mmHg"
+          },
+          "diastolic": {
+            "value": 72,
+            "unit": "mmHg"
+          }
+        },
+        {
+          "source_name": "Withings BPM Connect",
+          "start_date": "2026-06-26T07:05:00Z",
+          "end_date": "2026-06-26T07:05:00Z",
+          "systolic": {
+            "value": 114,
+            "unit": "mmHg"
+          },
+          "diastolic": {
+            "value": 73,
+            "unit": "mmHg"
+          }
+        },
+        {
+          "source_name": "Withings BPM Connect",
+          "start_date": "2026-06-28T07:05:00Z",
+          "end_date": "2026-06-28T07:05:00Z",
+          "systolic": {
+            "value": 116,
+            "unit": "mmHg"
+          },
+          "diastolic": {
+            "value": 74,
+            "unit": "mmHg"
+          }
+        },
+        {
+          "source_name": "Withings BPM Connect",
+          "start_date": "2026-06-30T07:05:00Z",
+          "end_date": "2026-06-30T07:05:00Z",
+          "systolic": {
+            "value": 118,
+            "unit": "mmHg"
+          },
+          "diastolic": {
+            "value": 75,
+            "unit": "mmHg"
+          }
+        }
+      ],
+      "workouts": [
+        {
+          "source_name": "Apple Watch",
+          "workout_activity_type": "HKWorkoutActivityTypeWalking",
+          "start_date": "2026-06-25T17:00:00Z",
+          "end_date": "2026-06-25T17:40:00Z",
+          "duration": 2400,
+          "total_energy_burned": 160,
+          "total_energy_unit": "kcal",
+          "total_distance": 2900,
+          "total_distance_unit": "m"
+        },
+        {
+          "source_name": "Apple Watch",
+          "workout_activity_type": "HKWorkoutActivityTypeWalking",
+          "start_date": "2026-06-28T17:00:00Z",
+          "end_date": "2026-06-28T17:45:00Z",
+          "duration": 2700,
+          "total_energy_burned": 180,
+          "total_energy_unit": "kcal",
+          "total_distance": 3200,
+          "total_distance_unit": "m"
+        },
+        {
+          "source_name": "Apple Watch",
+          "workout_activity_type": "HKWorkoutActivityTypeYoga",
+          "start_date": "2026-06-29T08:00:00Z",
+          "end_date": "2026-06-29T08:30:00Z",
+          "duration": 1800,
+          "total_energy_burned": 90,
+          "total_energy_unit": "kcal"
+        }
+      ],
+      "activity_summaries": [
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-24",
+          "active_energy_burned": 240,
+          "active_energy_goal": 400,
+          "exercise_time": 19,
+          "exercise_goal": 30,
+          "stand_hours": 8,
+          "stand_goal": 12
+        },
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-25",
+          "active_energy_burned": 263,
+          "active_energy_goal": 400,
+          "exercise_time": 20,
+          "exercise_goal": 30,
+          "stand_hours": 9,
+          "stand_goal": 12
+        },
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-26",
+          "active_energy_burned": 286,
+          "active_energy_goal": 400,
+          "exercise_time": 21,
+          "exercise_goal": 30,
+          "stand_hours": 10,
+          "stand_goal": 12
+        },
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-27",
+          "active_energy_burned": 309,
+          "active_energy_goal": 400,
+          "exercise_time": 22,
+          "exercise_goal": 30,
+          "stand_hours": 8,
+          "stand_goal": 12
+        },
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-28",
+          "active_energy_burned": 332,
+          "active_energy_goal": 400,
+          "exercise_time": 19,
+          "exercise_goal": 30,
+          "stand_hours": 9,
+          "stand_goal": 12
+        },
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-29",
+          "active_energy_burned": 355,
+          "active_energy_goal": 400,
+          "exercise_time": 20,
+          "exercise_goal": 30,
+          "stand_hours": 10,
+          "stand_goal": 12
+        },
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-30",
+          "active_energy_burned": 258,
+          "active_energy_goal": 400,
+          "exercise_time": 21,
+          "exercise_goal": 30,
+          "stand_hours": 8,
+          "stand_goal": 12
+        }
+      ]
+    },
+    "fhir": {
+      "patient": {
+        "resourceType": "Patient",
+        "name": [
+          {
+            "use": "official",
+            "family": "Kowalski",
+            "given": [
+              "Margaret"
+            ]
+          }
+        ],
+        "gender": "female",
+        "birthDate": "1958-03-14",
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "555-0142",
+            "use": "home"
+          }
+        ],
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "48 Maple Street"
+            ],
+            "city": "Springfield",
+            "state": "IL",
+            "postalCode": "62701",
+            "country": "US"
+          }
+        ]
+      },
+      "encounter": {
+        "resourceType": "Encounter",
+        "status": "finished",
+        "class": {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "AMB",
+          "display": "ambulatory"
+        },
+        "period": {
+          "start": "2026-06-24T08:00:00Z",
+          "end": "2026-06-24T08:30:00Z"
+        },
+        "reasonCode": [
+          {
+            "text": "Annual wellness visit: remote monitoring enrollment"
+          }
+        ]
+      },
+      "conditions": [
+        {
+          "resourceType": "Condition",
+          "clinicalStatus": {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+                "code": "resolved",
+                "display": "Resolved"
+              }
+            ]
+          },
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "161891005",
+                "display": "Backache"
+              }
+            ],
+            "text": "Backache"
+          },
+          "onsetDateTime": "2019-04-02"
+        }
+      ],
+      "allergies": [
+        {
+          "resourceType": "AllergyIntolerance",
+          "clinicalStatus": {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+                "code": "active",
+                "display": "Active"
+              }
+            ]
+          },
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "764146007",
+                "display": "Penicillin allergy"
+              }
+            ],
+            "text": "Penicillin allergy"
+          },
+          "criticality": "high",
+          "recordedDate": "2010-06-01"
+        }
+      ],
+      "medications": [],
+      "observations": [
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs",
+                  "display": "Vital Signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "8867-4",
+                "display": "Heart rate"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-24T07:00:00Z",
+          "valueQuantity": {
+            "value": 66,
+            "unit": "beats/minute",
+            "system": "http://unitsofmeasure.org",
+            "code": "/min"
+          }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs",
+                  "display": "Vital Signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "8867-4",
+                "display": "Heart rate"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-27T07:00:00Z",
+          "valueQuantity": {
+            "value": 65,
+            "unit": "beats/minute",
+            "system": "http://unitsofmeasure.org",
+            "code": "/min"
+          }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs",
+                  "display": "Vital Signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "8867-4",
+                "display": "Heart rate"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-30T07:00:00Z",
+          "valueQuantity": {
+            "value": 67,
+            "unit": "beats/minute",
+            "system": "http://unitsofmeasure.org",
+            "code": "/min"
+          }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs",
+                  "display": "Vital Signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "85354-9",
+                "display": "Blood pressure panel"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-24T07:05:00Z",
+          "component": [
+            {
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://loinc.org",
+                    "code": "8480-6",
+                    "display": "Systolic blood pressure"
+                  }
+                ]
+              },
+              "valueQuantity": {
+                "value": 112,
+                "unit": "mmHg",
+                "system": "http://unitsofmeasure.org",
+                "code": "mm[Hg]"
+              }
+            },
+            {
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://loinc.org",
+                    "code": "8462-4",
+                    "display": "Diastolic blood pressure"
+                  }
+                ]
+              },
+              "valueQuantity": {
+                "value": 72,
+                "unit": "mmHg",
+                "system": "http://unitsofmeasure.org",
+                "code": "mm[Hg]"
+              }
+            }
+          ]
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs",
+                  "display": "Vital Signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "85354-9",
+                "display": "Blood pressure panel"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-28T07:05:00Z",
+          "component": [
+            {
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://loinc.org",
+                    "code": "8480-6",
+                    "display": "Systolic blood pressure"
+                  }
+                ]
+              },
+              "valueQuantity": {
+                "value": 116,
+                "unit": "mmHg",
+                "system": "http://unitsofmeasure.org",
+                "code": "mm[Hg]"
+              }
+            },
+            {
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://loinc.org",
+                    "code": "8462-4",
+                    "display": "Diastolic blood pressure"
+                  }
+                ]
+              },
+              "valueQuantity": {
+                "value": 76,
+                "unit": "mmHg",
+                "system": "http://unitsofmeasure.org",
+                "code": "mm[Hg]"
+              }
+            }
+          ]
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs",
+                  "display": "Vital Signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "29463-7",
+                "display": "Body weight"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-30T06:45:00Z",
+          "valueQuantity": {
+            "value": 70.8,
+            "unit": "kg",
+            "system": "http://unitsofmeasure.org",
+            "code": "kg"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "patient": {
+      "mrn": "MRN-DEMO-0002",
+      "given_name": "Robert",
+      "family_name": "Alvarez",
+      "date_of_birth": "1965-09-02",
+      "biological_sex": "male",
+      "blood_type": "A+",
+      "fitzpatrick_skin_type": "IV",
+      "vitals_profile": "borderline"
+    },
+    "healthkit": {
+      "characteristics": {
+        "source_name": "Health",
+        "date_of_birth": "1965-09-02",
+        "biological_sex": "male",
+        "blood_type": "A+",
+        "fitzpatrick_skin_type": "IV",
+        "wheelchair_use": false
+      },
+      "quantity_samples": [
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 84,
+          "unit": "count/min",
+          "start_date": "2026-06-24T07:00:00Z",
+          "end_date": "2026-06-24T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 2700,
+          "unit": "count",
+          "start_date": "2026-06-24T00:00:00Z",
+          "end_date": "2026-06-24T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 2.16,
+          "unit": "km",
+          "start_date": "2026-06-24T00:00:00Z",
+          "end_date": "2026-06-24T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 85,
+          "unit": "count/min",
+          "start_date": "2026-06-25T07:00:00Z",
+          "end_date": "2026-06-25T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 2837,
+          "unit": "count",
+          "start_date": "2026-06-25T00:00:00Z",
+          "end_date": "2026-06-25T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 2.27,
+          "unit": "km",
+          "start_date": "2026-06-25T00:00:00Z",
+          "end_date": "2026-06-25T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 86,
+          "unit": "count/min",
+          "start_date": "2026-06-26T07:00:00Z",
+          "end_date": "2026-06-26T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 2974,
+          "unit": "count",
+          "start_date": "2026-06-26T00:00:00Z",
+          "end_date": "2026-06-26T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 2.38,
+          "unit": "km",
+          "start_date": "2026-06-26T00:00:00Z",
+          "end_date": "2026-06-26T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 84,
+          "unit": "count/min",
+          "start_date": "2026-06-27T07:00:00Z",
+          "end_date": "2026-06-27T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 3111,
+          "unit": "count",
+          "start_date": "2026-06-27T00:00:00Z",
+          "end_date": "2026-06-27T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 2.49,
+          "unit": "km",
+          "start_date": "2026-06-27T00:00:00Z",
+          "end_date": "2026-06-27T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 85,
+          "unit": "count/min",
+          "start_date": "2026-06-28T07:00:00Z",
+          "end_date": "2026-06-28T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 3248,
+          "unit": "count",
+          "start_date": "2026-06-28T00:00:00Z",
+          "end_date": "2026-06-28T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 2.6,
+          "unit": "km",
+          "start_date": "2026-06-28T00:00:00Z",
+          "end_date": "2026-06-28T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 86,
+          "unit": "count/min",
+          "start_date": "2026-06-29T07:00:00Z",
+          "end_date": "2026-06-29T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 3385,
+          "unit": "count",
+          "start_date": "2026-06-29T00:00:00Z",
+          "end_date": "2026-06-29T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 2.71,
+          "unit": "km",
+          "start_date": "2026-06-29T00:00:00Z",
+          "end_date": "2026-06-29T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 84,
+          "unit": "count/min",
+          "start_date": "2026-06-30T07:00:00Z",
+          "end_date": "2026-06-30T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 3522,
+          "unit": "count",
+          "start_date": "2026-06-30T00:00:00Z",
+          "end_date": "2026-06-30T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 2.82,
+          "unit": "km",
+          "start_date": "2026-06-30T00:00:00Z",
+          "end_date": "2026-06-30T23:59:00Z"
+        },
+        {
+          "source_name": "Health",
+          "device_name": "Withings Body+",
+          "quantity_type": "HKQuantityTypeIdentifierBodyMass",
+          "value": 92.4,
+          "unit": "kg",
+          "start_date": "2026-06-24T06:45:00Z",
+          "end_date": "2026-06-24T06:45:00Z"
+        },
+        {
+          "source_name": "Health",
+          "device_name": "Withings Body+",
+          "quantity_type": "HKQuantityTypeIdentifierBodyMass",
+          "value": 92.1,
+          "unit": "kg",
+          "start_date": "2026-06-27T06:45:00Z",
+          "end_date": "2026-06-27T06:45:00Z"
+        },
+        {
+          "source_name": "Health",
+          "device_name": "Withings Body+",
+          "quantity_type": "HKQuantityTypeIdentifierBodyMass",
+          "value": 91.8,
+          "unit": "kg",
+          "start_date": "2026-06-30T06:45:00Z",
+          "end_date": "2026-06-30T06:45:00Z"
+        }
+      ],
+      "category_samples": [
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-24T23:00:00Z",
+          "end_date": "2026-06-25T06:20:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        },
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-25T22:50:00Z",
+          "end_date": "2026-06-26T06:21:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        },
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-26T23:40:00Z",
+          "end_date": "2026-06-27T06:22:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        },
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-27T22:15:00Z",
+          "end_date": "2026-06-28T06:23:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        },
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-28T23:20:00Z",
+          "end_date": "2026-06-29T06:24:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        },
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-29T22:50:00Z",
+          "end_date": "2026-06-30T06:25:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        },
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-30T23:05:00Z",
+          "end_date": "2026-07-01T06:26:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        }
+      ],
+      "blood_pressure_correlations": [
+        {
+          "source_name": "Withings BPM Connect",
+          "start_date": "2026-06-24T07:05:00Z",
+          "end_date": "2026-06-24T07:05:00Z",
+          "systolic": {
+            "value": 127,
+            "unit": "mmHg"
+          },
+          "diastolic": {
+            "value": 81,
+            "unit": "mmHg"
+          }
+        },
+        {
+          "source_name": "Withings BPM Connect",
+          "start_date": "2026-06-26T07:05:00Z",
+          "end_date": "2026-06-26T07:05:00Z",
+          "systolic": {
+            "value": 129,
+            "unit": "mmHg"
+          },
+          "diastolic": {
+            "value": 82,
+            "unit": "mmHg"
+          }
+        },
+        {
+          "source_name": "Withings BPM Connect",
+          "start_date": "2026-06-28T07:05:00Z",
+          "end_date": "2026-06-28T07:05:00Z",
+          "systolic": {
+            "value": 131,
+            "unit": "mmHg"
+          },
+          "diastolic": {
+            "value": 83,
+            "unit": "mmHg"
+          }
+        },
+        {
+          "source_name": "Withings BPM Connect",
+          "start_date": "2026-06-30T07:05:00Z",
+          "end_date": "2026-06-30T07:05:00Z",
+          "systolic": {
+            "value": 133,
+            "unit": "mmHg"
+          },
+          "diastolic": {
+            "value": 84,
+            "unit": "mmHg"
+          }
+        }
+      ],
+      "workouts": [
+        {
+          "source_name": "Apple Watch",
+          "workout_activity_type": "HKWorkoutActivityTypeCycling",
+          "start_date": "2026-06-26T09:00:00Z",
+          "end_date": "2026-06-26T09:40:00Z",
+          "duration": 2400,
+          "total_energy_burned": 260,
+          "total_energy_unit": "kcal",
+          "total_distance": 9500,
+          "total_distance_unit": "m"
+        },
+        {
+          "source_name": "Apple Watch",
+          "workout_activity_type": "HKWorkoutActivityTypeElliptical",
+          "start_date": "2026-06-29T18:00:00Z",
+          "end_date": "2026-06-29T18:30:00Z",
+          "duration": 1800,
+          "total_energy_burned": 210,
+          "total_energy_unit": "kcal"
+        }
+      ],
+      "activity_summaries": [
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-24",
+          "active_energy_burned": 130,
+          "active_energy_goal": 400,
+          "exercise_time": 7,
+          "exercise_goal": 30,
+          "stand_hours": 5,
+          "stand_goal": 12
+        },
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-25",
+          "active_energy_burned": 153,
+          "active_energy_goal": 400,
+          "exercise_time": 8,
+          "exercise_goal": 30,
+          "stand_hours": 6,
+          "stand_goal": 12
+        },
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-26",
+          "active_energy_burned": 176,
+          "active_energy_goal": 400,
+          "exercise_time": 9,
+          "exercise_goal": 30,
+          "stand_hours": 7,
+          "stand_goal": 12
+        },
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-27",
+          "active_energy_burned": 199,
+          "active_energy_goal": 400,
+          "exercise_time": 10,
+          "exercise_goal": 30,
+          "stand_hours": 5,
+          "stand_goal": 12
+        },
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-28",
+          "active_energy_burned": 222,
+          "active_energy_goal": 400,
+          "exercise_time": 7,
+          "exercise_goal": 30,
+          "stand_hours": 6,
+          "stand_goal": 12
+        },
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-29",
+          "active_energy_burned": 245,
+          "active_energy_goal": 400,
+          "exercise_time": 8,
+          "exercise_goal": 30,
+          "stand_hours": 7,
+          "stand_goal": 12
+        },
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-30",
+          "active_energy_burned": 148,
+          "active_energy_goal": 400,
+          "exercise_time": 9,
+          "exercise_goal": 30,
+          "stand_hours": 5,
+          "stand_goal": 12
+        }
+      ]
+    },
+    "fhir": {
+      "patient": {
+        "resourceType": "Patient",
+        "name": [
+          {
+            "use": "official",
+            "family": "Alvarez",
+            "given": [
+              "Robert"
+            ]
+          }
+        ],
+        "gender": "male",
+        "birthDate": "1965-09-02",
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "555-0198",
+            "use": "home"
+          }
+        ],
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "12 Birchwood Ave"
+            ],
+            "city": "Springfield",
+            "state": "IL",
+            "postalCode": "62704",
+            "country": "US"
+          }
+        ]
+      },
+      "encounter": {
+        "resourceType": "Encounter",
+        "status": "finished",
+        "class": {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "AMB",
+          "display": "ambulatory"
+        },
+        "period": {
+          "start": "2026-06-24T08:00:00Z",
+          "end": "2026-06-24T08:30:00Z"
+        },
+        "reasonCode": [
+          {
+            "text": "Cardiology follow-up: elevated home blood pressure readings"
+          }
+        ]
+      },
+      "conditions": [
+        {
+          "resourceType": "Condition",
+          "clinicalStatus": {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+                "code": "active",
+                "display": "Active"
+              }
+            ]
+          },
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "1078301004",
+                "display": "Elevated blood pressure reading, without diagnosis of hypertension"
+              }
+            ],
+            "text": "Elevated blood pressure reading, without diagnosis of hypertension"
+          },
+          "onsetDateTime": "2025-11-03"
+        },
+        {
+          "resourceType": "Condition",
+          "clinicalStatus": {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+                "code": "active",
+                "display": "Active"
+              }
+            ]
+          },
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "44054006",
+                "display": "Type 2 diabetes mellitus"
+              }
+            ],
+            "text": "Type 2 diabetes mellitus"
+          },
+          "onsetDateTime": "2023-02-14"
+        }
+      ],
+      "allergies": [],
+      "medications": [
+        {
+          "resourceType": "MedicationRequest",
+          "status": "active",
+          "intent": "order",
+          "medicationCodeableConcept": {
+            "coding": [
+              {
+                "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+                "code": "860975",
+                "display": "Metformin 500 MG Oral Tablet"
+              }
+            ],
+            "text": "Metformin 500 MG Oral Tablet"
+          },
+          "authoredOn": "2023-02-20",
+          "dosageInstruction": [
+            {
+              "text": "Take one tablet by mouth twice daily with meals"
+            }
+          ]
+        }
+      ],
+      "observations": [
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs",
+                  "display": "Vital Signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "8867-4",
+                "display": "Heart rate"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-24T07:00:00Z",
+          "valueQuantity": {
+            "value": 84,
+            "unit": "beats/minute",
+            "system": "http://unitsofmeasure.org",
+            "code": "/min"
+          }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs",
+                  "display": "Vital Signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "8867-4",
+                "display": "Heart rate"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-27T07:00:00Z",
+          "valueQuantity": {
+            "value": 88,
+            "unit": "beats/minute",
+            "system": "http://unitsofmeasure.org",
+            "code": "/min"
+          }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs",
+                  "display": "Vital Signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "8867-4",
+                "display": "Heart rate"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-30T07:00:00Z",
+          "valueQuantity": {
+            "value": 86,
+            "unit": "beats/minute",
+            "system": "http://unitsofmeasure.org",
+            "code": "/min"
+          }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs",
+                  "display": "Vital Signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "85354-9",
+                "display": "Blood pressure panel"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-24T07:05:00Z",
+          "component": [
+            {
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://loinc.org",
+                    "code": "8480-6",
+                    "display": "Systolic blood pressure"
+                  }
+                ]
+              },
+              "valueQuantity": {
+                "value": 127,
+                "unit": "mmHg",
+                "system": "http://unitsofmeasure.org",
+                "code": "mm[Hg]"
+              }
+            },
+            {
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://loinc.org",
+                    "code": "8462-4",
+                    "display": "Diastolic blood pressure"
+                  }
+                ]
+              },
+              "valueQuantity": {
+                "value": 81,
+                "unit": "mmHg",
+                "system": "http://unitsofmeasure.org",
+                "code": "mm[Hg]"
+              }
+            }
+          ]
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs",
+                  "display": "Vital Signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "85354-9",
+                "display": "Blood pressure panel"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-28T07:05:00Z",
+          "component": [
+            {
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://loinc.org",
+                    "code": "8480-6",
+                    "display": "Systolic blood pressure"
+                  }
+                ]
+              },
+              "valueQuantity": {
+                "value": 131,
+                "unit": "mmHg",
+                "system": "http://unitsofmeasure.org",
+                "code": "mm[Hg]"
+              }
+            },
+            {
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://loinc.org",
+                    "code": "8462-4",
+                    "display": "Diastolic blood pressure"
+                  }
+                ]
+              },
+              "valueQuantity": {
+                "value": 84,
+                "unit": "mmHg",
+                "system": "http://unitsofmeasure.org",
+                "code": "mm[Hg]"
+              }
+            }
+          ]
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs",
+                  "display": "Vital Signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "29463-7",
+                "display": "Body weight"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-30T06:45:00Z",
+          "valueQuantity": {
+            "value": 92.4,
+            "unit": "kg",
+            "system": "http://unitsofmeasure.org",
+            "code": "kg"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "patient": {
+      "mrn": "MRN-DEMO-0003",
+      "given_name": "Dorothy",
+      "family_name": "Chen",
+      "date_of_birth": "1949-12-21",
+      "biological_sex": "female",
+      "blood_type": "B+",
+      "fitzpatrick_skin_type": "II",
+      "vitals_profile": "at_risk"
+    },
+    "healthkit": {
+      "characteristics": {
+        "source_name": "Health",
+        "date_of_birth": "1949-12-21",
+        "biological_sex": "female",
+        "blood_type": "B+",
+        "fitzpatrick_skin_type": "II",
+        "wheelchair_use": false
+      },
+      "quantity_samples": [
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 99,
+          "unit": "count/min",
+          "start_date": "2026-06-24T07:00:00Z",
+          "end_date": "2026-06-24T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 600,
+          "unit": "count",
+          "start_date": "2026-06-24T00:00:00Z",
+          "end_date": "2026-06-24T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 0.48,
+          "unit": "km",
+          "start_date": "2026-06-24T00:00:00Z",
+          "end_date": "2026-06-24T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 100,
+          "unit": "count/min",
+          "start_date": "2026-06-25T07:00:00Z",
+          "end_date": "2026-06-25T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 737,
+          "unit": "count",
+          "start_date": "2026-06-25T00:00:00Z",
+          "end_date": "2026-06-25T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 0.59,
+          "unit": "km",
+          "start_date": "2026-06-25T00:00:00Z",
+          "end_date": "2026-06-25T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 101,
+          "unit": "count/min",
+          "start_date": "2026-06-26T07:00:00Z",
+          "end_date": "2026-06-26T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 874,
+          "unit": "count",
+          "start_date": "2026-06-26T00:00:00Z",
+          "end_date": "2026-06-26T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 0.7,
+          "unit": "km",
+          "start_date": "2026-06-26T00:00:00Z",
+          "end_date": "2026-06-26T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 99,
+          "unit": "count/min",
+          "start_date": "2026-06-27T07:00:00Z",
+          "end_date": "2026-06-27T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 1011,
+          "unit": "count",
+          "start_date": "2026-06-27T00:00:00Z",
+          "end_date": "2026-06-27T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 0.81,
+          "unit": "km",
+          "start_date": "2026-06-27T00:00:00Z",
+          "end_date": "2026-06-27T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 100,
+          "unit": "count/min",
+          "start_date": "2026-06-28T07:00:00Z",
+          "end_date": "2026-06-28T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 1148,
+          "unit": "count",
+          "start_date": "2026-06-28T00:00:00Z",
+          "end_date": "2026-06-28T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 0.92,
+          "unit": "km",
+          "start_date": "2026-06-28T00:00:00Z",
+          "end_date": "2026-06-28T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 101,
+          "unit": "count/min",
+          "start_date": "2026-06-29T07:00:00Z",
+          "end_date": "2026-06-29T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 1285,
+          "unit": "count",
+          "start_date": "2026-06-29T00:00:00Z",
+          "end_date": "2026-06-29T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 1.03,
+          "unit": "km",
+          "start_date": "2026-06-29T00:00:00Z",
+          "end_date": "2026-06-29T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierRestingHeartRate",
+          "value": 99,
+          "unit": "count/min",
+          "start_date": "2026-06-30T07:00:00Z",
+          "end_date": "2026-06-30T07:00:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierStepCount",
+          "value": 1422,
+          "unit": "count",
+          "start_date": "2026-06-30T00:00:00Z",
+          "end_date": "2026-06-30T23:59:00Z"
+        },
+        {
+          "source_name": "Apple Watch",
+          "device_name": "Apple Watch Series 9",
+          "quantity_type": "HKQuantityTypeIdentifierDistanceWalkingRunning",
+          "value": 1.14,
+          "unit": "km",
+          "start_date": "2026-06-30T00:00:00Z",
+          "end_date": "2026-06-30T23:59:00Z"
+        },
+        {
+          "source_name": "Health",
+          "device_name": "Withings Body+",
+          "quantity_type": "HKQuantityTypeIdentifierBodyMass",
+          "value": 84.1,
+          "unit": "kg",
+          "start_date": "2026-06-24T06:45:00Z",
+          "end_date": "2026-06-24T06:45:00Z"
+        },
+        {
+          "source_name": "Health",
+          "device_name": "Withings Body+",
+          "quantity_type": "HKQuantityTypeIdentifierBodyMass",
+          "value": 83.8,
+          "unit": "kg",
+          "start_date": "2026-06-27T06:45:00Z",
+          "end_date": "2026-06-27T06:45:00Z"
+        },
+        {
+          "source_name": "Health",
+          "device_name": "Withings Body+",
+          "quantity_type": "HKQuantityTypeIdentifierBodyMass",
+          "value": 83.5,
+          "unit": "kg",
+          "start_date": "2026-06-30T06:45:00Z",
+          "end_date": "2026-06-30T06:45:00Z"
+        }
+      ],
+      "category_samples": [
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-24T23:00:00Z",
+          "end_date": "2026-06-25T06:20:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        },
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-25T22:50:00Z",
+          "end_date": "2026-06-26T06:21:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        },
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-26T23:40:00Z",
+          "end_date": "2026-06-27T06:22:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        },
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-27T22:15:00Z",
+          "end_date": "2026-06-28T06:23:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        },
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-28T23:20:00Z",
+          "end_date": "2026-06-29T06:24:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        },
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-29T22:50:00Z",
+          "end_date": "2026-06-30T06:25:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        },
+        {
+          "source_name": "Apple Watch",
+          "category_type": "HKCategoryTypeIdentifierSleepAnalysis",
+          "value": 1,
+          "start_date": "2026-06-30T23:05:00Z",
+          "end_date": "2026-07-01T06:26:00Z",
+          "sample_metadata": {
+            "stage": "asleepCore"
+          }
+        }
+      ],
+      "blood_pressure_correlations": [
+        {
+          "source_name": "Withings BPM Connect",
+          "start_date": "2026-06-24T07:05:00Z",
+          "end_date": "2026-06-24T07:05:00Z",
+          "systolic": {
+            "value": 150,
+            "unit": "mmHg"
+          },
+          "diastolic": {
+            "value": 95,
+            "unit": "mmHg"
+          }
+        },
+        {
+          "source_name": "Withings BPM Connect",
+          "start_date": "2026-06-26T07:05:00Z",
+          "end_date": "2026-06-26T07:05:00Z",
+          "systolic": {
+            "value": 152,
+            "unit": "mmHg"
+          },
+          "diastolic": {
+            "value": 96,
+            "unit": "mmHg"
+          }
+        },
+        {
+          "source_name": "Withings BPM Connect",
+          "start_date": "2026-06-28T07:05:00Z",
+          "end_date": "2026-06-28T07:05:00Z",
+          "systolic": {
+            "value": 154,
+            "unit": "mmHg"
+          },
+          "diastolic": {
+            "value": 97,
+            "unit": "mmHg"
+          }
+        },
+        {
+          "source_name": "Withings BPM Connect",
+          "start_date": "2026-06-30T07:05:00Z",
+          "end_date": "2026-06-30T07:05:00Z",
+          "systolic": {
+            "value": 156,
+            "unit": "mmHg"
+          },
+          "diastolic": {
+            "value": 98,
+            "unit": "mmHg"
+          }
+        }
+      ],
+      "workouts": [
+        {
+          "source_name": "Apple Watch",
+          "workout_activity_type": "HKWorkoutActivityTypeWalking",
+          "start_date": "2026-06-27T10:00:00Z",
+          "end_date": "2026-06-27T10:15:00Z",
+          "duration": 900,
+          "total_energy_burned": 45,
+          "total_energy_unit": "kcal",
+          "total_distance": 700,
+          "total_distance_unit": "m"
+        }
+      ],
+      "activity_summaries": [
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-24",
+          "active_energy_burned": 5,
+          "active_energy_goal": 300,
+          "exercise_time": 0,
+          "exercise_goal": 20,
+          "stand_hours": 1,
+          "stand_goal": 12
+        },
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-25",
+          "active_energy_burned": 28,
+          "active_energy_goal": 300,
+          "exercise_time": 1,
+          "exercise_goal": 20,
+          "stand_hours": 2,
+          "stand_goal": 12
+        },
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-26",
+          "active_energy_burned": 51,
+          "active_energy_goal": 300,
+          "exercise_time": 2,
+          "exercise_goal": 20,
+          "stand_hours": 3,
+          "stand_goal": 12
+        },
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-27",
+          "active_energy_burned": 74,
+          "active_energy_goal": 300,
+          "exercise_time": 3,
+          "exercise_goal": 20,
+          "stand_hours": 1,
+          "stand_goal": 12
+        },
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-28",
+          "active_energy_burned": 97,
+          "active_energy_goal": 300,
+          "exercise_time": 0,
+          "exercise_goal": 20,
+          "stand_hours": 2,
+          "stand_goal": 12
+        },
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-29",
+          "active_energy_burned": 120,
+          "active_energy_goal": 300,
+          "exercise_time": 1,
+          "exercise_goal": 20,
+          "stand_hours": 3,
+          "stand_goal": 12
+        },
+        {
+          "source_name": "Health",
+          "date_value": "2026-06-30",
+          "active_energy_burned": 23,
+          "active_energy_goal": 300,
+          "exercise_time": 2,
+          "exercise_goal": 20,
+          "stand_hours": 1,
+          "stand_goal": 12
+        }
+      ]
+    },
+    "fhir": {
+      "patient": {
+        "resourceType": "Patient",
+        "name": [
+          {
+            "use": "official",
+            "family": "Chen",
+            "given": [
+              "Dorothy"
+            ]
+          }
+        ],
+        "gender": "female",
+        "birthDate": "1949-12-21",
+        "telecom": [
+          {
+            "system": "phone",
+            "value": "555-0176",
+            "use": "home"
+          }
+        ],
+        "address": [
+          {
+            "use": "home",
+            "line": [
+              "901 Elm Court"
+            ],
+            "city": "Springfield",
+            "state": "IL",
+            "postalCode": "62702",
+            "country": "US"
+          }
+        ]
+      },
+      "encounter": {
+        "resourceType": "Encounter",
+        "status": "finished",
+        "class": {
+          "system": "http://terminology.hl7.org/CodeSystem/v3-ActCode",
+          "code": "AMB",
+          "display": "ambulatory"
+        },
+        "period": {
+          "start": "2026-06-24T08:00:00Z",
+          "end": "2026-06-24T08:30:00Z"
+        },
+        "reasonCode": [
+          {
+            "text": "Cardiology follow-up: stage 2 hypertension, tachycardia on home monitoring"
+          }
+        ]
+      },
+      "conditions": [
+        {
+          "resourceType": "Condition",
+          "clinicalStatus": {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+                "code": "active",
+                "display": "Active"
+              }
+            ]
+          },
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "59621000",
+                "display": "Essential hypertension"
+              }
+            ],
+            "text": "Essential hypertension"
+          },
+          "onsetDateTime": "2020-05-18"
+        },
+        {
+          "resourceType": "Condition",
+          "clinicalStatus": {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+                "code": "active",
+                "display": "Active"
+              }
+            ]
+          },
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "266257000",
+                "display": "Family history of ischemic heart disease"
+              }
+            ],
+            "text": "Family history of ischemic heart disease"
+          },
+          "onsetDateTime": "2020-05-18"
+        },
+        {
+          "resourceType": "Condition",
+          "clinicalStatus": {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+                "code": "active",
+                "display": "Active"
+              }
+            ]
+          },
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "49436004",
+                "display": "Atrial fibrillation"
+              }
+            ],
+            "text": "Atrial fibrillation"
+          },
+          "onsetDateTime": "2024-09-30"
+        },
+        {
+          "resourceType": "Condition",
+          "clinicalStatus": {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/condition-clinical",
+                "code": "active",
+                "display": "Active"
+              }
+            ]
+          },
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "237627000",
+                "display": "Exertional dyspnea"
+              }
+            ],
+            "text": "Exertional dyspnea"
+          },
+          "onsetDateTime": "2025-08-11"
+        }
+      ],
+      "allergies": [
+        {
+          "resourceType": "AllergyIntolerance",
+          "clinicalStatus": {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/allergyintolerance-clinical",
+                "code": "active",
+                "display": "Active"
+              }
+            ]
+          },
+          "code": {
+            "coding": [
+              {
+                "system": "http://snomed.info/sct",
+                "code": "294505008",
+                "display": "Aspirin allergy"
+              }
+            ],
+            "text": "Aspirin allergy"
+          },
+          "criticality": "high",
+          "recordedDate": "2015-03-22"
+        }
+      ],
+      "medications": [
+        {
+          "resourceType": "MedicationRequest",
+          "status": "active",
+          "intent": "order",
+          "medicationCodeableConcept": {
+            "coding": [
+              {
+                "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+                "code": "197361",
+                "display": "Lisinopril 10 MG Oral Tablet"
+              }
+            ],
+            "text": "Lisinopril 10 MG Oral Tablet"
+          },
+          "authoredOn": "2020-05-20",
+          "dosageInstruction": [
+            {
+              "text": "Take one tablet by mouth once daily"
+            }
+          ]
+        },
+        {
+          "resourceType": "MedicationRequest",
+          "status": "active",
+          "intent": "order",
+          "medicationCodeableConcept": {
+            "coding": [
+              {
+                "system": "http://www.nlm.nih.gov/research/umls/rxnorm",
+                "code": "855332",
+                "display": "Metoprolol succinate 50 MG Extended Release Oral Tablet"
+              }
+            ],
+            "text": "Metoprolol succinate 50 MG Extended Release Oral Tablet"
+          },
+          "authoredOn": "2024-10-02",
+          "dosageInstruction": [
+            {
+              "text": "Take one tablet by mouth once daily"
+            }
+          ]
+        }
+      ],
+      "observations": [
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs",
+                  "display": "Vital Signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "8867-4",
+                "display": "Heart rate"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-24T07:00:00Z",
+          "valueQuantity": {
+            "value": 98,
+            "unit": "beats/minute",
+            "system": "http://unitsofmeasure.org",
+            "code": "/min"
+          }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs",
+                  "display": "Vital Signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "8867-4",
+                "display": "Heart rate"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-27T07:00:00Z",
+          "valueQuantity": {
+            "value": 104,
+            "unit": "beats/minute",
+            "system": "http://unitsofmeasure.org",
+            "code": "/min"
+          }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs",
+                  "display": "Vital Signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "8867-4",
+                "display": "Heart rate"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-30T07:00:00Z",
+          "valueQuantity": {
+            "value": 101,
+            "unit": "beats/minute",
+            "system": "http://unitsofmeasure.org",
+            "code": "/min"
+          }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs",
+                  "display": "Vital Signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "85354-9",
+                "display": "Blood pressure panel"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-24T07:05:00Z",
+          "component": [
+            {
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://loinc.org",
+                    "code": "8480-6",
+                    "display": "Systolic blood pressure"
+                  }
+                ]
+              },
+              "valueQuantity": {
+                "value": 150,
+                "unit": "mmHg",
+                "system": "http://unitsofmeasure.org",
+                "code": "mm[Hg]"
+              }
+            },
+            {
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://loinc.org",
+                    "code": "8462-4",
+                    "display": "Diastolic blood pressure"
+                  }
+                ]
+              },
+              "valueQuantity": {
+                "value": 95,
+                "unit": "mmHg",
+                "system": "http://unitsofmeasure.org",
+                "code": "mm[Hg]"
+              }
+            }
+          ]
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs",
+                  "display": "Vital Signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "85354-9",
+                "display": "Blood pressure panel"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-28T07:05:00Z",
+          "component": [
+            {
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://loinc.org",
+                    "code": "8480-6",
+                    "display": "Systolic blood pressure"
+                  }
+                ]
+              },
+              "valueQuantity": {
+                "value": 156,
+                "unit": "mmHg",
+                "system": "http://unitsofmeasure.org",
+                "code": "mm[Hg]"
+              }
+            },
+            {
+              "code": {
+                "coding": [
+                  {
+                    "system": "http://loinc.org",
+                    "code": "8462-4",
+                    "display": "Diastolic blood pressure"
+                  }
+                ]
+              },
+              "valueQuantity": {
+                "value": 97,
+                "unit": "mmHg",
+                "system": "http://unitsofmeasure.org",
+                "code": "mm[Hg]"
+              }
+            }
+          ]
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "vital-signs",
+                  "display": "Vital Signs"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "29463-7",
+                "display": "Body weight"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-30T06:45:00Z",
+          "valueQuantity": {
+            "value": 84.1,
+            "unit": "kg",
+            "system": "http://unitsofmeasure.org",
+            "code": "kg"
+          }
+        }
+      ]
+    }
+  }
+]

@@ -83,6 +83,12 @@ convention = "google"
     "D104",
 ]
 
+# Generic FastAPI route factory: each query param is an independent optional
+# filter, not a sign the function should be split up.
+"**/routers/crud.py" = [
+    "PLR0913",
+]
+
 "tests/**/*.py" = [
     "S101",
     "D10",

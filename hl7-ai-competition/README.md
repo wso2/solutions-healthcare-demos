@@ -16,27 +16,43 @@ Earlier stages: [v1](assets/architecture-diagram-v1.png),
 ## Components
 
 - [apple-healthkit-simulator](apple-healthkit-simulator/) — FastAPI service that
-  ingests Apple HealthKit samples (port 8000).
+  ingests Apple HealthKit samples for multiple patients (port 8000). Also runs
+  an in-process hourly job (`src/app/vitals_forwarder.py`) that builds a FHIR
+  `Observation` bundle from each patient's last-hour vitals and forwards it to
+  `HEALTHKIT_VITALS_TARGET_URL` (unset by default — no downstream consumer
+  exists yet, so the job just builds the bundle and skips the POST). Manually
+  trigger a cycle with `POST /vitals-cron/run-now`, check the last result with
+  `GET /vitals-cron/status`.
 - [whatsapp-simulator](whatsapp-simulator/) — Next.js chat UI that renders a
   pushed questionnaire and posts the conversation transcript to a callback URL
   (port 3000).
-- OpenEMR — open-source EHR run from the official `openemr/openemr` image with a
-  MySQL sidecar (internal only). Web UI on port 3001 (default login
-  `admin` / `pass`). First boot seeds the database and takes a few minutes.
+- fhir-server — WSO2 FHIR R4 server (`wso2/fhir-server`, Go + Postgres) standing
+  in for an EHR/EMR's FHIR API. Port 9090 (`/fhir/r4`). Has no auth of its own;
+  fine for this local demo, put a gateway/auth proxy in front for anything real.
 - fhir-mcp-server — WSO2 FHIR R4 to MCP bridge (`wso2/fhir-mcp-server`) in front
-  of OpenEMR, exposing the FHIR API as MCP tools on port 8001.
+  of fhir-server, exposing the FHIR API as MCP tools on port 8001. Reaches
+  fhir-server through fhir-server-readonly-proxy (nginx), which 403s anything
+  but GET/HEAD, so the bridge can only read.
 
 Run the stack with `make up`, or `make watch` to run it in the foreground and
 rebuild on change.
 
-`make up` also runs `scripts/bootstrap-fhir.sh`, which registers and enables an OpenEMR
-OAuth2 client, mints an access token, and writes it to `.fhir.env` (gitignored)
-for the bridge. The bridge starts under the `fhir` compose profile once the
-token exists. Re-run `make fhir` to mint a new token. The bridge reaches OpenEMR
-over the internal Docker network in plain HTTP, since OpenEMR's FHIR endpoint
-uses a self-signed cert the client will not trust; the OAuth2 token is still
-required. Static-token mode is demo-grade; production should use the SMART
-authorization-code grant instead.
+### Seeding demo data
+
+`make up` also runs `make seed`, which runs `scripts/seed/index.ts` (Bun):
+loads the three demo patients in `scripts/seed/data/patients.json` (one
+stable, one borderline, one at-risk) into apple-healthkit-simulator's own
+REST API and into fhir-server as FHIR `Patient`/`Encounter`/`Condition`/
+`AllergyIntolerance`/`MedicationRequest`/`Observation` resources, then seeds
+the next 24 hours of hourly vitals (heart rate, SpO2, respiratory rate, blood
+pressure) per patient into apple-healthkit-simulator only, timestamped into
+the future from "now". apple-healthkit-simulator's `Patient.fhir_patient_id`
+column (set via `PATCH /patients/{uuid}/fhir-link`) links the two systems'
+patient records.
+
+apple-healthkit-simulator's hourly job picks up each hour's worth of readings
+as real time reaches them, ready to forward once `HEALTHKIT_VITALS_TARGET_URL`
+points at a real consumer.
 
 ## Pre-commit hooks
 
