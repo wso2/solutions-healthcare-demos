@@ -139,6 +139,37 @@ services:
       - openemr
     restart: unless-stopped
 
+  front-desk-dashboard:
+    build:
+      context: ./front-desk-dashboard
+    image: front-desk-dashboard:latest
+    container_name: front-desk-dashboard
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: production
+    healthcheck:
+      test:
+        - "CMD"
+        - "bun"
+        - "-e"
+        - "fetch('http://localhost:3002/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    develop:
+      watch:
+        - path: ./front-desk-dashboard/package.json
+          action: rebuild
+        - path: ./front-desk-dashboard/bun.lock
+          action: rebuild
+        - path: ./front-desk-dashboard/next.config.ts
+          action: rebuild
+        - path: ./front-desk-dashboard/src
+          action: rebuild
+
 volumes:
   healthkit-data:
   openemr-db:
