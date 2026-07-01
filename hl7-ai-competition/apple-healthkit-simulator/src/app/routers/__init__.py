@@ -1,5 +1,10 @@
-from fastapi import APIRouter
+from typing import Annotated
 
+from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
+from sqlmodel import Session, select
+
+from app.db import get_session
 from app.models import (
     ActivitySummary,
     ActivitySummaryCreate,
@@ -16,6 +21,9 @@ from app.models import (
     Correlation,
     CorrelationCreate,
     CorrelationRead,
+    Patient,
+    PatientCreate,
+    PatientRead,
     QuantitySample,
     QuantitySampleCreate,
     QuantitySampleRead,
@@ -23,8 +31,33 @@ from app.models import (
     WorkoutCreate,
     WorkoutRead,
 )
-from app.routers import health
+from app.routers import health, vitals_cron
 from app.routers.crud import build_router
+
+patient_router = build_router(
+    prefix="/patients",
+    tag="patients",
+    table_model=Patient,
+    create_model=PatientCreate,
+    read_model=PatientRead,
+)
+
+
+class FhirLink(BaseModel):
+    fhir_patient_id: str
+
+
+@patient_router.patch("/{uuid}/fhir-link", response_model=PatientRead)
+def link_fhir_patient(uuid: str, link: FhirLink, session: Annotated[Session, Depends(get_session)]) -> Patient:
+    patient = session.exec(select(Patient).where(Patient.uuid == uuid)).first()
+    if patient is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"patient '{uuid}' not found")
+    patient.fhir_patient_id = link.fhir_patient_id
+    session.add(patient)
+    session.commit()
+    session.refresh(patient)
+    return patient
+
 
 quantity_router = build_router(
     prefix="/quantity-samples",
@@ -84,6 +117,8 @@ clinical_router = build_router(
 
 all_routers: list[APIRouter] = [
     health.router,
+    vitals_cron.router,
+    patient_router,
     quantity_router,
     category_router,
     correlation_router,

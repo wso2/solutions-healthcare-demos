@@ -88,82 +88,63 @@ services:
         - path: ./whatsapp-simulator/src
           action: rebuild
 
-  openemr-db:
-    image: mysql:8.4
-    container_name: openemr-db
-    command:
-      - "--character-set-server=utf8mb4"
-      - "--collation-server=utf8mb4_unicode_ci"
+  fhir-server-db:
+    image: postgres:16-alpine
+    container_name: fhir-server-db
     environment:
-      MYSQL_ROOT_PASSWORD: root
+      POSTGRES_DB: fhirdb
+      POSTGRES_USER: fhir
+      POSTGRES_PASSWORD: fhir
     volumes:
-      - openemr-db:/var/lib/mysql
+      - fhir-server-db:/var/lib/postgresql/data
     healthcheck:
-      test:
-        - "CMD"
-        - "mysqladmin"
-        - "ping"
-        - "-h"
-        - "localhost"
-        - "-proot"
-      interval: 10s
+      test: ["CMD-SHELL", "pg_isready -U fhir -d fhirdb"]
+      interval: 5s
       timeout: 5s
       retries: 10
-      start_period: 30s
     restart: unless-stopped
 
-  openemr:
-    image: openemr/openemr:8.0.0.3
-    container_name: openemr
+  fhir-server:
+    build:
+      context: "https://github.com/wso2/fhir-server.git#v0.5.0"
+    image: care-loop/fhir-server:v0.5.0
+    container_name: fhir-server
     ports:
-      - "3001:80"
+      - "9090:9090"
     environment:
-      MYSQL_HOST: openemr-db
-      MYSQL_ROOT_PASS: root
-      MYSQL_USER: openemr
-      MYSQL_PASS: openemr
-      OE_USER: admin
-      OE_PASS: pass
-      # Enable REST + FHIR APIs and password grant on first setup (OpenEMR
-      # globals applied via OPENEMR_SETTING_<global>).
-      OPENEMR_SETTING_rest_api: 1
-      OPENEMR_SETTING_rest_fhir_api: 1
-      OPENEMR_SETTING_site_addr_oath: "http://localhost"
-      OPENEMR_SETTING_oauth_password_grant: 1
-    volumes:
-      - openemr-sites:/var/www/localhost/htdocs/openemr/sites
+      DATABASE_URL: "postgres://fhir:fhir@fhir-server-db:5432/fhirdb?sslmode=disable"
+      FHIR_CREATE_TABLES: "true"
+      SERVER_PORT: "9090"
+      BASE_URL: "http://localhost:9090/fhir/r4"
     depends_on:
-      openemr-db:
+      fhir-server-db:
         condition: service_healthy
     restart: unless-stopped
 
-  # FHIR R4 -> MCP bridge in front of OpenEMR. Behind the "fhir" profile so it
-  # starts only after bootstrap-fhir.sh mints a token. Uses internal plain HTTP:
-  # the client verifies TLS with no skip option, so HTTP sidesteps OpenEMR's
-  # self-signed cert; the bearer token is still required.
+  fhir-server-readonly-proxy:
+    image: nginx:1.27-alpine
+    container_name: fhir-server-readonly-proxy
+    volumes:
+      - ./fhir-server-readonly-proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - fhir-server
+    restart: unless-stopped
+
   fhir-mcp-server:
-    # Built from the pinned upstream tag rather than the published image, which
-    # is arm64-only; building uses $TARGETPLATFORM so it works on any host arch.
+    # Built from the pinned tag, not the published image, which is arm64-only.
     build:
       context: "https://github.com/wso2/fhir-mcp-server.git#0.10.0"
     image: care-loop/fhir-mcp-server:0.10.0
     container_name: fhir-mcp-server
-    profiles:
-      - fhir
     ports:
       - "8001:8000"
     environment:
       FHIR_MCP_HOST: 0.0.0.0
       FHIR_MCP_PORT: 8000
-      FHIR_SERVER_BASE_URL: "http://openemr/apis/default/fhir"
-      # Static token mode (demo): bearer token from .fhir.env (TTL widened by
-      # bootstrap). Future: SMART auth-code grant so the server self-refreshes.
+      FHIR_SERVER_BASE_URL: "http://fhir-server-readonly-proxy:8080/fhir/r4"
       FHIR_SERVER_DISABLE_AUTHORIZATION: "True"
-    env_file:
-      - path: .fhir.env
-        required: false
     depends_on:
-      - openemr
+      - fhir-server-readonly-proxy
     restart: unless-stopped
 
   front-desk-dashboard:
@@ -199,5 +180,4 @@ services:
 
 volumes:
   healthkit-data:
-  openemr-db:
-  openemr-sites:
+  fhir-server-db:

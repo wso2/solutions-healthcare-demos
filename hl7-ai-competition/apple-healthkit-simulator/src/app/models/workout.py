@@ -7,6 +7,7 @@ from app.models.base import RecordIdentity, SampleSource
 
 
 class WorkoutBase(SampleSource):
+    patient_id: int | None = Field(default=None, foreign_key="patient.id", index=True)
     workout_activity_type: str = Field(
         index=True,
         description="HealthKit workout activity type, e.g. 'HKWorkoutActivityTypeRunning'.",

@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
@@ -50,10 +51,19 @@ def build_router(
     @router.get("", response_model=list[read_model])
     def list_records(
         session: SessionDep,
+        patient_id: Annotated[int | None, Query()] = None,
+        since: Annotated[datetime | None, Query()] = None,
+        until: Annotated[datetime | None, Query()] = None,
         limit: Annotated[int, Query(ge=1, le=MAX_LIMIT)] = DEFAULT_LIMIT,
         offset: Annotated[int, Query(ge=0)] = 0,
     ) -> list[SQLModel]:
         statement = select(table_model).order_by(table_model.id.desc()).offset(offset).limit(limit)
+        if patient_id is not None and hasattr(table_model, "patient_id"):
+            statement = statement.where(table_model.patient_id == patient_id)
+        if since is not None and hasattr(table_model, "start_date"):
+            statement = statement.where(table_model.start_date >= since)
+        if until is not None and hasattr(table_model, "start_date"):
+            statement = statement.where(table_model.start_date < until)
         return list(session.exec(statement).all())
 
     @router.get("/{uuid}", response_model=read_model)

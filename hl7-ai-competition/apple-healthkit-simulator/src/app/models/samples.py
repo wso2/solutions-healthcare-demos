@@ -6,6 +6,7 @@ from app.models.base import RecordIdentity, SampleSource
 
 
 class QuantitySampleBase(SampleSource):
+    patient_id: int | None = Field(default=None, foreign_key="patient.id", index=True)
     quantity_type: str = Field(
         index=True,
         description="HealthKit quantity identifier, e.g. 'HKQuantityTypeIdentifierHeartRate'.",
@@ -31,6 +32,7 @@ class QuantitySampleRead(QuantitySampleBase, RecordIdentity):
 
 
 class CategorySampleBase(SampleSource):
+    patient_id: int | None = Field(default=None, foreign_key="patient.id", index=True)
     category_type: str = Field(
         index=True,
         description="HealthKit category identifier, e.g. 'HKCategoryTypeIdentifierSleepAnalysis'.",
@@ -55,6 +57,7 @@ class CategorySampleRead(CategorySampleBase, RecordIdentity):
 
 
 class CorrelationBase(SampleSource):
+    patient_id: int | None = Field(default=None, foreign_key="patient.id", index=True)
     correlation_type: str = Field(
         index=True,
         description="HealthKit correlation identifier, e.g. 'HKCorrelationTypeIdentifierBloodPressure'.",

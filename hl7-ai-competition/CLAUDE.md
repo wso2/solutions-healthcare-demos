@@ -154,6 +154,8 @@ the user's instructions or perform extra work outside the requested scope.
 - Report exactly what was changed and what was not verified.
 - Include the reason behind important implementation choices, especially when
   choosing a cheaper, simpler, safer, or more repo-native path.
+- Only add a code comment when it is required to explain a non-obvious why. If
+  you add one, compress it to a single line.
 
 ## Speed and Turnaround
 
