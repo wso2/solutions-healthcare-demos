@@ -15,8 +15,9 @@ up: ## Build and start the stack, then seed demo data
 	$(COMPOSE) up -d --build
 	$(MAKE) seed
 
-seed: ## Load demo patient data into apple-healthkit-simulator and fhir-server
+seed: ## Load demo patient data into apple-healthkit-simulator and ehr-fhir-server, then sync it into care-loop-fhir-server
 	bun scripts/seed/index.ts
+	$(COMPOSE) restart fhir-sync
 
 watch: ## Start the stack in the foreground and rebuild on change
 	$(COMPOSE) up --build --watch
