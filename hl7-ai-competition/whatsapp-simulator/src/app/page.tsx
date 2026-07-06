@@ -1,16 +1,66 @@
 "use client";
 
 import ky from "ky";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import * as React from "react";
 
 import { Button } from "@/components/ui/button";
 import { sampleQuestionnaire } from "@/lib/sample";
 
+interface SessionSummary {
+  id: string;
+  patientId?: string;
+  patientName?: string;
+  title: string;
+  status: string;
+  createdAt: string;
+  path: string;
+}
+
 export default function Home() {
   const router = useRouter();
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const [generating, setGenerating] = React.useState(false);
+  const [sessions, setSessions] = React.useState<SessionSummary[]>([]);
+
+  const loadSessions = React.useCallback(async () => {
+    try {
+      const res = await ky.get("/api/sessions", { throwHttpErrors: false });
+      if (!res.ok) return;
+      const data = (await res.json()) as { sessions: SessionSummary[] };
+      setSessions(data.sessions);
+    } catch {
+      // best-effort; leave the list as-is
+    }
+  }, []);
+
+  React.useEffect(() => {
+    void loadSessions();
+  }, [loadSessions]);
+
+  async function generateQuestionnaires() {
+    setGenerating(true);
+    setError(null);
+    try {
+      const res = await ky.post("/api/generate-questionnaires", {
+        throwHttpErrors: false,
+      });
+      if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        setError(data?.error ?? "Could not generate questionnaires.");
+        return;
+      }
+      await loadSessions();
+    } catch {
+      setError("Could not generate questionnaires.");
+    } finally {
+      setGenerating(false);
+    }
+  }
 
   async function launchDemo() {
     setBusy(true);
@@ -70,10 +120,55 @@ export default function Home() {
       </ol>
 
       <div className="space-y-2">
-        <Button onClick={launchDemo} disabled={busy}>
-          {busy ? "Starting..." : "Launch demo questionnaire"}
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={launchDemo} disabled={busy}>
+            {busy ? "Starting..." : "Launch demo questionnaire"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={generateQuestionnaires}
+            disabled={generating}
+          >
+            {generating ? "Generating..." : "Generate Questionnaires"}
+          </Button>
+        </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
+      </div>
+
+      <div className="space-y-2">
+        <h2 className="text-sm font-medium text-muted-foreground">Chats</h2>
+        {sessions.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No sessions yet.</p>
+        ) : (
+          <ul className="space-y-1">
+            {sessions.map((session) => (
+              <li key={session.id}>
+                <Link
+                  href={session.path}
+                  className="flex items-center justify-between rounded-lg border border-border px-3 py-2 text-sm hover:bg-muted"
+                >
+                  <span className="flex flex-col">
+                    <span className="font-medium">
+                      {session.patientName ?? session.patientId ?? session.id}
+                    </span>
+                    <span className="text-muted-foreground">
+                      {session.title}
+                    </span>
+                  </span>
+                  <span
+                    className={
+                      session.status === "completed"
+                        ? "rounded-full bg-emerald-500/10 px-2 py-0.5 text-xs font-medium text-emerald-600"
+                        : "rounded-full bg-amber-500/10 px-2 py-0.5 text-xs font-medium text-amber-600"
+                    }
+                  >
+                    {session.status}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </main>
   );

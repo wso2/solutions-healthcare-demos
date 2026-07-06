@@ -166,6 +166,10 @@ quality, but get there as fast as possible.
 - Parallelize aggressively. Run independent tool calls together in one turn, fan
   work out across multiple agents at once, and push long-running commands to the
   background so the session is never blocked waiting on them.
+- Default to spinning off a background subagent for substantive or long-running
+  work (builds, tests, investigations, multi-file implementation) rather than
+  running it in the main thread. The main thread should stay free for the user
+  to keep directing work while agents run in the background.
 - Use the platform's features to their fullest to do this: background bash
   tasks, background and parallel subagents, batched tool calls — whatever
   produces a correct result sooner.

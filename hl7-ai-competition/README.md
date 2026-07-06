@@ -41,6 +41,28 @@ Earlier stages: [v1](assets/architecture-diagram-v1.png),
   front of care-loop-fhir-server, exposing the FHIR API as MCP tools on port
   8001. Reaches it through care-loop-fhir-server-readonly-proxy (nginx), which
   403s anything but GET/HEAD, so the bridge can only read.
+- [care-loop-ai-service](care-loop-ai-service/) — standalone Ballerina agent
+  (port 8003). `POST /questionnaires` with a `patientId` runs an `ai:Agent`
+  wired to fhir-mcp-server (via `ai:McpToolKit`), which calls the MCP `search`
+  tool itself to pull that patient's recent Observations, then drafts a FHIR
+  `Questionnaire` (questions only, no answers) targeted at the vitals trend.
+  Not wired into the rest of the loop yet — this is a standalone component
+  for now. Uses `ballerina/ai`'s built-in `Wso2ModelProvider` (via
+  `ai:getDefaultModelProvider()`), configured through the `wso2ProviderConfig`
+  table in `Config.toml` (copy `Config.toml.example`); gitignored, never
+  commit it. See `TODO.md` for the WSO2 Agent Manager registration this is
+  deferred on.
+
+- [care-loop-collector-service](care-loop-collector-service/) — standalone
+  Ballerina bridge (port 8004). `POST /generate` fetches every `Patient` from
+  care-loop-fhir-server, asks care-loop-ai-service to draft a Questionnaire
+  per patient, converts each into whatsapp-simulator's chat shape, and opens
+  one chat session per patient there. `POST /transcripts` is the callback
+  each session posts its completed answers to; it builds a FHIR
+  `QuestionnaireResponse` from them and saves it back to
+  care-loop-fhir-server. Triggered from the "Generate Questionnaires" button
+  on whatsapp-simulator's home page, which also lists every chat this
+  produces. Needs a `Config.toml` (copy `Config.toml.example`); gitignored.
 
 Run the stack with `make up`, or `make watch` to run it in the foreground and
 rebuild on change.
@@ -72,11 +94,12 @@ front-desk-dashboard has no server-side code, so nothing to log.
 
 ## Pre-commit hooks
 
-ruff (apple-healthkit-simulator) and biome plus knip (whatsapp-simulator) run on
-staged files at commit time. The config lives at
-`hl7-ai-competition/.pre-commit-config.yaml`; install the hook pointing at it
-once, from the fork root (needs `pre-commit`, e.g. `uv tool install pre-commit`;
-the whatsapp-simulator hooks also need `bun`):
+ruff (apple-healthkit-simulator), biome plus knip (whatsapp-simulator), and
+`bal format` plus `bal scan` (care-loop-ai-service) run on staged files at
+commit time. The config lives at `hl7-ai-competition/.pre-commit-config.yaml`;
+install the hook pointing at it once, from the fork root (needs
+`pre-commit`, e.g. `uv tool install pre-commit`; the whatsapp-simulator hooks
+also need `bun`, care-loop-ai-service needs `bal`):
 
 ```sh
 pre-commit install -c hl7-ai-competition/.pre-commit-config.yaml

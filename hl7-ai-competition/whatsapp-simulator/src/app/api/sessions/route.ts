@@ -3,7 +3,7 @@ import { z } from "zod";
 
 import { logger } from "@/lib/logger";
 import { questionnaireSchema } from "@/lib/questionnaire";
-import { createSession } from "@/lib/sessions";
+import { createSession, listSessions } from "@/lib/sessions";
 
 export const runtime = "nodejs";
 
@@ -20,6 +20,8 @@ const createBody = z.object({
     },
     { message: "callbackUrl must be a valid http(s) URL" },
   ),
+  patientId: z.string().optional(),
+  patientName: z.string().optional(),
 });
 
 export async function POST(request: Request) {
@@ -32,11 +34,13 @@ export async function POST(request: Request) {
       );
     }
 
-    const { questionnaire, callbackUrl } = parsed.data;
+    const { questionnaire, callbackUrl, patientId, patientName } = parsed.data;
     const session = createSession(
       questionnaire,
       callbackUrl,
       new Date().toISOString(),
+      patientId,
+      patientName,
     );
 
     const path = `/q/${session.id}`;
@@ -46,6 +50,28 @@ export async function POST(request: Request) {
     );
   } catch (error) {
     logger.error("failed to create session", error);
+    return NextResponse.json(
+      { error: "internal server error" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function GET() {
+  try {
+    const sessions = listSessions().map((session) => ({
+      id: session.id,
+      patientId: session.patientId,
+      patientName: session.patientName,
+      title: session.questionnaire.title,
+      status: session.status,
+      createdAt: session.createdAt,
+      path: `/q/${session.id}`,
+    }));
+
+    return NextResponse.json({ sessions });
+  } catch (error) {
+    logger.error("failed to list sessions", error);
     return NextResponse.json(
       { error: "internal server error" },
       { status: 500 },
