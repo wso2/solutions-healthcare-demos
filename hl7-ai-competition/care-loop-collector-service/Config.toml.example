@@ -1,0 +1,5 @@
+aiServiceUrl = "http://localhost:8003"
+fhirServerUrl = "http://localhost:9091/fhir"
+whatsappUrl = "http://localhost:3000"
+collectorPublicUrl = "http://localhost:8004"
+listenPort = 8004

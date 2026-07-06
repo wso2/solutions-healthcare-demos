@@ -33,3 +33,15 @@ repos:
         language: system
         files: ^hl7-ai-competition/whatsapp-simulator/
         pass_filenames: false
+      - id: bal-format
+        name: bal format (care-loop-ai-service)
+        entry: bash -c 'cd hl7-ai-competition/care-loop-ai-service && bal format'
+        language: system
+        files: ^hl7-ai-competition/care-loop-ai-service/.*\.bal$
+        pass_filenames: false
+      - id: bal-scan
+        name: bal scan (care-loop-ai-service)
+        entry: bash -c 'cd hl7-ai-competition/care-loop-ai-service && bal scan'
+        language: system
+        files: ^hl7-ai-competition/care-loop-ai-service/.*\.bal$
+        pass_filenames: false

@@ -1,0 +1,3 @@
+fhirMcpUrl = "http://fhir-mcp-server:8000/mcp"
+listenPort = 8003
+openAiApiKey = "your-openai-api-key"
