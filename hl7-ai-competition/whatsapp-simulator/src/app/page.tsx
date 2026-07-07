@@ -22,7 +22,6 @@ export default function Home() {
   const router = useRouter();
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const [generating, setGenerating] = React.useState(false);
   const [sessions, setSessions] = React.useState<SessionSummary[]>([]);
 
   const loadSessions = React.useCallback(async () => {
@@ -39,28 +38,6 @@ export default function Home() {
   React.useEffect(() => {
     void loadSessions();
   }, [loadSessions]);
-
-  async function generateQuestionnaires() {
-    setGenerating(true);
-    setError(null);
-    try {
-      const res = await ky.post("/api/generate-questionnaires", {
-        throwHttpErrors: false,
-      });
-      if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        setError(data?.error ?? "Could not generate questionnaires.");
-        return;
-      }
-      await loadSessions();
-    } catch {
-      setError("Could not generate questionnaires.");
-    } finally {
-      setGenerating(false);
-    }
-  }
 
   async function launchDemo() {
     setBusy(true);
@@ -123,13 +100,6 @@ export default function Home() {
         <div className="flex gap-2">
           <Button onClick={launchDemo} disabled={busy}>
             {busy ? "Starting..." : "Launch demo questionnaire"}
-          </Button>
-          <Button
-            variant="outline"
-            onClick={generateQuestionnaires}
-            disabled={generating}
-          >
-            {generating ? "Generating..." : "Generate Questionnaires"}
           </Button>
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}

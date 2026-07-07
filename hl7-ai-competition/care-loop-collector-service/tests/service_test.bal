@@ -87,3 +87,69 @@ function testBuildQuestionnaireResponseOmitsQuestionnaireRefWithoutId() {
     international401:QuestionnaireResponse questionnaireResponse = buildQuestionnaireResponse(callback, session);
     test:assertTrue(questionnaireResponse.questionnaire is ());
 }
+
+@test:Config {}
+function testExtractPatientIdFromVitalsBundle() returns error? {
+    json bundle = {
+        resourceType: "Bundle",
+        'type: "transaction",
+        entry: [
+            {
+                'resource: {
+                    resourceType: "Observation",
+                    subject: {reference: "Patient/patient-42"}
+                },
+                request: {method: "POST", url: "Observation"}
+            }
+        ]
+    };
+
+    string patientId = check extractPatientIdFromVitalsBundle(bundle);
+    test:assertEquals(patientId, "patient-42");
+}
+
+@test:Config {}
+function testExtractPatientIdFromVitalsBundleRejectsEmptyBundle() {
+    json bundle = {resourceType: "Bundle", 'type: "transaction", entry: []};
+    string|error result = extractPatientIdFromVitalsBundle(bundle);
+    test:assertTrue(result is error);
+}
+
+@test:Config {}
+function testBuildEmergencyAnswersMatchesQuestionIdToBotQuestionText() {
+    TranscriptCallback callback = {
+        sessionId: "session-1",
+        title: "Emergency check-in",
+        messages: [
+            {role: "bot", text: "How are you feeling?", time: "2026-07-06T10:00:00Z", questionId: "1"},
+            {role: "user", text: "Dizzy", time: "2026-07-06T10:01:00Z", questionId: "1"},
+            {role: "bot", text: "Any chest pain?", time: "2026-07-06T10:02:00Z", questionId: "2"},
+            {
+                role: "user",
+                text: "Yes, since this morning",
+                time: "2026-07-06T10:03:00Z",
+                replyTo: {questionId: "2", questionText: "Any chest pain?"}
+            }
+        ]
+    };
+
+    EmergencyAnswer[] answers = buildEmergencyAnswers(callback);
+    test:assertEquals(answers.length(), 2);
+    test:assertEquals(answers[0].question, "How are you feeling?");
+    test:assertEquals(answers[0].answer, "Dizzy");
+    test:assertEquals(answers[1].question, "Any chest pain?");
+    test:assertEquals(answers[1].answer, "Yes, since this morning");
+}
+
+@test:Config {}
+function testExtractPatientConvertsFhirPatientJson() returns error? {
+    json patientJson = {
+        resourceType: "Patient",
+        id: "patient-7",
+        name: [{given: ["Jane"], family: "Doe"}]
+    };
+
+    Patient patient = check extractPatient(patientJson, "fallback-id");
+    test:assertEquals(patient.id, "patient-7");
+    test:assertEquals(patient.name, "Jane Doe");
+}

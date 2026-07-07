@@ -15,14 +15,14 @@ import { receptionist } from "@/lib/store";
 
 const titles: Record<string, string> = {
   "/": "Dashboard",
-  "/tasks": "Alerts",
   "/patients": "Patients",
-  "/appointments": "Reviews",
 };
 
 export function SiteHeader() {
   const pathname = usePathname();
-  const title = titles[pathname] ?? "Dashboard";
+  const title =
+    titles[pathname] ??
+    (pathname.startsWith("/tasks/") ? "Task" : "Dashboard");
 
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/60">

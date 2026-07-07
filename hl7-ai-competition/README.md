@@ -19,13 +19,15 @@ Earlier stages: [v1](assets/architecture-diagram-v1.png),
   ingests Apple HealthKit samples for multiple patients (port 8000). Also runs
   an in-process hourly job (`src/app/vitals_forwarder.py`) that builds a FHIR
   `Observation` bundle from each patient's last-hour vitals and forwards it to
-  `HEALTHKIT_VITALS_TARGET_URL` (unset by default — no downstream consumer
-  exists yet, so the job just builds the bundle and skips the POST). Manually
+  `HEALTHKIT_VITALS_TARGET_URL`, pointed at care-loop-collector-service's
+  `/vitals` (unset skips the POST and just builds the bundle). Manually
   trigger a cycle with `POST /vitals-cron/run-now`, check the last result with
   `GET /vitals-cron/status`.
 - [whatsapp-simulator](whatsapp-simulator/) — Next.js chat UI that renders a
   pushed questionnaire and posts the conversation transcript to a callback URL
-  (port 3000).
+  (port 3000). Chat sessions are created by care-loop-collector-service and
+  listed on the home page; there's no longer a button to trigger generation
+  from this app.
 - ehr-fhir-server — WSO2 FHIR R4 server (`wso2/fhir-server`, Go + Postgres)
   standing in for the clinic's EHR/EMR FHIR API. Port 9090 (`/fhir/r4`). Has no
   auth of its own; fine for this local demo, put a gateway/auth proxy in front
@@ -54,15 +56,33 @@ Earlier stages: [v1](assets/architecture-diagram-v1.png),
   deferred on.
 
 - [care-loop-collector-service](care-loop-collector-service/) — standalone
-  Ballerina bridge (port 8004). `POST /generate` fetches every `Patient` from
-  care-loop-fhir-server, asks care-loop-ai-service to draft a Questionnaire
-  per patient, converts each into whatsapp-simulator's chat shape, and opens
-  one chat session per patient there. `POST /transcripts` is the callback
-  each session posts its completed answers to; it builds a FHIR
-  `QuestionnaireResponse` from them and saves it back to
-  care-loop-fhir-server. Triggered from the "Generate Questionnaires" button
-  on whatsapp-simulator's home page, which also lists every chat this
-  produces. Needs a `Config.toml` (copy `Config.toml.example`); gitignored.
+  Ballerina bridge (port 8004). `POST /vitals` saves an incoming Observation
+  bundle to care-loop-fhir-server and notifies care-loop-analysis-service on
+  `/vitals-ready`. `POST /patients/{patientId}/generate` asks
+  care-loop-ai-service to draft a Questionnaire for that patient, converts it
+  into whatsapp-simulator's chat shape, and opens a chat session there.
+  `POST /transcripts` is the callback each session posts its completed
+  answers to; it builds a FHIR `QuestionnaireResponse` from them, saves it to
+  care-loop-fhir-server, and, for emergency sessions, also forwards the
+  flattened answers to care-loop-analysis-service on `/emergency-answers`.
+  Needs a `Config.toml` (copy `Config.toml.example`); gitignored.
+- [care-loop-analysis-service](care-loop-analysis-service/) — standalone
+  Ballerina service (port 8005) that turns vitals and questionnaire answers
+  into a risk decision. `POST /vitals-ready` pulls the patient's recent
+  vitals and demographics, calls care-loop-heart-risk-service for an ML
+  probability, and either escalates straight away or asks
+  care-loop-collector-service to generate a follow-up questionnaire, with a
+  timeout fail-safe if it's never answered. `POST /emergency-answers` runs
+  the answers plus the ML probability through care-loop-ai-service's
+  `/risk-assessment` agent and escalates if either signal crosses its
+  threshold, writing a `RiskAssessment` and, on escalation, a `Task` to
+  ehr-fhir-server. Needs a `Config.toml` (copy `Config.toml.example`);
+  gitignored.
+
+- [front-desk-dashboard](front-desk-dashboard/) — Next.js clinician-facing UI
+  (port 3002). `GET /api/tasks` searches ehr-fhir-server for `Task?status=
+  requested` and returns them flattened for the `EhrTasks` component, which
+  polls it every 15s.
 
 Run the stack with `make up`, or `make watch` to run it in the foreground and
 rebuild on change.
@@ -82,15 +102,16 @@ patient records. `make seed` also restarts fhir-sync, which mirrors this data
 into care-loop-fhir-server on startup and then hourly after that.
 
 apple-healthkit-simulator's hourly job picks up each hour's worth of readings
-as real time reaches them, ready to forward once `HEALTHKIT_VITALS_TARGET_URL`
-points at a real consumer.
+as real time reaches them, forwarding to care-loop-collector-service's
+`/vitals`.
 
 ## Logging
 
 apple-healthkit-simulator and care-loop-heart-risk-service log via
 [loguru](https://github.com/Delgan/loguru) (`from loguru import logger`) to
 stdout. whatsapp-simulator logs via `consola` (`src/lib/logger.ts`).
-front-desk-dashboard has no server-side code, so nothing to log.
+front-desk-dashboard's `/api/tasks` route only logs failures, via a plain
+`console.error`; no logger library wired in yet.
 
 ## Pre-commit hooks
 

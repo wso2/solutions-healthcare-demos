@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  CalendarDays,
-  HeartPulse,
-  LayoutDashboard,
-  ListChecks,
-  Users,
-} from "lucide-react";
+import { HeartPulse, LayoutDashboard, Users } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -20,38 +14,18 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
-  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarRail,
 } from "@/components/ui/sidebar";
-import { receptionist, useData } from "@/lib/store";
+import { receptionist } from "@/lib/store";
 
 export function AppSidebar() {
   const pathname = usePathname();
-  const { data } = useData();
-  const openAlerts = data.tasks.filter((t) => t.status !== "Closed").length;
 
   const navItems = [
-    {
-      title: "Dashboard",
-      url: "/",
-      icon: LayoutDashboard,
-      badge: null as string | null,
-    },
-    {
-      title: "Alerts",
-      url: "/tasks",
-      icon: ListChecks,
-      badge: openAlerts > 0 ? String(openAlerts) : null,
-    },
-    { title: "Patients", url: "/patients", icon: Users, badge: null },
-    {
-      title: "Reviews",
-      url: "/appointments",
-      icon: CalendarDays,
-      badge: null,
-    },
+    { title: "Dashboard", url: "/", icon: LayoutDashboard },
+    { title: "Patients", url: "/patients", icon: Users },
   ];
 
   return (
@@ -98,9 +72,6 @@ export function AppSidebar() {
                         <span>{item.title}</span>
                       </Link>
                     </SidebarMenuButton>
-                    {item.badge ? (
-                      <SidebarMenuBadge>{item.badge}</SidebarMenuBadge>
-                    ) : null}
                   </SidebarMenuItem>
                 );
               })}

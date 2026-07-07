@@ -187,13 +187,11 @@ async function seedHourlyVitals(patient: HealthkitPatient, profile: ProfileRange
 export async function seedVitalsTimeline(
   patients: SeedPatient[],
   healthkitPatients: HealthkitPatient[],
-  horizonHours: number,
+  pastHours: number,
+  futureHours: number,
 ): Promise<void> {
   const profileByMrn = new Map(patients.map((p) => [p.patient.mrn, p.patient.vitals_profile]));
-
-  const firstHour = new Date();
-  firstHour.setMinutes(0, 0, 0);
-  firstHour.setHours(firstHour.getHours() + 1);
+  const now = new Date();
 
   for (const patient of healthkitPatients) {
     const profileName = profileByMrn.get(patient.mrn);
@@ -201,9 +199,9 @@ export async function seedVitalsTimeline(
       continue;
     }
     const profile = PROFILES[profileName];
-    for (let hour = 0; hour < horizonHours; hour++) {
-      await seedHourlyVitals(patient, profile, new Date(firstHour.getTime() + hour * 60 * 60 * 1000));
+    for (let hour = -pastHours; hour <= futureHours; hour++) {
+      await seedHourlyVitals(patient, profile, new Date(now.getTime() + hour * 60 * 60 * 1000));
     }
-    log(`seeded ${horizonHours}h of future vitals for ${patient.mrn} (${profileName})`);
+    log(`seeded ${pastHours}h past + ${futureHours}h future vitals for ${patient.mrn} (${profileName})`);
   }
 }

@@ -1,22 +1,15 @@
 import ballerinax/health.fhir.r4;
 import ballerinax/health.fhir.r4.international401;
 
-isolated function extractPatients(json bundle) returns Patient[] {
-    Patient[] patients = [];
-    r4:Bundle|error typedBundle = bundle.cloneWithType(r4:Bundle);
-    if typedBundle is error {
-        return patients;
-    }
-    foreach r4:BundleEntry entry in typedBundle.entry ?: [] {
-        anydata|r4:FHIRWireFormat? entryResource = entry?.'resource;
-        international401:Patient|error patientResource = entryResource.cloneWithType(international401:Patient);
-        string? id = patientResource is international401:Patient ? patientResource.id : ();
-        if patientResource is error || id is () {
-            continue;
-        }
-        patients.push({id, name: extractPatientName(patientResource, id)});
-    }
-    return patients;
+# Converts a single FHIR Patient resource (as returned by FHIRConnector's getById) into this service's Patient shape.
+#
+# + patientResourceJson - the raw Patient resource json returned by FHIRConnector
+# + fallbackId - used as both the id and display-name fallback if the resource is missing either
+# + return - the converted Patient, or an error if the json isn't a valid Patient resource
+isolated function extractPatient(json patientResourceJson, string fallbackId) returns Patient|error {
+    international401:Patient patientResource = check patientResourceJson.cloneWithType(international401:Patient);
+    string id = patientResource.id ?: fallbackId;
+    return {id, name: extractPatientName(patientResource, id)};
 }
 
 isolated function extractPatientName(international401:Patient patientResource, string fallbackId) returns string {

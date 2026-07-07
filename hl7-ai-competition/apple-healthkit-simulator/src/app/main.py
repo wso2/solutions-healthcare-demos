@@ -1,5 +1,6 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from fastapi import FastAPI
@@ -29,7 +30,10 @@ async def lifespan(_app: FastAPI) -> AsyncGenerator[None]:
     init_db()
     scheduler = AsyncIOScheduler()
     scheduler.add_job(
-        _scheduled_forward_cycle, "interval", hours=settings.vitals_forward_interval_hours, next_run_time=None
+        _scheduled_forward_cycle,
+        "interval",
+        hours=settings.vitals_forward_interval_hours,
+        next_run_time=datetime.now(UTC),
     )
     scheduler.start()
     logger.info("apple-healthkit-simulator started")

@@ -3,7 +3,12 @@ import ballerina/http;
 isolated map<GeneratedSession> generatedSessions = {};
 
 # Runs one patient's questionnaire generation + whatsapp session creation end to end; isolated so `start` can run it concurrently.
-isolated function processPatient(Patient patient) returns GenerateResult {
+#
+# + patient - the patient to generate a questionnaire and chat session for
+# + emergencyContext - present when this generation was triggered by an ML escalation, so the resulting
+#   session can be flagged for /transcripts to notify analysis-service once it's answered
+# + return - the outcome of this patient's generation attempt
+isolated function processPatient(Patient patient, EmergencyContext? emergencyContext = ()) returns GenerateResult {
     GenerateResult result = {patientId: patient.id, patientName: patient.name};
 
     AiQuestionnaireRequest aiRequest = {patientId: patient.id};
@@ -36,7 +41,9 @@ isolated function processPatient(Patient patient) returns GenerateResult {
         generatedSessions[sessionResponse.id] = {
             patientId: patient.id,
             patientName: patient.name,
-            questionnaire: aiResponse.questionnaire.clone()
+            questionnaire: aiResponse.questionnaire.clone(),
+            emergency: emergencyContext is EmergencyContext,
+            mlProbability: emergencyContext?.mlProbability
         };
     }
 

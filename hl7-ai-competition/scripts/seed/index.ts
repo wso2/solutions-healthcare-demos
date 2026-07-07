@@ -7,7 +7,8 @@ import { log, waitForHealthy } from "./util";
 import type { HealthkitPatient, SeedPatient } from "./types";
 
 const SEED_DATA_FILE = process.env.SEED_DATA_FILE ?? join(import.meta.dir, "data/patients.json");
-const VITALS_HORIZON_HOURS = Number(process.env.VITALS_HORIZON_HOURS ?? 24);
+const VITALS_PAST_HOURS = Number(process.env.VITALS_PAST_HOURS ?? 24);
+const VITALS_FUTURE_HOURS = Number(process.env.VITALS_FUTURE_HOURS ?? 24);
 
 async function main(): Promise<void> {
   const patients = (await Bun.file(SEED_DATA_FILE).json()) as SeedPatient[];
@@ -22,7 +23,7 @@ async function main(): Promise<void> {
     healthkitPatients.push(patient);
   }
 
-  await seedVitalsTimeline(patients, healthkitPatients, VITALS_HORIZON_HOURS);
+  await seedVitalsTimeline(patients, healthkitPatients, VITALS_PAST_HOURS, VITALS_FUTURE_HOURS);
 
   log("done.");
 }
