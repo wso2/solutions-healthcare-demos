@@ -5,7 +5,8 @@ import type { Questionnaire } from "@/lib/questionnaire";
 
 import type { ReplyRef } from "@/lib/transcript";
 import ky from "ky";
-import { Send, X } from "lucide-react";
+import { ArrowLeft, Send, X } from "lucide-react";
+import Link from "next/link";
 import * as React from "react";
 
 import { Notice, Status } from "@/components/chat/chat-status";
@@ -168,7 +169,13 @@ export function QuestionnaireChat({ id }: { id: string }) {
       style={{ letterSpacing: "-0.006em" }}
     >
       <div className="flex h-full w-full min-w-0 max-w-[760px] flex-col">
-        <header className="flex h-14 shrink-0 items-center border-b border-[#ececed] px-4">
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-[#ececed] px-4">
+          <Link
+            href="/"
+            className="flex size-8 shrink-0 items-center justify-center rounded-md text-[#8a8a8e] transition hover:bg-[#ececed] hover:text-[#0a0a0a]"
+          >
+            <ArrowLeft className="size-[18px]" />
+          </Link>
           <div className="flex min-w-0 items-center gap-2.5">
             <div className="flex size-[30px] shrink-0 items-center justify-center rounded-full bg-[#0a0a0a] text-xs font-semibold text-white">
               {BOT_INITIALS}

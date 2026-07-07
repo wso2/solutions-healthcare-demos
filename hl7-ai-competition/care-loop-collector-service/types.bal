@@ -107,8 +107,36 @@ public type TranscriptSavedResponse record {|
 # + patientName - display name for the patient
 # + questionnaire - the original FHIR Questionnaire resource, kept so the transcript
 #   callback can rebuild a QuestionnaireResponse against the same linkIds
+# + emergency - whether this session was generated for an ML-flagged emergency case
+# + mlProbability - the heart-risk-service probability that triggered this session, if emergency
 public type GeneratedSession record {|
     string patientId;
     string patientName;
     json questionnaire;
+    boolean emergency = false;
+    float? mlProbability = ();
+|};
+
+# + mlProbability - the escalation probability care-loop-analysis-service's ML model produced
+public type EmergencyContext record {|
+    float mlProbability;
+|};
+
+# + emergencyContext - present when this generation was triggered by an ML escalation, absent otherwise
+public type GenerateRequestBody record {|
+    EmergencyContext? emergencyContext = ();
+|};
+
+# + question - the question text as asked in the chat
+# + answer - the patient's answer text
+public type EmergencyAnswer record {|
+    string question;
+    string answer;
+|};
+
+# + patientId - the FHIR Patient id these answers are for
+# + answers - the flattened question/answer pairs from the emergency questionnaire transcript
+public type EmergencyAnswersNotification record {|
+    string patientId;
+    EmergencyAnswer[] answers;
 |};

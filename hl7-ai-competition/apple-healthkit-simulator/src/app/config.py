@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./data/healthkit.db"
     echo_sql: bool = False
     vitals_target_url: str | None = None
-    vitals_forward_interval_hours: int = 1
+    vitals_forward_interval_hours: float = 1
 
 
 @lru_cache

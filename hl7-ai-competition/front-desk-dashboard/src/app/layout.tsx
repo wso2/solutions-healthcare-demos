@@ -6,7 +6,6 @@ import { SiteHeader } from "@/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { DataProvider } from "@/lib/store";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -36,19 +35,17 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full">
-        <DataProvider>
-          <TooltipProvider delayDuration={200}>
-            <SidebarProvider>
-              <AppSidebar />
-              <SidebarInset>
-                <SiteHeader />
-                <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
-                  {children}
-                </div>
-              </SidebarInset>
-            </SidebarProvider>
-          </TooltipProvider>
-        </DataProvider>
+        <TooltipProvider delayDuration={200}>
+          <SidebarProvider>
+            <AppSidebar />
+            <SidebarInset>
+              <SiteHeader />
+              <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+                {children}
+              </div>
+            </SidebarInset>
+          </SidebarProvider>
+        </TooltipProvider>
         <Toaster position="bottom-right" />
       </body>
     </html>

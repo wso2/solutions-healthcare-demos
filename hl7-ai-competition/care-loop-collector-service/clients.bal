@@ -6,6 +6,7 @@ import ballerinax/health.clients.fhir;
 // Capability-statement validation would GET /metadata at construction time, racing this service's own startup against care-loop-fhir-server's - disabled.
 final fhir:FHIRConnector fhirConnector = check new ({baseURL: fhirServerUrl}, enableCapabilityStatementValidation = false);
 final http:Client aiClient = check new (aiServiceUrl);
+final http:Client analysisClient = check new (analysisServiceUrl);
 
 // http:Client defaults to HTTP_2_0, which probes with an h2c upgrade that Bun's HTTP server resets the connection on instead of answering - pinning HTTP_1_1 avoids it (verified 0/50 failures vs 50/50 before).
 final http:Client whatsappClient = check new (whatsappUrl, httpVersion = http:HTTP_1_1);

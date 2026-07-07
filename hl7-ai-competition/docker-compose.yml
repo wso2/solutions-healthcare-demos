@@ -8,6 +8,9 @@ services:
       - "8000:8000"
     environment:
       HEALTHKIT_DATABASE_URL: "sqlite:///./data/healthkit.db"
+      HEALTHKIT_VITALS_TARGET_URL: "http://care-loop-collector-service:8004/vitals"
+      # Demo-speed cadence (real default is hourly); forward window equals this interval so checks tile with no gaps/overlaps.
+      HEALTHKIT_VITALS_FORWARD_INTERVAL_HOURS: "0.1"
     volumes:
       - healthkit-data:/app/data
     healthcheck:
@@ -66,7 +69,6 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: production
-      COLLECTOR_SERVICE_URL: "http://care-loop-collector-service:8004"
     healthcheck:
       test:
         - "CMD"
@@ -181,6 +183,11 @@ services:
       - "3002:3002"
     environment:
       NODE_ENV: production
+      EHR_FHIR_SERVER_URL: "http://ehr-fhir-server:9090/fhir/r4"
+      CARE_LOOP_FHIR_SERVER_URL: "http://care-loop-fhir-server-readonly-proxy:8080/fhir"
+    depends_on:
+      - ehr-fhir-server
+      - care-loop-fhir-server-readonly-proxy
     healthcheck:
       test:
         - "CMD"
@@ -229,6 +236,23 @@ services:
       - care-loop-ai-service
       - care-loop-fhir-server
       - whatsapp-simulator
+    restart: unless-stopped
+
+  care-loop-analysis-service:
+    build:
+      context: ./care-loop-analysis-service
+    image: care-loop-analysis-service:latest
+    container_name: care-loop-analysis-service
+    ports:
+      - "8005:8005"
+    volumes:
+      - ./care-loop-analysis-service/Config.toml:/home/ballerina/Config.toml:ro
+    depends_on:
+      - care-loop-heart-risk-service
+      - care-loop-fhir-server
+      - ehr-fhir-server
+      - care-loop-ai-service
+      - care-loop-collector-service
     restart: unless-stopped
 
 volumes:
