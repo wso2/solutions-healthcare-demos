@@ -1,0 +1,27 @@
+# UnifiedCare API — configuration template.
+# Copy this file to Config.toml and fill in your sandbox app credentials.
+servicePort = 9095
+
+# Epic sandbox (SMART Backend Services / private key JWT)
+epicBaseUrl = "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4"
+epicTokenUrl = "https://fhir.epic.com/interconnect-fhir-oauth/oauth2/token"
+epicClientId = "<epic-backend-app-client-id>"
+# Path to the RSA private key whose public key is registered on the Epic app.
+epicKeyFile = "epic-private-key.pem"
+
+# Cerner sandbox (system app / client credentials)
+cernerBaseUrl = "https://fhir-ehr-code.cerner.com/r4/<tenant-id>"
+cernerTokenUrl = "https://authorization.cerner.com/tenants/<tenant-id>/protocols/oauth2/profiles/smart-v1/token"
+cernerClientId = "<cerner-system-app-client-id>"
+cernerClientSecret = "<cerner-system-app-client-secret>"
+cernerScopes = [
+    "system/Patient.read",
+    "system/Condition.read",
+    "system/Observation.read",
+    "system/AllergyIntolerance.read",
+    "system/MedicationRequest.read"
+]
+
+# Optional: print HTTP trace logs on the console during demos.
+#[ballerina.http.traceLogAdvancedConfig]
+#console = true

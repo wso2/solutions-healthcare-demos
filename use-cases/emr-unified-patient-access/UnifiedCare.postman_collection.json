@@ -1,0 +1,166 @@
+{
+  "info": {
+    "name": "UnifiedCare — Epic & Cerner EMR Integration (WSO2 Ballerina Healthcare)",
+    "description": "Demo flow for the UnifiedCare cross-EMR patient access API.\n\nA regional care network runs its tertiary hospital on **Epic** and its community clinics on **Cerner (Oracle Health)**. The UnifiedCare API — built with WSO2's Ballerina healthcare connectors (`ballerinax/health.clients.fhir.epic`, `ballerinax/health.clients.fhir.cerner`) — exposes ONE API context over both EMRs: every patient operation fans out to Epic and Cerner in parallel and combines whatever each system returns. Authentication is **system-to-system (SMART Backend Services)**: private-key JWT for Epic, OAuth2 client credentials for Cerner. No user login, fully read-only.\n\nWatch the service console while running requests — every EMR interaction is logged (request, HTTP status, latency, raw FHIR snippet, entry counts, cross-EMR link decisions) to show live connectivity.\n\nRun top to bottom:\n1. Unified lookup / search — one call, both EMRs, merged results.\n2. Unified Patient-360 — aggregates clinical data where the id resolves, then demographically links and aggregates the same person's record in the other EMR.\n3. Referral — pulls the packet from the source EMR and matches the patient in the target EMR.\n\nStart the service first: `bal run` inside `unified_care_api/` (listens on port 9095).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key": "baseUrl", "value": "http://localhost:9095/unifiedcare"},
+    {"key": "epicPatientId", "value": "erXuFYUfucBZaryVksYEcMg3", "description": "Camila Maria Lopez — Epic sandbox test patient (also has matching Cerner records)"},
+    {"key": "epicPatientId2", "value": "eq081-VQEgP8drUUqCWzHfw3", "description": "Derrick Lin — Epic sandbox test patient"},
+    {"key": "cernerPatientId", "value": "12724066", "description": "Nancy Smart — Cerner sandbox test patient (rich clinical record)"},
+    {"key": "cernerPatientId2", "value": "12724067", "description": "Joe Smart — Cerner sandbox test patient"}
+  ],
+  "item": [
+    {
+      "name": "1. Unified patient access (one context, both EMRs)",
+      "item": [
+        {
+          "name": "Lookup by Epic id — found in epic only",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{epicPatientId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients", "{{epicPatientId}}"]
+            },
+            "description": "One call fans the id out to BOTH EMRs in parallel. Epic resolves Camila Lopez (private-key JWT auth); Cerner reports a miss in `warnings`. `foundIn` tells you where the patient lives. Watch the console: both EMR round-trips are logged with status, latency and a raw FHIR snippet."
+          }
+        },
+        {
+          "name": "Lookup by Cerner id — found in cerner only",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{cernerPatientId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients", "{{cernerPatientId}}"]
+            },
+            "description": "Same endpoint with a Cerner id (client-credentials auth). The API is EMR-agnostic — callers never need to know which system holds the record."
+          }
+        },
+        {
+          "name": "Unified search — merged matches from both EMRs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients?family=Lopez&birthdate=1987-09-12",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients"],
+              "query": [
+                {"key": "family", "value": "Lopez"},
+                {"key": "birthdate", "value": "1987-09-12"},
+                {"key": "given", "value": "Camila", "disabled": true}
+              ]
+            },
+            "description": "Searches Epic and Cerner concurrently and merges the results: Camila Lopez comes back from Epic AND her registrations in Cerner — the same human in two EMRs, combined in one response (`sourceEmr` marks the origin, `foundIn` lists the systems that matched)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Unified Patient-360 (cross-EMR linked)",
+      "item": [
+        {
+          "name": "Patient-360 by Epic id — auto-links Cerner record",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{epicPatientId}}/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients", "{{epicPatientId}}", "summary"]
+            },
+            "description": "Resolves the id in both EMRs, aggregates the clinical summary where it lives (Epic), then demographically links the same person in Cerner (family name + birthDate) and aggregates there too — `summaries` holds one Patient-360 per EMR and `linkedVia` explains the join. Epic's clinical sections appear as warnings because the sandbox app only holds Patient scopes."
+          }
+        },
+        {
+          "name": "Patient-360 by Cerner id — rich clinical record",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/{{cernerPatientId}}/summary",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients", "{{cernerPatientId}}", "summary"]
+            },
+            "description": "Cerner-held patient: conditions, medications, allergies, vitals (component blood-pressure panels flattened) and labs fetched in 5 parallel Ballerina workers, plus an Epic demographic-link attempt. Allow up to ~90s — the open Cerner sandbox is slow, and its Condition search intermittently 504s (surfaced in `warnings`)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Cross-EMR referral (read-only)",
+      "item": [
+        {
+          "name": "Refer Epic patient to Cerner clinic — MATCH_FOUND",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceEmr\": \"epic\",\n  \"targetEmr\": \"cerner\",\n  \"patientId\": \"{{epicPatientId}}\",\n  \"reason\": \"Endocrinology follow-up at community clinic\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/referrals",
+              "host": ["{{baseUrl}}"],
+              "path": ["referrals"]
+            },
+            "description": "Hospital (Epic) refers Camila Lopez to a community clinic (Cerner). The API pulls her record from Epic, searches Cerner by family name + birth date and returns matchOutcome MATCH_FOUND with the candidate Cerner patient ids. Entirely read-only."
+          }
+        },
+        {
+          "name": "Refer Cerner patient to Epic hospital — NO_MATCH packet",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sourceEmr\": \"cerner\",\n  \"targetEmr\": \"epic\",\n  \"patientId\": \"{{cernerPatientId2}}\",\n  \"reason\": \"Transfer to tertiary hospital for cardiac evaluation\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/referrals",
+              "host": ["{{baseUrl}}"],
+              "path": ["referrals"]
+            },
+            "description": "Community clinic (Cerner) refers a patient to the hospital (Epic). The transition-of-care packet carries the full Cerner clinical summary; the Epic demographic match returns NO_MATCH — a new patient for the hospital to register. Allow up to ~60s."
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Error handling",
+      "item": [
+        {
+          "name": "Search without parameters returns 400",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients"]
+            },
+            "description": "At least one of family / given / birthdate is required."
+          }
+        },
+        {
+          "name": "Unknown patient id returns 404",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/patients/no-such-patient-anywhere",
+              "host": ["{{baseUrl}}"],
+              "path": ["patients", "no-such-patient-anywhere"]
+            },
+            "description": "Neither EMR resolves the id → 404 with per-EMR reasons logged on the console."
+          }
+        }
+      ]
+    }
+  ]
+}
