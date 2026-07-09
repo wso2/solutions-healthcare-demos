@@ -15,8 +15,7 @@
 // under the License.
 
 import ballerinax/health.base.auth;
-import ballerinax/health.clients.fhir.cerner;
-import ballerinax/health.clients.fhir.epic;
+import ballerinax/health.clients.fhir;
 
 // Epic sandbox — SMART Backend Services (private key JWT client assertion)
 configurable string epicBaseUrl = "https://fhir.epic.com/interconnect-fhir-oauth/api/FHIR/R4";
@@ -43,12 +42,12 @@ auth:PKJWTAuthConfig epicAuthConfig = {
     keyFile: epicKeyFile
 };
 
-final epic:FHIRClientConnector epicClient = check new (fhirConnectorConfig = {
+final fhir:FHIRConnector epicClient = check new ({
     baseURL: epicBaseUrl,
     authConfig: epicAuthConfig,
     timeout: 90
 });
-final cerner:FHIRClientConnector cernerClient = check new (fhirConnectorConfig = {
+final fhir:FHIRConnector cernerClient = check new ({
     baseURL: cernerBaseUrl,
     timeout: 90,
     authConfig: {
@@ -58,3 +57,24 @@ final cerner:FHIRClientConnector cernerClient = check new (fhirConnectorConfig =
         scopes: cernerScopes
     }
 });
+
+# Returns the FHIR connector for the given EMR.
+#
+# + emr - source EMR
+# + return - Epic or Cerner FHIR connector
+isolated function emrClient(EmrSystem emr) returns fhir:FHIRConnector =>
+    emr == EPIC ? epicClient : cernerClient;
+
+# Builds a FHIR search parameter map, omitting absent values.
+#
+# + params - name/value pairs where () means "omit"
+# + return - search parameter map suitable for FHIRConnector->search
+isolated function searchParams(map<string?> params) returns map<string[]> {
+    map<string[]> searchParameters = {};
+    foreach [string, string?] [paramName, paramValue] in params.entries() {
+        if paramValue is string {
+            searchParameters[paramName] = [paramValue];
+        }
+    }
+    return searchParameters;
+}

@@ -37,7 +37,7 @@ service /unifiedcare on new http:Listener(servicePort, timeout = 300) {
     #
     # + patientId - patient logical id (Epic or Cerner)
     # + return - combined lookup result, or 404 when no EMR has the patient
-    resource function get patients/[string patientId]()
+    isolated resource function get patients/[string patientId]()
             returns UnifiedPatientResult|http:NotFound {
         UnifiedPatientResult unifiedResult = lookupPatientEverywhere(patientId = patientId);
         if unifiedResult.foundIn.length() == 0 {
@@ -56,7 +56,7 @@ service /unifiedcare on new http:Listener(servicePort, timeout = 300) {
     # + given - given name to search
     # + birthdate - date of birth (YYYY-MM-DD)
     # + return - merged search results, or an error response
-    resource function get patients(string? family, string? given, string? birthdate)
+    isolated resource function get patients(string? family, string? given, string? birthdate)
             returns UnifiedSearchResult|http:BadRequest {
         if family is () && given is () && birthdate is () {
             return <http:BadRequest>{
@@ -102,7 +102,7 @@ service /unifiedcare on new http:Listener(servicePort, timeout = 300) {
     #
     # + patientId - patient logical id (Epic or Cerner)
     # + return - combined clinical view, or an error response
-    resource function get patients/[string patientId]/summary()
+    isolated resource function get patients/[string patientId]/summary()
             returns UnifiedPatient360|http:NotFound|http:InternalServerError {
         UnifiedPatient360|error unified360 = buildUnifiedPatient360(patientId = patientId);
         if unified360 is error {
@@ -120,7 +120,7 @@ service /unifiedcare on new http:Listener(servicePort, timeout = 300) {
     #
     # + referralRequest - referral instruction
     # + return - transition-of-care packet, or an error response
-    resource function post referrals(ReferralRequest referralRequest)
+    isolated resource function post referrals(ReferralRequest referralRequest)
             returns ReferralPacket|http:BadRequest|http:InternalServerError {
         if referralRequest.sourceEmr == referralRequest.targetEmr {
             return <http:BadRequest>{body: <ErrorBody>{message: "sourceEmr and targetEmr must differ"}};
@@ -138,7 +138,7 @@ service /unifiedcare on new http:Listener(servicePort, timeout = 300) {
 #
 # + patientId - patient logical id
 # + return - combined lookup result (never fails; misses become warnings)
-function lookupPatientEverywhere(string patientId) returns UnifiedPatientResult {
+isolated function lookupPatientEverywhere(string patientId) returns UnifiedPatientResult {
     log:printInfo("Fanning out patient lookup to Epic and Cerner", patientId = patientId);
     future<PatientSummary|error> epicFuture = start fetchPatientSummary(emr = EPIC, patientId = patientId);
     future<PatientSummary|error> cernerFuture = start fetchPatientSummary(emr = CERNER, patientId = patientId);
@@ -169,15 +169,11 @@ function lookupPatientEverywhere(string patientId) returns UnifiedPatientResult 
 # + emr - source EMR
 # + patientId - patient logical id
 # + return - patient summary or an error
-function fetchPatientSummary(EmrSystem emr, string patientId) returns PatientSummary|error {
+isolated function fetchPatientSummary(EmrSystem emr, string patientId) returns PatientSummary|error {
     decimal startSeconds = time:monotonicNow();
     log:printInfo("EMR request: Patient read", emr = emr, patientId = patientId);
-    fhir:FHIRResponse|fhir:FHIRError fhirResponse;
-    if emr == EPIC {
-        fhirResponse = epicClient->getPatientById(id = patientId);
-    } else {
-        fhirResponse = cernerClient->getPatientById(id = patientId);
-    }
+    fhir:FHIRConnector fhirClient = emrClient(emr = emr);
+    fhir:FHIRResponse|fhir:FHIRError fhirResponse = fhirClient->getById("Patient", patientId);
     decimal elapsedMs = (time:monotonicNow() - startSeconds) * 1000;
     if fhirResponse is fhir:FHIRError {
         log:printWarn("EMR response: Patient read failed", emr = emr, patientId = patientId,
@@ -197,17 +193,19 @@ function fetchPatientSummary(EmrSystem emr, string patientId) returns PatientSum
 # + given - given name
 # + birthdate - date of birth
 # + return - matching patient summaries or an error
-function searchPatients(EmrSystem emr, string? family, string? given, string? birthdate)
+isolated function searchPatients(EmrSystem emr, string? family, string? given, string? birthdate)
         returns PatientSummary[]|error {
     decimal startSeconds = time:monotonicNow();
     log:printInfo("EMR request: Patient search", emr = emr, family = family,
             given = given, birthdate = birthdate);
-    fhir:FHIRResponse|fhir:FHIRError fhirResponse;
-    if emr == EPIC {
-        fhirResponse = epicClient->searchPatient(family = family, given = given, birthdate = birthdate);
-    } else {
-        fhirResponse = cernerClient->searchPatient(family = family, given = given, birthdate = birthdate);
-    }
+    map<string[]> patientSearchParams = searchParams(params = {
+        family,
+        given,
+        birthdate
+    });
+    fhir:FHIRConnector fhirClient = emrClient(emr = emr);
+    fhir:FHIRResponse|fhir:FHIRError fhirResponse = fhirClient->search("Patient",
+            mode = fhir:POST, searchParameters = patientSearchParams);
     decimal elapsedMs = (time:monotonicNow() - startSeconds) * 1000;
     if fhirResponse is fhir:FHIRError {
         log:printWarn("EMR response: Patient search failed", emr = emr,
@@ -236,7 +234,7 @@ function searchPatients(EmrSystem emr, string? family, string? given, string? bi
 #
 # + patientId - patient logical id
 # + return - unified Patient-360 or an error
-function buildUnifiedPatient360(string patientId) returns UnifiedPatient360|error {
+isolated function buildUnifiedPatient360(string patientId) returns UnifiedPatient360|error {
     UnifiedPatientResult lookup = lookupPatientEverywhere(patientId = patientId);
     if lookup.foundIn.length() == 0 {
         return error(string `Patient '${patientId}' was not found in any connected EMR`);
@@ -303,31 +301,33 @@ function buildUnifiedPatient360(string patientId) returns UnifiedPatient360|erro
 # + emr - source EMR
 # + patientId - patient logical id
 # + return - aggregated Patient-360 view or an error
-function buildPatient360(EmrSystem emr, string patientId) returns Patient360|error {
+isolated function buildPatient360(EmrSystem emr, string patientId) returns Patient360|error {
     PatientSummary patientSummary = check fetchPatientSummary(emr = emr, patientId = patientId);
     string[] warnings = [];
     log:printInfo("Fanning out clinical section searches", emr = emr, patientId = patientId,
             sections = "conditions, medications, allergies, vitals, labResults");
 
     // Fan out all clinical section searches to the EMR in parallel.
-    future<fhir:FHIRResponse|fhir:FHIRError> conditionFuture;
-    future<fhir:FHIRResponse|fhir:FHIRError> medicationFuture;
-    future<fhir:FHIRResponse|fhir:FHIRError> allergyFuture;
-    future<fhir:FHIRResponse|fhir:FHIRError> vitalsFuture;
-    future<fhir:FHIRResponse|fhir:FHIRError> labsFuture;
-    if emr == EPIC {
-        conditionFuture = start epicClient->searchCondition(patient = patientId);
-        medicationFuture = start epicClient->searchMedicationRequest(patient = patientId);
-        allergyFuture = start epicClient->searchAllergyIntolerance(patient = patientId);
-        vitalsFuture = start epicClient->searchObservation(patient = patientId, category = "vital-signs");
-        labsFuture = start epicClient->searchObservation(patient = patientId, category = "laboratory");
-    } else {
-        conditionFuture = start cernerClient->searchCondition(patient = patientId);
-        medicationFuture = start cernerClient->searchMedicationRequest(patient = patientId);
-        allergyFuture = start cernerClient->searchAllergyIntolerance(patient = patientId);
-        vitalsFuture = start cernerClient->searchObservation(patient = patientId, category = "vital-signs");
-        labsFuture = start cernerClient->searchObservation(patient = patientId, category = "laboratory");
-    }
+    fhir:FHIRConnector fhirClient = emrClient(emr = emr);
+    map<string[]> & readonly patientOnly = searchParams(params = {patient: patientId}).cloneReadOnly();
+    map<string[]> & readonly vitalsParams = searchParams(params = {
+        patient: patientId,
+        category: "vital-signs"
+    }).cloneReadOnly();
+    map<string[]> & readonly labsParams = searchParams(params = {
+        patient: patientId,
+        category: "laboratory"
+    }).cloneReadOnly();
+    future<fhir:FHIRResponse|fhir:FHIRError> conditionFuture =
+            start fhirClient->search("Condition", mode = fhir:POST, searchParameters = patientOnly);
+    future<fhir:FHIRResponse|fhir:FHIRError> medicationFuture =
+            start fhirClient->search("MedicationRequest", mode = fhir:POST, searchParameters = patientOnly);
+    future<fhir:FHIRResponse|fhir:FHIRError> allergyFuture =
+            start fhirClient->search("AllergyIntolerance", mode = fhir:POST, searchParameters = patientOnly);
+    future<fhir:FHIRResponse|fhir:FHIRError> vitalsFuture =
+            start fhirClient->search("Observation", mode = fhir:POST, searchParameters = vitalsParams);
+    future<fhir:FHIRResponse|fhir:FHIRError> labsFuture =
+            start fhirClient->search("Observation", mode = fhir:POST, searchParameters = labsParams);
 
     ConditionSummary[] conditions = [];
     fhir:FHIRResponse|fhir:FHIRError conditionResponse = wait conditionFuture;
@@ -416,7 +416,7 @@ function buildPatient360(EmrSystem emr, string patientId) returns Patient360|err
 # + sectionName - section label used in warnings
 # + warnings - warning accumulator
 # + return - the section's Bundle payload, or () when the section failed
-function sectionBundle(EmrSystem emr, fhir:FHIRResponse|fhir:FHIRError sectionResponse,
+isolated function sectionBundle(EmrSystem emr, fhir:FHIRResponse|fhir:FHIRError sectionResponse,
         string sectionName, string[] warnings) returns json? {
     if sectionResponse is fhir:FHIRError {
         log:printWarn("EMR response: section search failed", emr = emr, section = sectionName,
@@ -439,7 +439,7 @@ function sectionBundle(EmrSystem emr, fhir:FHIRResponse|fhir:FHIRError sectionRe
 #
 # + referralRequest - referral instruction
 # + return - assembled referral packet or an error
-function processReferral(ReferralRequest referralRequest) returns ReferralPacket|error {
+isolated function processReferral(ReferralRequest referralRequest) returns ReferralPacket|error {
     string referralId = uuid:createType4AsString();
     log:printInfo("Processing referral", referralId = referralId,
             sourceEmr = referralRequest.sourceEmr, targetEmr = referralRequest.targetEmr,

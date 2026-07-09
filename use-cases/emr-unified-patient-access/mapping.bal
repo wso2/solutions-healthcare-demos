@@ -22,7 +22,7 @@ import ballerinax/health.fhir.r4.parser;
 #
 # + concept - the codeable concept, possibly absent
 # + return - text, first coding display, or ()
-function conceptToText(r4:CodeableConcept? concept) returns string? {
+isolated function conceptToText(r4:CodeableConcept? concept) returns string? {
     if concept is () {
         return ();
     }
@@ -46,7 +46,7 @@ function conceptToText(r4:CodeableConcept? concept) returns string? {
 #
 # + quantity - the quantity, possibly absent
 # + return - formatted value or ()
-function quantityToText(r4:Quantity? quantity) returns string? {
+isolated function quantityToText(r4:Quantity? quantity) returns string? {
     if quantity is () {
         return ();
     }
@@ -62,7 +62,7 @@ function quantityToText(r4:Quantity? quantity) returns string? {
 #
 # + bundleJson - raw Bundle payload
 # + return - number of entry resources
-function countBundleEntries(json bundleJson) returns int {
+isolated function countBundleEntries(json bundleJson) returns int {
     json[]|error entryResources = bundleToResources(bundleJson = bundleJson);
     return entryResources is json[] ? entryResources.length() : 0;
 }
@@ -71,7 +71,7 @@ function countBundleEntries(json bundleJson) returns int {
 #
 # + payload - the payload to snippet
 # + return - first 300 characters of the serialized payload
-function jsonSnippet(json payload) returns string {
+isolated function jsonSnippet(json payload) returns string {
     string serialized = payload.toJsonString();
     return serialized.length() > 300 ? serialized.substring(0, 300) + "..." : serialized;
 }
@@ -80,7 +80,7 @@ function jsonSnippet(json payload) returns string {
 #
 # + bundleJson - raw Bundle payload returned by the EMR
 # + return - list of entry resources as json, or a parse error
-function bundleToResources(json bundleJson) returns json[]|error {
+isolated function bundleToResources(json bundleJson) returns json[]|error {
     map<json> bundleMap = check bundleJson.ensureType();
     json entriesJson = bundleMap["entry"] ?: ();
     if entriesJson is () {
@@ -102,7 +102,7 @@ function bundleToResources(json bundleJson) returns json[]|error {
 #
 # + patientNames - FHIR name array, possibly absent
 # + return - display name string
-function extractFullName(r4:HumanName[]? patientNames) returns string {
+isolated function extractFullName(r4:HumanName[]? patientNames) returns string {
     if patientNames is () || patientNames.length() == 0 {
         return "(unnamed)";
     }
@@ -127,7 +127,7 @@ function extractFullName(r4:HumanName[]? patientNames) returns string {
 #
 # + patientNames - FHIR name array, possibly absent
 # + return - family name or ()
-function extractFamily(r4:HumanName[]? patientNames) returns string? {
+isolated function extractFamily(r4:HumanName[]? patientNames) returns string? {
     if patientNames is () || patientNames.length() == 0 {
         return ();
     }
@@ -138,7 +138,7 @@ function extractFamily(r4:HumanName[]? patientNames) returns string? {
 #
 # + patientNames - FHIR name array, possibly absent
 # + return - given name or ()
-function extractGiven(r4:HumanName[]? patientNames) returns string? {
+isolated function extractGiven(r4:HumanName[]? patientNames) returns string? {
     if patientNames is () || patientNames.length() == 0 {
         return ();
     }
@@ -153,7 +153,7 @@ function extractGiven(r4:HumanName[]? patientNames) returns string? {
 #
 # + patientIdentifiers - FHIR identifier array, possibly absent
 # + return - MRN value or ()
-function extractMrn(r4:Identifier[]? patientIdentifiers) returns string? {
+isolated function extractMrn(r4:Identifier[]? patientIdentifiers) returns string? {
     if patientIdentifiers is () {
         return ();
     }
@@ -173,7 +173,7 @@ function extractMrn(r4:Identifier[]? patientIdentifiers) returns string? {
 #
 # + contactPoints - FHIR telecom array, possibly absent
 # + return - phone number or ()
-function extractPhone(r4:ContactPoint[]? contactPoints) returns string? {
+isolated function extractPhone(r4:ContactPoint[]? contactPoints) returns string? {
     if contactPoints is () {
         return ();
     }
@@ -189,7 +189,7 @@ function extractPhone(r4:ContactPoint[]? contactPoints) returns string? {
 #
 # + patientAddresses - FHIR address array, possibly absent
 # + return - formatted address or ()
-function extractAddress(r4:Address[]? patientAddresses) returns string? {
+isolated function extractAddress(r4:Address[]? patientAddresses) returns string? {
     if patientAddresses is () || patientAddresses.length() == 0 {
         return ();
     }
@@ -219,7 +219,7 @@ function extractAddress(r4:Address[]? patientAddresses) returns string? {
 # + fhirPatient - parsed FHIR Patient
 # + sourceEmr - EMR the record came from
 # + return - patient summary
-function mapPatientToSummary(international401:Patient fhirPatient, string sourceEmr) returns PatientSummary => {
+isolated function mapPatientToSummary(international401:Patient fhirPatient, string sourceEmr) returns PatientSummary => {
     patientId: fhirPatient.id ?: "",
     sourceEmr: sourceEmr,
     fullName: extractFullName(fhirPatient.name),
@@ -237,7 +237,7 @@ function mapPatientToSummary(international401:Patient fhirPatient, string source
 # + patientJson - raw Patient payload
 # + sourceEmr - EMR the record came from
 # + return - patient summary or a parse error
-function toPatientSummary(json patientJson, string sourceEmr) returns PatientSummary|error {
+isolated function toPatientSummary(json patientJson, string sourceEmr) returns PatientSummary|error {
     international401:Patient fhirPatient = check parser:parse(payload = patientJson,
             targetFHIRModelType = international401:Patient).ensureType();
     return mapPatientToSummary(fhirPatient = fhirPatient, sourceEmr = sourceEmr);
@@ -247,7 +247,7 @@ function toPatientSummary(json patientJson, string sourceEmr) returns PatientSum
 #
 # + fhirCondition - parsed FHIR Condition
 # + return - condition summary
-function mapConditionToSummary(international401:Condition fhirCondition) returns ConditionSummary => {
+isolated function mapConditionToSummary(international401:Condition fhirCondition) returns ConditionSummary => {
     condition: conceptToText(fhirCondition.code) ?: "(uncoded condition)",
     clinicalStatus: conceptToText(fhirCondition.clinicalStatus),
     recordedDate: fhirCondition.recordedDate
@@ -257,7 +257,7 @@ function mapConditionToSummary(international401:Condition fhirCondition) returns
 #
 # + bundleJson - raw search-set Bundle
 # + return - condition summaries or a parse error
-function toConditionSummaries(json bundleJson) returns ConditionSummary[]|error {
+isolated function toConditionSummaries(json bundleJson) returns ConditionSummary[]|error {
     ConditionSummary[] conditionSummaries = [];
     foreach json entryResource in check bundleToResources(bundleJson) {
         international401:Condition|error fhirCondition = parser:parse(payload = entryResource,
@@ -274,7 +274,7 @@ function toConditionSummaries(json bundleJson) returns ConditionSummary[]|error 
 #
 # + dosageInstructions - FHIR dosage array, possibly absent
 # + return - dosage text or ()
-function extractDosageText(r4:Dosage[]? dosageInstructions) returns string? {
+isolated function extractDosageText(r4:Dosage[]? dosageInstructions) returns string? {
     if dosageInstructions is r4:Dosage[] && dosageInstructions.length() > 0 {
         return dosageInstructions[0].text;
     }
@@ -285,7 +285,7 @@ function extractDosageText(r4:Dosage[]? dosageInstructions) returns string? {
 #
 # + medicationRequest - parsed FHIR MedicationRequest
 # + return - medication summary
-function mapMedicationToSummary(international401:MedicationRequest medicationRequest) returns MedicationSummary => {
+isolated function mapMedicationToSummary(international401:MedicationRequest medicationRequest) returns MedicationSummary => {
     medication: conceptToText(medicationRequest.medicationCodeableConcept) ?: "(uncoded medication)",
     status: medicationRequest.status,
     authoredOn: medicationRequest.authoredOn,
@@ -296,7 +296,7 @@ function mapMedicationToSummary(international401:MedicationRequest medicationReq
 #
 # + bundleJson - raw search-set Bundle
 # + return - medication summaries or a parse error
-function toMedicationSummaries(json bundleJson) returns MedicationSummary[]|error {
+isolated function toMedicationSummaries(json bundleJson) returns MedicationSummary[]|error {
     MedicationSummary[] medicationSummaries = [];
     foreach json entryResource in check bundleToResources(bundleJson) {
         international401:MedicationRequest|error medicationRequest = parser:parse(payload = entryResource,
@@ -313,7 +313,7 @@ function toMedicationSummaries(json bundleJson) returns MedicationSummary[]|erro
 #
 # + allergyIntolerance - parsed FHIR AllergyIntolerance
 # + return - allergy summary
-function mapAllergyToSummary(international401:AllergyIntolerance allergyIntolerance) returns AllergySummary => {
+isolated function mapAllergyToSummary(international401:AllergyIntolerance allergyIntolerance) returns AllergySummary => {
     substance: conceptToText(allergyIntolerance.code) ?: "(uncoded allergen)",
     clinicalStatus: conceptToText(allergyIntolerance.clinicalStatus),
     criticality: allergyIntolerance.criticality
@@ -323,7 +323,7 @@ function mapAllergyToSummary(international401:AllergyIntolerance allergyIntolera
 #
 # + bundleJson - raw search-set Bundle
 # + return - allergy summaries or a parse error
-function toAllergySummaries(json bundleJson) returns AllergySummary[]|error {
+isolated function toAllergySummaries(json bundleJson) returns AllergySummary[]|error {
     AllergySummary[] allergySummaries = [];
     foreach json entryResource in check bundleToResources(bundleJson) {
         international401:AllergyIntolerance|error allergyIntolerance = parser:parse(payload = entryResource,
@@ -341,7 +341,7 @@ function toAllergySummaries(json bundleJson) returns AllergySummary[]|error {
 #
 # + fhirObservation - parsed FHIR Observation
 # + return - formatted value string or ()
-function extractObservationValue(international401:Observation fhirObservation) returns string? {
+isolated function extractObservationValue(international401:Observation fhirObservation) returns string? {
     string? quantityValue = quantityToText(fhirObservation.valueQuantity);
     if quantityValue is string {
         return quantityValue;
@@ -372,7 +372,7 @@ function extractObservationValue(international401:Observation fhirObservation) r
 #
 # + fhirObservation - parsed FHIR Observation
 # + return - observation summary
-function mapObservationToSummary(international401:Observation fhirObservation) returns ObservationSummary => {
+isolated function mapObservationToSummary(international401:Observation fhirObservation) returns ObservationSummary => {
     name: conceptToText(fhirObservation.code) ?: "(uncoded observation)",
     value: extractObservationValue(fhirObservation),
     effectiveDate: fhirObservation.effectiveDateTime
@@ -384,7 +384,7 @@ function mapObservationToSummary(international401:Observation fhirObservation) r
 #
 # + bundleJson - raw search-set Bundle
 # + return - observation summaries or a parse error
-function toObservationSummaries(json bundleJson) returns ObservationSummary[]|error {
+isolated function toObservationSummaries(json bundleJson) returns ObservationSummary[]|error {
     ObservationSummary[] observationSummaries = [];
     foreach json entryResource in check bundleToResources(bundleJson) {
         international401:Observation|error fhirObservation = parser:parse(payload = entryResource,

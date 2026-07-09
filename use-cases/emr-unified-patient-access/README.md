@@ -32,8 +32,8 @@ sandboxes.
         REST/JSON       │  UnifiedCare API (WSO2)      │──────────────────────────► Epic EMR
 Postman ───────────────►│  /unifiedcare on :9095       │   
                         │                              │
-                        │  epic:FHIRClientConnector    │   SMART Backend Auth + FHIR
-                        │  cerner:FHIRClientConnector  │──────────────────────────► Cerner EMR
+                        │  fhir:FHIRConnector (Epic)   │   SMART Backend Auth + FHIR
+                        │  fhir:FHIRConnector (Cerner) │──────────────────────────► Cerner EMR
                         └──────────────────────────────┘   (system/*.read scopes)
 ```
 
@@ -44,8 +44,8 @@ Postman ───────────────►│  /unifiedcare on :90
 | Epic | SMART Backend Services: RS384 private-key JWT client assertion at the token endpoint | `auth:PKJWTAuthConfig` (client id + key file) |
 | Cerner | OAuth2 client credentials with `system/*` scopes | `http:OAuth2ClientCredentialsGrantConfig` |
 
-Token acquisition, caching and refresh are handled inside the Ballerina FHIR connectors
-(`ballerinax/health.clients.fhir.epic`, `ballerinax/health.clients.fhir.cerner`).
+Token acquisition, caching and refresh are handled inside the Ballerina FHIR connector
+(`ballerinax/health.clients.fhir`).
 
 ## Project layout
 
