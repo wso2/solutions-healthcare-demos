@@ -1,0 +1,30 @@
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: care-loop-heart-risk-service
+  namespace: default
+spec:
+  owner:
+    projectName: default
+  componentType:
+    kind: ClusterComponentType
+    name: deployment/service
+  autoDeploy: true
+
+---
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: care-loop-heart-risk-service
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: care-loop-heart-risk-service
+  endpoints:
+    http:
+      type: HTTP
+      port: 8000
+  container:
+    image: "care-loop-heart-risk-service:openchoreo"
+    # Image must be pre-loaded into the cluster's containerd (deploy-components.sh does this).

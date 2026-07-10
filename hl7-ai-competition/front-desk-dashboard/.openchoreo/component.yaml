@@ -1,0 +1,44 @@
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: front-desk-dashboard
+  namespace: default
+spec:
+  owner:
+    projectName: default
+  componentType:
+    kind: ClusterComponentType
+    name: deployment/service
+  autoDeploy: true
+
+---
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: front-desk-dashboard
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: front-desk-dashboard
+  container:
+    # Image must be pre-loaded into the cluster's containerd (deploy-components.sh does this).
+    image: front-desk-dashboard:openchoreo
+  endpoints:
+    http:
+      type: HTTP
+      port: 3002
+      visibility: [project]
+  dependencies:
+    endpoints:
+      # envBindings match the env var names the app reads.
+      - component: ehr-fhir-server
+        name: http
+        visibility: project
+        envBindings:
+          address: EHR_FHIR_SERVER_URL
+      - component: care-loop-fhir-server-readonly-proxy
+        name: http
+        visibility: project
+        envBindings:
+          address: CARE_LOOP_FHIR_SERVER_URL

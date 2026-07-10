@@ -1,0 +1,37 @@
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: apple-healthkit-simulator
+  namespace: default
+spec:
+  owner:
+    projectName: default
+  componentType:
+    kind: ClusterComponentType
+    name: deployment/service
+  autoDeploy: true
+
+---
+
+# Image must be pre-loaded into the cluster's containerd (deploy-components.sh does this).
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: apple-healthkit-simulator
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: apple-healthkit-simulator
+  container:
+    image: "apple-healthkit-simulator:openchoreo"
+    env:
+      - key: HEALTHKIT_VITALS_TARGET_URL
+        value: "http://care-loop-collector-service:8004/vitals"
+      - key: HEALTHKIT_VITALS_FORWARD_INTERVAL_HOURS
+        value: "0.1"
+  endpoints:
+    http:
+      type: HTTP
+      port: 8000
+      visibility: [external]

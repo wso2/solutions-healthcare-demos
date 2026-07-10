@@ -1,0 +1,82 @@
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: care-loop-collector-service
+  namespace: default
+spec:
+  owner:
+    projectName: default
+
+  autoDeploy: true
+  componentType:
+    kind: ClusterComponentType
+    name: deployment/service
+
+---
+
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: care-loop-collector-service
+  namespace: default
+spec:
+  owner:
+    componentName: care-loop-collector-service
+    projectName: default
+  endpoints:
+    http:
+      type: HTTP
+      port: 8004
+      # "internal" visibility needs gateway.ingress.internal, unset on this install - the release fails to render.
+      visibility: [project]
+  container:
+    # Image must be pre-loaded into the cluster's containerd (deploy-components.sh does this).
+    image: care-loop-collector-service:openchoreo
+    # Runtime wiring happens via this Config.toml, not envBindings; short service names are deliberate (see openchoreo/README.md).
+    files:
+      - key: Config.toml
+        mountPath: /home/ballerina
+        # Resolved via the secret store from this service's local gitignored Config.toml (deploy-components.sh).
+        valueFrom:
+          secretKeyRef:
+            name: care-loop-collector-service-config
+            key: Config.toml
+  # Dependency-graph only; runtime wiring is the Config.toml above.
+  dependencies:
+    endpoints:
+      - component: care-loop-ai-service
+        name: http
+        visibility: project
+        envBindings:
+          address: AI_SERVICE_URL
+      - component: care-loop-fhir-server
+        name: http
+        visibility: project
+        envBindings:
+          address: FHIR_SERVER_URL
+      - component: whatsapp-simulator
+        name: http
+        visibility: project
+        envBindings:
+          address: WHATSAPP_URL
+
+---
+# Memory override (ComponentType's 256Mi default OOM-kills JVMs); only the ReleaseBinding's environmentConfigs reach the Deployment.
+apiVersion: openchoreo.dev/v1alpha1
+kind: ReleaseBinding
+metadata:
+  name: care-loop-collector-service-development
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: care-loop-collector-service
+  environment: development
+  componentTypeEnvironmentConfigs:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 768Mi

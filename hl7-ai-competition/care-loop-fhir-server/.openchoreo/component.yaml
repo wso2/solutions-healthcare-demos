@@ -1,0 +1,111 @@
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: care-loop-fhir-server-db
+  namespace: default
+spec:
+  owner:
+    projectName: default
+  componentType:
+    kind: ClusterComponentType
+    name: deployment/service
+  autoDeploy: true
+
+---
+# Non-sensitive local demo credentials, matching docker-compose.yml.
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: care-loop-fhir-server-db
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: care-loop-fhir-server-db
+  container:
+    image: "postgres:16-alpine"
+    env:
+      - key: POSTGRES_DB
+        value: "fhirdb"
+      - key: POSTGRES_USER
+        value: "fhir"
+      - key: POSTGRES_PASSWORD
+        value: "fhir"
+  endpoints:
+    postgres:
+      type: TCP
+      port: 5432
+      visibility: [project]
+
+---
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: care-loop-fhir-server
+  namespace: default
+spec:
+  owner:
+    projectName: default
+  componentType:
+    kind: ClusterComponentType
+    name: deployment/service
+  autoDeploy: true
+
+---
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: care-loop-fhir-server
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: care-loop-fhir-server
+  container:
+    # Image must be pre-loaded into the cluster's containerd (deploy-components.sh does this).
+    image: "care-loop-fhir-server:openchoreo"
+    env:
+      # Bare component name resolves via same-namespace DNS (envBindings can't compose a DSN with credentials).
+      - key: DATABASE_URL
+        value: "postgres://fhir:fhir@care-loop-fhir-server-db:5432/fhirdb?sslmode=disable"
+      - key: FHIR_CREATE_TABLES
+        value: "true"
+      - key: SERVER_PORT
+        value: "9090"
+      - key: BASE_URL
+        value: "http://localhost:9090/fhir/r4"
+  endpoints:
+    http:
+      type: HTTP
+      port: 9090
+      basePath: /fhir/r4
+      visibility: [project]
+  dependencies:
+    endpoints:
+      - component: care-loop-fhir-server-db
+        name: postgres
+        visibility: project
+        envBindings:
+          # Dependency-graph only; DATABASE_URL above carries the real DSN.
+          address: CARE_LOOP_FHIR_SERVER_DB_ADDRESS
+
+---
+# Memory override (ComponentType's 256Mi default OOM-kills JVMs); only the ReleaseBinding's environmentConfigs reach the Deployment.
+apiVersion: openchoreo.dev/v1alpha1
+kind: ReleaseBinding
+metadata:
+  name: care-loop-fhir-server-development
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: care-loop-fhir-server
+  environment: development
+  componentTypeEnvironmentConfigs:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 768Mi

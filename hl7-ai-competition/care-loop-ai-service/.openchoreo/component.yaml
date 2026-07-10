@@ -1,0 +1,71 @@
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: care-loop-ai-service
+  namespace: default
+spec:
+  owner:
+    projectName: default
+
+  componentType:
+    kind: ClusterComponentType
+    name: deployment/service
+  autoDeploy: true
+
+---
+
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: care-loop-ai-service
+  namespace: default
+spec:
+  owner:
+    componentName: care-loop-ai-service
+    projectName: default
+  endpoints:
+    http:
+      type: HTTP
+      port: 8003
+  # fhirMcpUrl must live in the mounted Config.toml (env overrides stop working once a Config.toml is mounted); short service names are deliberate (see openchoreo/README.md).
+  dependencies:
+    endpoints:
+      - project: default
+        component: fhir-mcp-server
+        name: http
+        visibility: project
+        envBindings:
+          # Dependency-graph only; runtime uses fhirMcpUrl in Config.toml below.
+          address: FHIR_MCP_SERVER_URL_UNUSED
+  container:
+    image: "care-loop-ai-service:openchoreo"
+    # mountPath is the directory, "key" the filename.
+    files:
+      - key: Config.toml
+        mountPath: /home/ballerina
+        # Resolved via the secret store from this service's local gitignored Config.toml (deploy-components.sh).
+        valueFrom:
+          secretKeyRef:
+            name: care-loop-ai-service-config
+            key: Config.toml
+
+---
+# Memory override (ComponentType's 256Mi default OOM-kills JVMs); only the ReleaseBinding's environmentConfigs reach the Deployment.
+apiVersion: openchoreo.dev/v1alpha1
+kind: ReleaseBinding
+metadata:
+  name: care-loop-ai-service-development
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: care-loop-ai-service
+  environment: development
+  componentTypeEnvironmentConfigs:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 768Mi

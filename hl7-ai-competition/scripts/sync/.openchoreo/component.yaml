@@ -1,0 +1,46 @@
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: fhir-sync
+  namespace: default
+spec:
+  owner:
+    projectName: default
+  componentType:
+    kind: ClusterComponentType
+    # deployment/worker: no endpoints (the service type rejects endpoint-less workloads).
+    name: deployment/worker
+  autoDeploy: true
+
+---
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: fhir-sync
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: fhir-sync
+  container:
+    # Image must be pre-loaded into the cluster's containerd (deploy-components.sh does this).
+    image: "fhir-sync:openchoreo"
+    env:
+      - key: EHR_FHIR_SERVER_URL
+        value: "http://ehr-fhir-server:9090/fhir/r4"
+      - key: CARE_LOOP_FHIR_SERVER_URL
+        value: "http://care-loop-fhir-server:9090/fhir/r4"
+      - key: SYNC_INTERVAL_SECONDS
+        value: "3600"
+  dependencies:
+    endpoints:
+      - component: ehr-fhir-server
+        name: http
+        visibility: project
+        envBindings:
+          address: EHR_FHIR_SERVER_ADDRESS
+      - component: care-loop-fhir-server
+        name: http
+        visibility: project
+        envBindings:
+          address: CARE_LOOP_FHIR_SERVER_ADDRESS

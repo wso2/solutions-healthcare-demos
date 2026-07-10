@@ -1,0 +1,88 @@
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: care-loop-analysis-service
+  namespace: default
+spec:
+  owner:
+    projectName: default
+  componentType:
+    kind: ClusterComponentType
+    name: deployment/service
+  autoDeploy: true
+
+---
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: care-loop-analysis-service
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: care-loop-analysis-service
+  container:
+    image: care-loop-analysis-service:openchoreo
+    # Runtime wiring happens via this Config.toml, not envBindings; short service names are deliberate (see openchoreo/README.md).
+    files:
+      - key: Config.toml
+        mountPath: /home/ballerina
+        # Resolved via the secret store from this service's local gitignored Config.toml (deploy-components.sh).
+        valueFrom:
+          secretKeyRef:
+            name: care-loop-analysis-service-config
+            key: Config.toml
+  endpoints:
+    http:
+      type: HTTP
+      port: 8005
+      visibility: [project]
+  # Dependency-graph only; runtime wiring is the Config.toml above.
+  dependencies:
+    endpoints:
+      - component: care-loop-heart-risk-service
+        name: http
+        visibility: project
+        envBindings:
+          address: HEART_RISK_SERVICE_URL
+      - component: care-loop-fhir-server
+        name: http
+        visibility: project
+        envBindings:
+          address: FHIR_SERVER_URL
+      - component: ehr-fhir-server
+        name: http
+        visibility: project
+        envBindings:
+          address: EHR_FHIR_SERVER_URL
+      - component: care-loop-ai-service
+        name: http
+        visibility: project
+        envBindings:
+          address: AI_SERVICE_URL
+      - component: care-loop-collector-service
+        name: http
+        visibility: project
+        envBindings:
+          address: COLLECTOR_SERVICE_URL
+
+---
+# Memory override (ComponentType's 256Mi default OOM-kills JVMs); only the ReleaseBinding's environmentConfigs reach the Deployment.
+apiVersion: openchoreo.dev/v1alpha1
+kind: ReleaseBinding
+metadata:
+  name: care-loop-analysis-service-development
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: care-loop-analysis-service
+  environment: development
+  componentTypeEnvironmentConfigs:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 768Mi

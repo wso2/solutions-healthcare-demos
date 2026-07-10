@@ -1,0 +1,33 @@
+# parameters don't reach the Deployment in v1.1; the image works because deploy-components.sh pre-loads it and IfNotPresent skips the pull.
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: whatsapp-simulator
+  namespace: default
+spec:
+  owner:
+    projectName: default
+  autoDeploy: true
+  componentType:
+    kind: ClusterComponentType
+    name: deployment/service
+
+---
+
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: whatsapp-simulator
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: whatsapp-simulator
+  container:
+    # Image must be pre-loaded into the cluster's containerd (deploy-components.sh does this).
+    image: whatsapp-simulator:openchoreo
+  endpoints:
+    http:
+      type: HTTP
+      port: 3000
+      visibility: [external]
