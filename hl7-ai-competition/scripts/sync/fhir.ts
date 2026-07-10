@@ -3,7 +3,7 @@ import { SYNC_LEVELS } from "./types";
 import type { FhirBundle, FhirResource } from "./types";
 
 export const EHR_FHIR_SERVER_URL = process.env.EHR_FHIR_SERVER_URL ?? "http://localhost:9090/fhir/r4";
-export const CARE_LOOP_FHIR_SERVER_URL = process.env.CARE_LOOP_FHIR_SERVER_URL ?? "http://localhost:9091/fhir";
+export const CARE_LOOP_FHIR_SERVER_URL = process.env.CARE_LOOP_FHIR_SERVER_URL ?? "http://localhost:9091/fhir/r4";
 const EHR_BASE_PATH = new URL(EHR_FHIR_SERVER_URL).pathname;
 
 async function getFhirBundle(path: string): Promise<FhirBundle> {
@@ -40,6 +40,17 @@ async function putResource(resourceType: string, resource: Record<string, unknow
     headers: { "content-type": "application/fhir+json" },
     body: JSON.stringify(resource),
   });
+  if (res.status === 404) {
+    const created = await fetch(`${CARE_LOOP_FHIR_SERVER_URL}/${resourceType}`, {
+      method: "POST",
+      headers: { "content-type": "application/fhir+json" },
+      body: JSON.stringify(resource),
+    });
+    if (!created.ok) {
+      throw new Error(`POST ${resourceType} (id ${resource.id}) failed: ${created.status} ${await created.text()}`);
+    }
+    return;
+  }
   if (!res.ok) {
     throw new Error(`PUT ${resourceType}/${resource.id} failed: ${res.status} ${await res.text()}`);
   }
