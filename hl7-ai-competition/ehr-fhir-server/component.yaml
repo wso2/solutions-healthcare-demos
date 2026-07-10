@@ -1,0 +1,70 @@
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: ehr-fhir-server
+  namespace: default
+spec:
+  owner:
+    projectName: default
+  autoDeploy: true
+  componentType:
+    kind: ClusterComponentType
+    name: deployment/service
+
+---
+
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: ehr-fhir-server
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: ehr-fhir-server
+  container:
+    # Image must be pre-loaded into the cluster's containerd (deploy-components.sh does this).
+    image: ehr-fhir-server:openchoreo
+    env:
+      # Bare component name resolves via same-namespace DNS (envBindings can't compose a DSN with credentials).
+      - key: DATABASE_URL
+        value: "postgres://fhir:fhir@ehr-fhir-server-db:5432/fhirdb?sslmode=disable"
+      - key: FHIR_CREATE_TABLES
+        value: "true"
+      - key: SERVER_PORT
+        value: "9090"
+  endpoints:
+    http:
+      type: HTTP
+      port: 9090
+      basePath: /fhir/r4
+      visibility: [project]
+  dependencies:
+    endpoints:
+      - component: ehr-fhir-server-db
+        name: postgres
+        visibility: project
+        envBindings:
+          # Dependency-graph only; DATABASE_URL above carries the real DSN.
+          address: EHR_FHIR_SERVER_DB_ADDRESS
+
+---
+# Memory override (ComponentType's 256Mi default OOM-kills JVMs); only the ReleaseBinding's environmentConfigs reach the Deployment.
+apiVersion: openchoreo.dev/v1alpha1
+kind: ReleaseBinding
+metadata:
+  name: ehr-fhir-server-development
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: ehr-fhir-server
+  environment: development
+  componentTypeEnvironmentConfigs:
+    resources:
+      requests:
+        cpu: 100m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 768Mi

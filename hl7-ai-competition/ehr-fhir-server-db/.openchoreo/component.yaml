@@ -1,0 +1,38 @@
+# Non-sensitive local demo credentials, matching docker-compose.yml.
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: ehr-fhir-server-db
+  namespace: default
+spec:
+  owner:
+    projectName: default
+  componentType:
+    kind: ClusterComponentType
+    name: deployment/service
+  autoDeploy: true
+
+---
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: ehr-fhir-server-db
+  namespace: default
+spec:
+  owner:
+    projectName: default
+    componentName: ehr-fhir-server-db
+  container:
+    image: "postgres:16-alpine"
+    env:
+      - key: POSTGRES_DB
+        value: "fhirdb"
+      - key: POSTGRES_USER
+        value: "fhir"
+      - key: POSTGRES_PASSWORD
+        value: "fhir"
+  endpoints:
+    postgres:
+      type: TCP
+      port: 5432
+      visibility: [project]

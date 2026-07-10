@@ -1,0 +1,48 @@
+apiVersion: openchoreo.dev/v1alpha1
+kind: Component
+metadata:
+  name: fhir-mcp-server
+  namespace: default
+spec:
+  owner:
+    projectName: default
+  componentType:
+    kind: ClusterComponentType
+    name: deployment/service
+  autoDeploy: true
+
+---
+
+apiVersion: openchoreo.dev/v1alpha1
+kind: Workload
+metadata:
+  name: fhir-mcp-server-workload
+  namespace: default
+spec:
+  owner:
+    componentName: fhir-mcp-server
+    projectName: default
+  endpoints:
+    http:
+      type: HTTP
+      port: 8000
+      basePath: /mcp/
+      # basePath trailing slash is required: bare /mcp 307-redirects with an empty body, which Ballerina's MCP client does not re-POST.
+  container:
+    image: "fhir-mcp-server:openchoreo"
+    env:
+      - key: FHIR_MCP_HOST
+        value: "0.0.0.0"
+      - key: FHIR_MCP_PORT
+        value: "8000"
+      - key: FHIR_SERVER_BASE_URL
+        value: "http://care-loop-fhir-server-readonly-proxy:8080/fhir/r4"
+      - key: FHIR_SERVER_DISABLE_AUTHORIZATION
+        value: "True"
+  dependencies:
+    endpoints:
+      - component: care-loop-fhir-server-readonly-proxy
+        name: http
+        visibility: project
+        envBindings:
+          address: FHIR_SERVER_BASE_URL
