@@ -32,7 +32,7 @@ export async function GET(
 ) {
   const { id } = await params;
   const baseUrl =
-    process.env.CARE_LOOP_FHIR_SERVER_URL ?? "http://localhost:9091/fhir/r4";
+    process.env.CARE_LOOP_FHIR_SERVER_URL ?? "http://localhost:9091/fhir";
 
   try {
     const client = new Client({ baseUrl });
