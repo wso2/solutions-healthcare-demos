@@ -1,0 +1,54 @@
+openapi: 3.0.3
+info:
+  title: PDF to Markdown Service
+  description: Converts payer policy PDFs into LLM-friendly Markdown for the PA Policy Analyzer.
+  version: 0.1.0
+servers:
+  - url: /
+paths:
+  /v1/convert:
+    post:
+      summary: Convert an uploaded PDF to Markdown
+      operationId: convert
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: PDF file to convert
+      responses:
+        "200":
+          description: Conversion succeeded
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  markdown:
+                    type: string
+        "400":
+          description: Uploaded file is empty
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+        "500":
+          description: Conversion failed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        detail:
+          type: string
