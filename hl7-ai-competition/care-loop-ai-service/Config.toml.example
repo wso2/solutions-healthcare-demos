@@ -1,3 +1,21 @@
+# Standalone-run config (compose uses Config.compose.toml + BAL_CONFIG_VAR_* env).
 fhirMcpUrl = "http://fhir-mcp-server:8000/mcp"
 listenPort = 8003
-openAiApiKey = "your-openai-api-key"
+
+# openAiServiceUrl = AMP gateway invoke URL; openAiApiKey = gateway API key.
+openAiServiceUrl = "http://localhost:22893/careloop-openai"
+openAiApiKey = "your-amp-gateway-key"
+
+# nanoModel = "gpt-4.1-nano"
+# fullModel = "gpt-4.1"
+
+# Tracing to AMP (off unless uncommented).
+# [ballerina.observe]
+# tracingEnabled = true
+# tracingProvider = "jaeger"
+#
+# [ballerinax.jaeger]
+# agentHostname = "otel-collector"
+# agentPort = 4317
+# samplerType = "const"
+# samplerParam = 1.0
