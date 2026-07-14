@@ -3,10 +3,26 @@ import ballerina/http;
 import ballerina/lang.value;
 import ballerina/log;
 import ballerinax/ai.openai;
+// OTLP gRPC span exporter (despite the name); activated via [ballerina.observe] config.
+import ballerinax/jaeger as _;
 
-final ai:McpToolKit fhirToolkit = check new (fhirMcpUrl);
-final ai:ModelProvider nanoModelProvider = check new openai:ModelProvider(openAiApiKey, openai:GPT_4_1_NANO);
-final ai:ModelProvider fullModelProvider = check new openai:ModelProvider(openAiApiKey, openai:GPT_4_1);
+final ai:McpToolKit fhirToolkit = check createFhirToolkit();
+final ai:ModelProvider nanoModelProvider = check createModelProvider(nanoModel);
+final ai:ModelProvider fullModelProvider = check createModelProvider(fullModel);
+
+isolated function createFhirToolkit() returns ai:McpToolKit|ai:Error {
+    // Empty token means the MCP server is reached directly, without gateway auth.
+    http:BearerTokenConfig? mcpAuth = fhirMcpAuthToken == "" ? () : {token: fhirMcpAuthToken};
+    return new (fhirMcpUrl, auth = mcpAuth);
+}
+
+isolated function createModelProvider(string modelName) returns ai:ModelProvider|ai:Error {
+    openai:OPEN_AI_MODEL_NAMES|error modelType = modelName.ensureType();
+    if modelType is error {
+        return error ai:Error(string `'${modelName}' is not a supported ballerinax/ai.openai model`);
+    }
+    return new AmpModelProvider(openAiApiKey, modelType, serviceUrl = openAiServiceUrl);
+}
 
 final ai:Agent questionnaireAgent = check new (
     systemPrompt = {

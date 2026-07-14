@@ -1,0 +1,12 @@
+# Compose config: connection/secrets come from BAL_CONFIG_VAR_* env; only toml-only settings (tracing) live here.
+listenPort = 8003
+
+[ballerina.observe]
+tracingEnabled = true
+tracingProvider = "jaeger"
+
+[ballerinax.jaeger]
+agentHostname = "otel-collector"
+agentPort = 4317
+samplerType = "const"
+samplerParam = 1.0

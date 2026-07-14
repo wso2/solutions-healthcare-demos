@@ -9,7 +9,7 @@ services:
     environment:
       HEALTHKIT_DATABASE_URL: "sqlite:///./data/healthkit.db"
       HEALTHKIT_VITALS_TARGET_URL: "http://care-loop-collector-service:8004/vitals"
-      # Demo-speed cadence (real default is hourly); forward window equals this interval so checks tile with no gaps/overlaps.
+      # Demo-speed cadence (real default hourly); forward window = interval so checks tile without gaps.
       HEALTHKIT_VITALS_FORWARD_INTERVAL_HOURS: "0.1"
     volumes:
       - healthkit-data:/app/data
@@ -232,6 +232,79 @@ services:
         - path: ./front-desk-dashboard/src
           action: rebuild
 
+  # WSO2 Agent Manager (AMP v0.18.0): docker-in-docker k3d cluster, state in amp-docker. Ports: API 9000, console 13000, gateway + otel ingest 22893.
+  amp:
+    build:
+      context: ./scripts/amp
+    image: care-loop/amp:v0.18.0
+    container_name: amp
+    privileged: true
+    ports:
+      - "9000:9000"
+      - "13000:3000"
+      - "22893:22893"
+    volumes:
+      - amp-docker:/var/lib/docker
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "[ -f /var/run/amp-ready ] && curl -s -m 5 -o /dev/null http://localhost:9000/"
+      interval: 30s
+      timeout: 10s
+      retries: 30
+      start_period: 45m
+    restart: unless-stopped
+
+  # One-shot idempotent registration (provider, catalog, agent, gateway key into amp-shared); needs only curl + jq, so it runs on alpine not the AMP image.
+  amp-init:
+    image: alpine:3.20
+    container_name: amp-init
+    entrypoint: ["sh", "-c", "apk add -q --no-cache curl jq && exec sh /scripts/register.sh"]
+    environment:
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+    volumes:
+      - ./scripts/amp/register.sh:/scripts/register.sh:ro
+      - amp-shared:/amp-shared
+    depends_on:
+      amp:
+        condition: service_healthy
+    restart: "no"
+
+  # Bridges Ballerina OTLP/gRPC spans to AMP's OTLP/HTTP otel ingest, using the identity-scoped config amp-init generates in amp-shared.
+  otel-collector:
+    image: otel/opentelemetry-collector:0.128.0
+    container_name: otel-collector
+    command: ["--config=/amp-shared/otelcol-config.yaml"]
+    volumes:
+      - amp-shared:/amp-shared:ro
+    depends_on:
+      amp-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # Expose Thunder (login) and the observability API to the host for the browser console at :13000 (also add "127.0.0.1 thunder.amp.localhost" to /etc/hosts for the OAuth redirect).
+  amp-thunder-fwd:
+    image: alpine/socat
+    container_name: amp-thunder-fwd
+    command: ["TCP-LISTEN:8080,fork,reuseaddr", "TCP:amp:8080"]
+    ports:
+      - "8080:8080"
+    depends_on:
+      amp:
+        condition: service_healthy
+    restart: unless-stopped
+
+  amp-obs-fwd:
+    image: alpine/socat
+    container_name: amp-obs-fwd
+    command: ["TCP-LISTEN:9098,fork,reuseaddr", "TCP:amp:9098"]
+    ports:
+      - "9098:9098"
+    depends_on:
+      amp:
+        condition: service_healthy
+    restart: unless-stopped
+
   care-loop-ai-service:
     build:
       context: ./care-loop-ai-service
@@ -239,10 +312,18 @@ services:
     container_name: care-loop-ai-service
     ports:
       - "8003:8003"
+    environment:
+      BAL_CONFIG_VAR_OPENAISERVICEURL: "http://amp:22893/careloop-openai"
+      # MCP direct to the FHIR server (the k3d gateway can't reach this compose service).
+      BAL_CONFIG_VAR_FHIRMCPURL: "http://fhir-mcp-server:8000/mcp"
     volumes:
-      - ./care-loop-ai-service/Config.toml:/home/ballerina/Config.toml:ro
+      - ./care-loop-ai-service/Config.compose.toml:/home/ballerina/Config.toml:ro
+      - amp-shared:/amp-shared:ro
     depends_on:
-      - fhir-mcp-server
+      amp-init:
+        condition: service_completed_successfully
+      fhir-mcp-server:
+        condition: service_started
     restart: unless-stopped
 
   care-loop-collector-service:
@@ -281,3 +362,5 @@ volumes:
   healthkit-data:
   ehr-fhir-server-db:
   care-loop-fhir-server-db:
+  amp-docker:
+  amp-shared:

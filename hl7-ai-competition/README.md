@@ -49,11 +49,11 @@ Earlier stages: [v1](assets/architecture-diagram-v1.png),
   tool itself to pull that patient's recent Observations, then drafts a FHIR
   `Questionnaire` (questions only, no answers) targeted at the vitals trend.
   Not wired into the rest of the loop yet — this is a standalone component
-  for now. Uses `ballerina/ai`'s built-in `Wso2ModelProvider` (via
-  `ai:getDefaultModelProvider()`), configured through the `wso2ProviderConfig`
-  table in `Config.toml` (copy `Config.toml.example`); gitignored, never
-  commit it. See `TODO.md` for the WSO2 Agent Manager registration this is
-  deferred on.
+  for now. In compose it runs its LLM calls through the WSO2 Agent Manager AI
+  gateway with tracing on (reaching fhir-mcp-server directly for MCP), via the
+  tracked `Config.compose.toml` plus `BAL_CONFIG_VAR_*` env vars (see the WSO2
+  Agent Manager section below); for a standalone run, copy `Config.toml.example`
+  to a gitignored `Config.toml`.
 
 - [care-loop-collector-service](care-loop-collector-service/) — standalone
   Ballerina bridge (port 8004). `POST /vitals` saves an incoming Observation
@@ -112,6 +112,25 @@ apple-healthkit-simulator and care-loop-heart-risk-service log via
 stdout. whatsapp-simulator logs via `consola` (`src/lib/logger.ts`).
 front-desk-dashboard's `/api/tasks` route only logs failures, via a plain
 `console.error`; no logger library wired in yet.
+
+## WSO2 Agent Manager
+
+`docker compose up` brings up WSO2 Agent Manager (AMP v0.18.0) as the `amp`
+service, a docker-in-docker quick-start cluster whose state persists across
+restarts. Set `OPENAI_API_KEY` in a gitignored `hl7-ai-competition/.env`; the
+`amp-init` one-shot service then registers the `careloop-openai` LLM provider on
+the AI gateway and publishes it to the catalog, mints a gateway API key into a
+shared volume, registers the `careloop-ai-service` external agent, and generates
+the otel-collector config with the agent's OpenChoreo identity so traces scope to
+the agent in the console. care-loop-ai-service routes its LLM calls through
+`http://amp:22893/careloop-openai` (gateway key sent as an `API-Key` header) and
+reads FHIR directly from fhir-mcp-server; its spans go OTLP/gRPC to
+`otel-collector`, which forwards them to AMP's otel ingest.
+
+To use the console at http://localhost:13000 (admin/admin), add
+`127.0.0.1 thunder.amp.localhost` to `/etc/hosts` (the login redirect needs it).
+The Thunder (8080) and observability (9098) ports it calls are exposed by the
+`amp-thunder-fwd` / `amp-obs-fwd` services.
 
 ## Pre-commit hooks
 
