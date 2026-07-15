@@ -102,13 +102,24 @@ async def _forward_patient(
     return len(readings)
 
 
-async def run_cycle(settings: Settings, session: Session, client: httpx.AsyncClient | None = None) -> CycleResult:
-    """Build a FHIR Observation bundle per patient from the last interval's vitals and forward it downstream."""
+async def run_cycle(
+    settings: Settings,
+    session: Session,
+    client: httpx.AsyncClient | None = None,
+    patient_uuids: list[str] | None = None,
+) -> CycleResult:
+    """Build a FHIR Observation bundle per patient from the last interval's vitals and forward it downstream.
+
+    When ``patient_uuids`` is given, only those patients are forwarded; otherwise every patient is.
+    """
     ran_at = datetime.now(UTC)
     window_end = ran_at.replace(tzinfo=None)
     window_start = window_end - timedelta(hours=settings.vitals_forward_interval_hours)
 
-    patients = list(session.exec(select(Patient)).all())
+    statement = select(Patient)
+    if patient_uuids is not None:
+        statement = statement.where(Patient.uuid.in_(patient_uuids))
+    patients = list(session.exec(statement).all())
     readings_forwarded = 0
     patients_forwarded = 0
 

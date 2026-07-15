@@ -23,6 +23,10 @@ def status() -> CycleResult | None:
 
 
 @router.post("/run-now")
-async def run_now(session: Annotated[Session, Depends(get_session)]) -> CycleResult:
-    state.last_result = await run_cycle(get_settings(), session)
+async def run_now(
+    session: Annotated[Session, Depends(get_session)],
+    patient_uuid: str | None = None,
+) -> CycleResult:
+    uuids = [patient_uuid] if patient_uuid else None
+    state.last_result = await run_cycle(get_settings(), session, patient_uuids=uuids)
     return state.last_result
