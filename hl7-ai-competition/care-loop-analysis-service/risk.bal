@@ -1,3 +1,4 @@
+import care_loop/care_loop_common as common;
 import ballerina/http;
 import ballerina/lang.runtime;
 import ballerina/lang.'string as strings;
@@ -61,6 +62,11 @@ isolated function runVitalsReadyCycle(string patientId) {
         log:printError("vitals-ready: heart-risk-service call failed", patientId = patientId, 'error = heartRiskResponse);
         return;
     }
+    future<()> _ = start notifyDashboard(patientId, common:ML_RISK_SCORING_COMPLETE, "probability " + heartRiskResponse.probability.toString(), {
+        model: heartRiskResponse.selected_model,
+        probability: heartRiskResponse.probability.toString(),
+        band: heartRiskResponse.probability >= mlEscalationThreshold ? ELEVATED : NORMAL
+    });
 
     string[] observationRefs = readings.map(r => "Observation/" + r.id);
 
@@ -75,6 +81,9 @@ isolated function runVitalsReadyCycle(string patientId) {
 
     log:printWarn("vitals-ready: ML probability crossed escalation threshold, starting emergency questionnaire",
             patientId = patientId, probability = heartRiskResponse.probability);
+    future<()> _ = start notifyDashboard(patientId, common:ESCALATION_TRIGGERED,
+            "ML probability " + heartRiskResponse.probability.toString() + " crossed threshold " + mlEscalationThreshold.toString(),
+            {probability: heartRiskResponse.probability.toString(), threshold: mlEscalationThreshold.toString()});
     PatientDisplay display = patientDisplay(patient, patientId, age, sex);
     putPendingCase(patientId, {heartRisk: heartRiskResponse, observationRefs, display});
 
@@ -106,11 +115,17 @@ isolated function runTimeoutWatcher(string patientId, float mlProbability) {
         log:printError("timeout escalation: failed to save RiskAssessment", patientId = patientId, 'error = raSaveResult);
     }
 
-    international401:Task task = buildTimeoutEscalationTask(patientId, mlProbability, pendingCase.display, riskAssessmentId);
+    international401:Task task = buildTimeoutEscalationTask(patientId, mlProbability, pendingCase.display, riskAssessmentId, pendingCase.observationRefs);
     fhir:FHIRResponse|fhir:FHIRError saveResult = ehrFhirConnector->create(task.toJson());
     if saveResult is fhir:FHIRError {
         log:printError("timeout escalation: failed to save Task to ehr-fhir-server", patientId = patientId, 'error = saveResult);
+        return;
     }
+    future<()> _ = start notifyDashboard(patientId, common:FHIR_TASK_CREATED_FOR_FRONT_DESK, extractFhirId(saveResult), {
+        taskId: extractFhirId(saveResult) ?: "",
+        status: task.status,
+        priority: task.priority ?: ""
+    });
 }
 
 # Runs in the background: /risk-assessment's multi-tool-call round-trips were blowing past whatsapp-simulator's request timeout when run synchronously.
@@ -140,8 +155,17 @@ isolated function runEmergencyAnswersCycle(EmergencyAnswersRequest request, Pend
     if agenticSaveResult is fhir:FHIRError {
         log:printError("emergency-answers: failed to save agentic RiskAssessment", patientId = request.patientId, 'error = agenticSaveResult);
     }
+    // escalated mirrors the guard below, computed server-side so the dashboard never re-derives threshold math.
+    boolean escalated = pendingCase.heartRisk.probability >= mlEscalationThreshold && aiResponse.probability >= agenticEscalationThreshold;
+    future<()> _ = start notifyDashboard(request.patientId, common:AGENTIC_RISK_ASSESSMENT_COMPLETE,
+            aiResponse.risk + " risk, probability " + aiResponse.probability.toString(), {
+        risk: aiResponse.risk,
+        probability: aiResponse.probability.toString(),
+        riskAssessmentId: agenticRiskAssessmentId ?: "",
+        escalated: escalated.toString()
+    });
 
-    if pendingCase.heartRisk.probability < mlEscalationThreshold || aiResponse.probability < agenticEscalationThreshold {
+    if !escalated {
         return;
     }
 
@@ -161,9 +185,16 @@ isolated function runEmergencyAnswersCycle(EmergencyAnswersRequest request, Pend
 
     international401:Task task = buildEscalationTask(
             request.patientId, pendingCase.heartRisk.probability, aiResponse, pendingCase.display,
-            descriptionResponse.description, mlRiskAssessmentId, agenticRiskAssessmentId);
+            descriptionResponse.description, mlRiskAssessmentId, agenticRiskAssessmentId,
+            pendingCase.observationRefs, request.questionnaireResponseId);
     fhir:FHIRResponse|fhir:FHIRError taskSaveResult = ehrFhirConnector->create(task.toJson());
     if taskSaveResult is fhir:FHIRError {
         log:printError("emergency-answers: failed to save Task to ehr-fhir-server", patientId = request.patientId, 'error = taskSaveResult);
+        return;
     }
+    future<()> _ = start notifyDashboard(request.patientId, common:FHIR_TASK_CREATED_FOR_FRONT_DESK, extractFhirId(taskSaveResult), {
+        taskId: extractFhirId(taskSaveResult) ?: "",
+        status: task.status,
+        priority: task.priority ?: ""
+    });
 }

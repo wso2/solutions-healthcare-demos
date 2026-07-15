@@ -1,5 +1,6 @@
 # Standalone-run config (compose uses Config.compose.toml + BAL_CONFIG_VAR_* env).
 fhirMcpUrl = "http://fhir-mcp-server:8000/mcp"
+dashboardEventsUrl = "http://localhost:3003"
 listenPort = 8003
 
 # openAiServiceUrl = AMP gateway invoke URL; openAiApiKey = gateway API key.

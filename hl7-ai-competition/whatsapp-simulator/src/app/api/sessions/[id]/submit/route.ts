@@ -3,6 +3,7 @@ import ky from "ky";
 
 import { NextResponse } from "next/server";
 
+import { notifyDashboard } from "@/lib/dashboard-events";
 import { logger } from "@/lib/logger";
 import { getSession, SessionStatus } from "@/lib/sessions";
 import { submitSchema } from "@/lib/transcript";
@@ -50,6 +51,19 @@ export async function POST(
     session.completedAt = new Date().toISOString();
     session.messages = messages;
     session.deliveryError = deliveryError;
+
+    const answerCount = messages.filter(
+      (message) => message.role === "user",
+    ).length;
+    notifyDashboard({
+      patientId: session.patientId ?? session.id,
+      label: "Patient responded via WhatsApp",
+      detail: `${answerCount} answer${answerCount === 1 ? "" : "s"} submitted for "${session.questionnaire.title}"`,
+      payload: {
+        answerCount: String(answerCount),
+        sessionId: session.id,
+      },
+    });
 
     return NextResponse.json({
       status: session.status,

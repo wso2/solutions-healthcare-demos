@@ -23,6 +23,6 @@ isolated function buildAgenticRiskAssessment(string patientId, AiRiskAssessmentR
         basis,
         method: {text: "care-loop-ai-service agentic assessment"},
         note: [{text: agentic.reasoning}],
-        prediction: [{probabilityDecimal: <decimal>agentic.probability, rationale: "risk=" + agentic.risk}]
+        prediction: [{probabilityDecimal: <decimal>agentic.probability, qualitativeRisk: {coding: [{system: "http://terminology.hl7.org/CodeSystem/risk-probability", code: agentic.risk}]}}]
     };
 }

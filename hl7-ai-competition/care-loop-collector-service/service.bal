@@ -1,3 +1,4 @@
+import care_loop/care_loop_common as common;
 import ballerina/http;
 import ballerina/log;
 import ballerinax/health.clients.fhir;
@@ -21,6 +22,11 @@ service / on new http:Listener(listenPort) {
         if notifyResult is http:ClientError {
             log:printWarn("failed to notify analysis-service of new vitals", patientId = patientId, 'error = notifyResult);
         }
+
+        int|error entryCount = trap (<json[]>checkpanic bundle.entry).length();
+        string detail = entryCount is int ? entryCount.toString() + " reading(s) ingested" : "vitals ingested";
+        map<string> payload = extractVitalsDashboardPayload(bundle);
+        future<()> _ = start notifyDashboard(patientId, common:VITALS_INGESTED, detail, payload);
 
         return http:OK;
     }
@@ -61,19 +67,25 @@ service / on new http:Listener(listenPort) {
             return <http:BadGateway>{body: {message: "failed to save QuestionnaireResponse: " + saveResult.message()}};
         }
 
+        string? fhirId = extractFhirId(saveResult);
+
         if session.emergency {
             EmergencyAnswersNotification notification = {
                 patientId: session.patientId,
-                answers: buildEmergencyAnswers(callback)
+                answers: buildEmergencyAnswers(callback),
+                questionnaireResponseId: fhirId
             };
             http:Response|http:ClientError notifyResult = analysisClient->post("/emergency-answers", notification);
             if notifyResult is http:ClientError {
                 log:printWarn("failed to notify analysis-service of emergency answers",
                         patientId = session.patientId, 'error = notifyResult);
+            } else if notifyResult.statusCode < 200 || notifyResult.statusCode > 299 {
+                // A non-2xx here silently drops the patient's emergency answers from the pipeline - make it visible.
+                log:printWarn("analysis-service rejected emergency answers",
+                        patientId = session.patientId, statusCode = notifyResult.statusCode);
             }
         }
 
-        string? fhirId = extractFhirId(saveResult);
         return <http:Created>{body: {saved: true, fhirId}};
     }
 }

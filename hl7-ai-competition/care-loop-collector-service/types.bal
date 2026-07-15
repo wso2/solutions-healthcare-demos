@@ -80,7 +80,7 @@ public type ReplyRef record {|
 # + questionId - the linkId this message answers, if any
 # + replyTo - the question this message is replying to, if any
 public type ChatMessage record {|
-    string role;
+    MessageRole role;
     string text;
     string time;
     string questionId?;
@@ -105,8 +105,7 @@ public type TranscriptSavedResponse record {|
 
 # + patientId - the FHIR Patient id this session is for
 # + patientName - display name for the patient
-# + questionnaire - the original FHIR Questionnaire resource, kept so the transcript
-#   callback can rebuild a QuestionnaireResponse against the same linkIds
+# + questionnaire - the original FHIR Questionnaire resource, kept so the transcript callback can rebuild a QuestionnaireResponse against the same linkIds
 # + emergency - whether this session was generated for an ML-flagged emergency case
 # + mlProbability - the heart-risk-service probability that triggered this session, if emergency
 public type GeneratedSession record {|
@@ -136,7 +135,14 @@ public type EmergencyAnswer record {|
 
 # + patientId - the FHIR Patient id these answers are for
 # + answers - the flattened question/answer pairs from the emergency questionnaire transcript
+# + questionnaireResponseId - the FHIR id of the QuestionnaireResponse just saved, so analysis-service can reference it from the Task it builds if this escalates
 public type EmergencyAnswersNotification record {|
     string patientId;
     EmergencyAnswer[] answers;
+    string? questionnaireResponseId;
 |};
+
+public enum MessageRole {
+    BOT = "bot",
+    USER = "user"
+}

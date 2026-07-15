@@ -456,8 +456,24 @@ dependencies = [
 	{org = "ballerinai", name = "observe"},
 	{org = "ballerinax", name = "health.clients.fhir"},
 	{org = "ballerinax", name = "health.fhir.r4"},
-	{org = "ballerinax", name = "health.fhir.r4.international401"}
+	{org = "ballerinax", name = "health.fhir.r4.international401"},
+	{org = "care_loop", name = "care_loop_common"}
 ]
 modules = [
 	{org = "care_loop", packageName = "care_loop_analysis_service", moduleName = "care_loop_analysis_service"}
+]
+
+[[package]]
+org = "care_loop"
+name = "care_loop_common"
+version = "0.1.0"
+dependencies = [
+	{org = "ballerina", name = "http"},
+	{org = "ballerina", name = "lang.runtime"},
+	{org = "ballerina", name = "log"},
+	{org = "ballerinai", name = "observe"},
+	{org = "ballerinax", name = "health.clients.fhir"}
+]
+modules = [
+	{org = "care_loop", packageName = "care_loop_common", moduleName = "care_loop_common"}
 ]

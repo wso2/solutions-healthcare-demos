@@ -1,3 +1,4 @@
+import care_loop/care_loop_common as common;
 import ballerina/uuid;
 import ballerinax/health.clients.fhir;
 import ballerinax/health.fhir.r4.international401;
@@ -28,12 +29,22 @@ isolated function toWhatsappQuestionnaire(json questionnaire) returns WhatsappQu
 }
 
 isolated function buildQuestionnaireResponse(TranscriptCallback callback, GeneratedSession session) returns international401:QuestionnaireResponse {
+    map<string> questionTextByLinkId = {};
+    foreach ChatMessage message in callback.messages {
+        string? questionId = message.questionId;
+        if message.role == BOT && questionId is string {
+            questionTextByLinkId[questionId] = message.text;
+        }
+    }
+
     international401:QuestionnaireResponseItem[] items = [];
     foreach ChatMessage message in callback.messages {
         string? questionId = message.questionId ?: message.replyTo?.questionId;
-        if message.role == "user" && questionId is string {
+        if message.role == USER && questionId is string {
+            string? questionText = questionTextByLinkId[questionId] ?: message.replyTo?.questionText;
             items.push({
                 linkId: questionId,
+                text: questionText,
                 answer: [{valueString: message.text}]
             });
         }
@@ -58,7 +69,7 @@ isolated function buildEmergencyAnswers(TranscriptCallback callback) returns Eme
     map<string> questionTextByLinkId = {};
     foreach ChatMessage message in callback.messages {
         string? questionId = message.questionId;
-        if message.role == "bot" && questionId is string {
+        if message.role == BOT && questionId is string {
             questionTextByLinkId[questionId] = message.text;
         }
     }
@@ -66,7 +77,7 @@ isolated function buildEmergencyAnswers(TranscriptCallback callback) returns Eme
     EmergencyAnswer[] answers = [];
     foreach ChatMessage message in callback.messages {
         string? questionId = message.questionId ?: message.replyTo?.questionId;
-        if message.role != "user" || questionId is () {
+        if message.role != USER || questionId is () {
             continue;
         }
         string question = questionTextByLinkId[questionId] ?: message.replyTo?.questionText ?: questionId;
@@ -75,18 +86,4 @@ isolated function buildEmergencyAnswers(TranscriptCallback callback) returns Eme
     return answers;
 }
 
-// create()'s default MINIMAL preference returns {resourceId, version}, not a full resource - fall back to "id" in case that ever changes.
-isolated function extractFhirId(fhir:FHIRResponse response) returns string? {
-    json|xml resourceValue = response.'resource;
-    if resourceValue is xml {
-        return ();
-    }
-
-    string|error resourceId = trap <string>(checkpanic resourceValue.resourceId);
-    if resourceId is string {
-        return resourceId;
-    }
-
-    string|error id = trap <string>(checkpanic resourceValue.id);
-    return id is string ? id : ();
-}
+isolated function extractFhirId(fhir:FHIRResponse response) returns string? => common:extractFhirId(response);
