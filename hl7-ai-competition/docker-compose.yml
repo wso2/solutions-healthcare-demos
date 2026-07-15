@@ -69,6 +69,7 @@ services:
       - "3000:3000"
     environment:
       NODE_ENV: production
+      DASHBOARD_EVENTS_URL: "http://care-loop-dashboard:3003"
     healthcheck:
       test:
         - "CMD"
@@ -307,7 +308,8 @@ services:
 
   care-loop-ai-service:
     build:
-      context: ./care-loop-ai-service
+      context: .
+      dockerfile: care-loop-ai-service/Dockerfile
     image: care-loop-ai-service:latest
     container_name: care-loop-ai-service
     ports:
@@ -316,6 +318,7 @@ services:
       BAL_CONFIG_VAR_OPENAISERVICEURL: "http://amp:22893/careloop-openai"
       # MCP direct to the FHIR server (the k3d gateway can't reach this compose service).
       BAL_CONFIG_VAR_FHIRMCPURL: "http://fhir-mcp-server:8000/mcp"
+      BAL_CONFIG_VAR_DASHBOARDEVENTSURL: "http://care-loop-dashboard:3003"
     volumes:
       - ./care-loop-ai-service/Config.compose.toml:/home/ballerina/Config.toml:ro
       - amp-shared:/amp-shared:ro
@@ -328,7 +331,8 @@ services:
 
   care-loop-collector-service:
     build:
-      context: ./care-loop-collector-service
+      context: .
+      dockerfile: care-loop-collector-service/Dockerfile
     image: care-loop-collector-service:latest
     container_name: care-loop-collector-service
     ports:
@@ -343,7 +347,8 @@ services:
 
   care-loop-analysis-service:
     build:
-      context: ./care-loop-analysis-service
+      context: .
+      dockerfile: care-loop-analysis-service/Dockerfile
     image: care-loop-analysis-service:latest
     container_name: care-loop-analysis-service
     ports:
@@ -358,9 +363,48 @@ services:
       - care-loop-collector-service
     restart: unless-stopped
 
+  care-loop-dashboard:
+    build:
+      context: ./care-loop-dashboard
+    image: care-loop-dashboard:latest
+    container_name: care-loop-dashboard
+    ports:
+      - "3003:3003"
+    environment:
+      NODE_ENV: production
+      CARE_LOOP_FHIR_SERVER_URL: "http://care-loop-fhir-server:9090/fhir/r4"
+      EHR_FHIR_SERVER_URL: "http://ehr-fhir-server:9090/fhir/r4"
+    volumes:
+      - care-loop-dashboard-data:/app/data
+    depends_on:
+      - care-loop-fhir-server
+      - ehr-fhir-server
+    healthcheck:
+      test:
+        - "CMD"
+        - "bun"
+        - "-e"
+        - "fetch('http://localhost:3003/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    develop:
+      watch:
+        - path: ./care-loop-dashboard/package.json
+          action: rebuild
+        - path: ./care-loop-dashboard/bun.lock
+          action: rebuild
+        - path: ./care-loop-dashboard/next.config.ts
+          action: rebuild
+        - path: ./care-loop-dashboard/src
+          action: rebuild
+
 volumes:
   healthkit-data:
   ehr-fhir-server-db:
   care-loop-fhir-server-db:
   amp-docker:
   amp-shared:
+  care-loop-dashboard-data:

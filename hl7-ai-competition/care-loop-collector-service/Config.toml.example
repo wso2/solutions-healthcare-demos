@@ -3,4 +3,5 @@ fhirServerUrl = "http://localhost:9091/fhir"
 whatsappUrl = "http://localhost:3000"
 collectorPublicUrl = "http://localhost:8004"
 analysisServiceUrl = "http://localhost:8005"
+dashboardEventsUrl = "http://localhost:3003"
 listenPort = 8004

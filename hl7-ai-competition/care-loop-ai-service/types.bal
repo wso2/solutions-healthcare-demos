@@ -1,3 +1,5 @@
+import care_loop/care_loop_common as common;
+
 # + patientId - FHIR Patient id to draft a questionnaire for
 public type QuestionnaireRequest record {|
     string patientId;
@@ -38,7 +40,7 @@ public type RiskAssessmentRequest record {|
 # never a guess - empty if it isn't sure of any real id
 public type RiskAssessmentResponse record {|
     float probability;
-    "low"|"moderate"|"high" risk;
+    common:RiskLevel risk;
     string reasoning;
     string[] referencedResources;
 |};

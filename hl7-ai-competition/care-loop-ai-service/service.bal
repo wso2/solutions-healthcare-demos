@@ -6,6 +6,8 @@ import ballerinax/ai.openai;
 // OTLP gRPC span exporter (despite the name); activated via [ballerina.observe] config.
 import ballerinax/jaeger as _;
 
+import care_loop/care_loop_common as common;
+
 final ai:McpToolKit fhirToolkit = check createFhirToolkit();
 final ai:ModelProvider nanoModelProvider = check createModelProvider(nanoModel);
 final ai:ModelProvider fullModelProvider = check createModelProvider(fullModel);
@@ -56,6 +58,17 @@ final ai:Agent taskDescriptionAgent = check new (
 
 listener http:Listener sharedListener = new (listenPort);
 
+isolated function draftedItemCount(json questionnaire) returns int? {
+    if questionnaire !is map<json> {
+        return ();
+    }
+    json items = questionnaire["item"] ?: ();
+    if items !is json[] {
+        return ();
+    }
+    return items.length();
+}
+
 service /questionnaires on sharedListener {
 
     resource function post .(QuestionnaireRequest request) returns QuestionnaireResponse|http:InternalServerError {
@@ -70,6 +83,12 @@ service /questionnaires on sharedListener {
         if questionnaire is error {
             return <http:InternalServerError>{body: {message: "agent did not return valid JSON: " + questionnaire.message()}};
         }
+
+        int? itemCount = draftedItemCount(questionnaire);
+        string? itemCountDetail = itemCount is int ? string `${itemCount} item(s) drafted` : ();
+        map<string>? itemCountPayload = itemCount is int ? {channel: common:WHATSAPP, itemCount: itemCount.toString()} : ();
+        future<()> _ = start reportDashboardEvent(request.patientId, common:QUESTIONNAIRE_DRAFTED, itemCountDetail, itemCountPayload);
+
         return {questionnaire};
     }
 }
@@ -94,6 +113,11 @@ service /risk\-assessment on sharedListener {
         if assessment is error {
             return <http:InternalServerError>{body: {message: "agent JSON did not match expected shape: " + assessment.message()}};
         }
+
+        future<()> _ = start reportDashboardEvent(request.patientId, common:AGENTIC_RISK_ASSESSMENT_DRAFTED,
+                string `risk=${assessment.risk}, probability=${assessment.probability}`,
+                {risk: assessment.risk, probability: assessment.probability.toString(), reasoning: assessment.reasoning});
+
         return assessment;
     }
 }
@@ -116,6 +140,8 @@ Patient answers: ${request.answers.toJsonString()}`;
                     request.mlProbability}. Agentic probability: ${agentic.probability} (risk=${agentic.risk}).`
             };
         }
+        future<()> _ = start reportDashboardEvent(request.patientId, common:TASK_DESCRIPTION_DRAFTED, (),
+                {description: result});
         return {description: result};
     }
 }

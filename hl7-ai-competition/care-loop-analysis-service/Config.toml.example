@@ -3,6 +3,7 @@ ehrFhirServerUrl = "http://localhost:9090/fhir/r4"
 heartRiskServiceUrl = "http://localhost:8000"
 aiServiceUrl = "http://localhost:8003"
 collectorServiceUrl = "http://localhost:8004"
+dashboardEventsUrl = "http://localhost:3003"
 listenPort = 8005
 mlEscalationThreshold = 0.5
 agenticEscalationThreshold = 0.5
