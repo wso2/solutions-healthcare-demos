@@ -161,8 +161,8 @@ interface NodeLook {
 function nodeLook(status: DisplayStatus): NodeLook {
   if (status === "active") {
     return {
-      border: "1.5px solid #FF7300",
-      iconStyle: { background: "#fff", color: "#FF7300" },
+      border: "1.5px solid #16161a",
+      iconStyle: { background: "#fff", color: "#16161a" },
       titleColor: "#16161a",
       cardOpacity: 1,
       stateColor: "#16161a",
@@ -171,7 +171,7 @@ function nodeLook(status: DisplayStatus): NodeLook {
   if (status === "done") {
     return {
       border: "1.5px solid rgba(0,0,0,0.11)",
-      iconStyle: { background: "#FF7300", color: "#fff" },
+      iconStyle: { background: "#16161a", color: "#fff" },
       titleColor: "#16161a",
       cardOpacity: 1,
       stateColor: "rgba(0,0,0,0.45)",
@@ -197,7 +197,7 @@ function nodeLook(status: DisplayStatus): NodeLook {
 
 function inspectorBadgeStyle(status: DisplayStatus): React.CSSProperties {
   if (status === "done") return { background: "rgba(0,0,0,0.08)", color: "rgba(0,0,0,0.65)" };
-  if (status === "active") return { background: "#FF7300", color: "#fff" };
+  if (status === "active") return { background: "#16161a", color: "#fff" };
   return { background: "transparent", color: "rgba(0,0,0,0.4)", border: "1px solid rgba(0,0,0,0.14)" };
 }
 
@@ -296,7 +296,7 @@ export function RunTimeline({ run }: { run: Run }) {
             // Only done/active nodes recolor their selected border; pending/ended keep their own.
             const border =
               isSelected && (status === "done" || status === "active")
-                ? `1.5px solid ${status === "active" ? "#FF7300" : "rgba(0,0,0,0.45)"}`
+                ? `1.5px solid ${status === "active" ? "#16161a" : "rgba(0,0,0,0.45)"}`
                 : look.border;
             const subtitle =
               def.method === "—" ? `${def.service} · internal decision` : `${def.service} · ${def.method} ${def.endpoint}`;

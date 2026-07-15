@@ -168,7 +168,7 @@ export function AgenticPredictionsList({
                   label="Agentic probability"
                   probability={probability}
                   sub="ai-service /risk-assessment"
-                  barColor="#FF7300"
+                  barColor="#16161a"
                 />
                 {index === 0 ? (
                   <ProbabilityCard
