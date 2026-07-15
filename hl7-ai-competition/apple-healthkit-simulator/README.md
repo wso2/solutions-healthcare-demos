@@ -36,6 +36,18 @@ uv run fastapi dev src/app/main.py
 API docs at `http://127.0.0.1:8000/docs`. The SQLite file is created at
 `data/healthkit.db`.
 
+## Web UI
+
+`http://127.0.0.1:8000/` serves an Apple Health styled control page. Pick a
+patient, set the vital values (heart rate, SpO2, respiratory rate, systolic and
+diastolic blood pressure) or use a Normal / Elevated / Critical preset, then
+send them to the Care Loop. "Send to Care Loop" ingests the readings and
+forwards that patient's window as a FHIR Observation bundle
+(`POST /vitals-cron/run-now?patient_uuid=`); "Send for all patients" forwards
+every patient (`POST /vitals-cron/run-now`). The page reports whether a
+`HEALTHKIT_VITALS_TARGET_URL` is configured, so with no target set it builds the
+bundle without sending.
+
 ## Run with Docker
 
 From the `hl7-ai-competition` root (docker stack):

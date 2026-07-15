@@ -31,7 +31,7 @@ from app.models import (
     WorkoutCreate,
     WorkoutRead,
 )
-from app.routers import health, vitals_cron
+from app.routers import health, vitals_cron, web
 from app.routers.crud import build_router
 
 patient_router = build_router(
@@ -116,6 +116,7 @@ clinical_router = build_router(
 )
 
 all_routers: list[APIRouter] = [
+    web.router,
     health.router,
     vitals_cron.router,
     patient_router,
