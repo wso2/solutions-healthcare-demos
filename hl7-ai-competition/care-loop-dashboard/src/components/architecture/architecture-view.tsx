@@ -163,7 +163,7 @@ function Node({
     <>
       <span className="absolute top-1/2 left-[-5px] h-[9px] w-[9px] -translate-y-1/2 rounded-full border-[1.5px] border-[rgba(0,0,0,0.3)] bg-[#f8f8f9]" />
       <span className="absolute top-1/2 right-[-5px] h-[9px] w-[9px] -translate-y-1/2 rounded-full border-[1.5px] border-[rgba(0,0,0,0.3)] bg-[#f8f8f9]" />
-      <span className="arch-soft-pulse absolute top-[8px] right-[8px] h-[7px] w-[7px] rounded-full bg-[#FF7300]" />
+      <span className="arch-soft-pulse absolute top-[8px] right-[8px] h-[7px] w-[7px] rounded-full bg-[#16161a]" />
       <Icon className="h-[30px] w-[30px]" strokeWidth={1.7} />
     </>
   );
@@ -172,8 +172,8 @@ function Node({
     "relative box-border flex h-[96px] w-[96px] items-center justify-center rounded-[18px] border-[1.5px] border-[rgba(0,0,0,0.14)] bg-white text-[#16161a] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_10px_22px_rgba(0,0,0,0.06)] transition-[border-color,box-shadow] duration-200",
     "hover:border-[rgba(0,0,0,0.4)] hover:shadow-[0_3px_6px_rgba(0,0,0,0.07),0_14px_30px_rgba(0,0,0,0.1)]",
     clickable ? "cursor-pointer" : "cursor-default",
-    status === "active" && "border-[#FF7300] animate-canvas-node-pulse",
-    selected && "border-[#FF7300]",
+    status === "active" && "border-[#16161a] animate-canvas-node-pulse",
+    selected && "border-[#16161a]",
   );
 
   return (
@@ -198,7 +198,7 @@ function Node({
           <div
             className={cn(
               "mt-[3px] font-mono text-[9.5px]",
-              status === "active" ? "text-[#FF7300]" : "text-[rgba(0,0,0,0.45)]",
+              status === "active" ? "text-[#16161a]" : "text-[rgba(0,0,0,0.45)]",
             )}
           >
             {status === "done" ? "Received" : status === "active" ? "Processing" : "Pending"}
@@ -317,7 +317,7 @@ export function ArchitectureView({
           <button
             type="button"
             onClick={() => zoomBy(1 / 1.25)}
-            className="h-[28px] w-[28px] cursor-pointer rounded-[6px] border border-[rgba(0,0,0,0.12)] bg-white text-[14px] font-semibold text-[#16161a] shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:border-[#FF7300] hover:bg-[#FF7300] hover:text-white"
+            className="h-[28px] w-[28px] cursor-pointer rounded-[6px] border border-[rgba(0,0,0,0.12)] bg-white text-[14px] font-semibold text-[#16161a] shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:border-[#16161a] hover:bg-[#16161a] hover:text-white"
           >
             −
           </button>
@@ -327,14 +327,14 @@ export function ArchitectureView({
           <button
             type="button"
             onClick={() => zoomBy(1.25)}
-            className="h-[28px] w-[28px] cursor-pointer rounded-[6px] border border-[rgba(0,0,0,0.12)] bg-white text-[14px] font-semibold text-[#16161a] shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:border-[#FF7300] hover:bg-[#FF7300] hover:text-white"
+            className="h-[28px] w-[28px] cursor-pointer rounded-[6px] border border-[rgba(0,0,0,0.12)] bg-white text-[14px] font-semibold text-[#16161a] shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:border-[#16161a] hover:bg-[#16161a] hover:text-white"
           >
             +
           </button>
           <button
             type="button"
             onClick={fit}
-            className="h-[28px] cursor-pointer rounded-[6px] border border-[rgba(0,0,0,0.12)] bg-white px-[12px] text-[11px] font-semibold text-[#16161a] shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:border-[#FF7300] hover:bg-[#FF7300] hover:text-white"
+            className="h-[28px] cursor-pointer rounded-[6px] border border-[rgba(0,0,0,0.12)] bg-white px-[12px] text-[11px] font-semibold text-[#16161a] shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:border-[#16161a] hover:bg-[#16161a] hover:text-white"
           >
             Fit
           </button>
@@ -385,7 +385,7 @@ export function ArchitectureView({
                       strokeWidth={e.strong ? 2.5 : 1.5}
                       markerEnd="url(#arch-arr)"
                     />
-                    <circle r={4.5} fill="#FF7300">
+                    <circle r={4.5} fill="#16161a">
                       <animateMotion
                         dur={e.dur}
                         repeatCount="indefinite"

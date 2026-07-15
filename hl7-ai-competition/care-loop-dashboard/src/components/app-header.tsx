@@ -21,7 +21,7 @@ export function AppHeader({ lastPollAt }: { lastPollAt: number | null }) {
           height="24"
           viewBox="0 0 24 24"
           fill="none"
-          stroke="#FF7300"
+          stroke="#16161a"
           strokeWidth="2.2"
           strokeLinecap="round"
           strokeLinejoin="round"
