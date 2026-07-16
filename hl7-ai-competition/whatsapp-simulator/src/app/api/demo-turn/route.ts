@@ -12,9 +12,7 @@ const turnBody = z.object({
   time: z.string().optional(),
 });
 
-// Stand-in for the collector's /turns agent so the Launch live demo button can drive the sample
-// questionnaire turn-by-turn with no external services. Tracks, per session, how many of the sample
-// questions have been asked (the first was seeded at session create) and serves the next one.
+// Stand-in for the collector's /turns agent so the Launch live demo button can drive the sample questionnaire turn-by-turn with no external services. Tracks, per session, how many of the sample questions have been asked (the first was seeded at session create) and serves the next one.
 const asked = new Map<string, number>();
 
 export async function POST(request: Request) {

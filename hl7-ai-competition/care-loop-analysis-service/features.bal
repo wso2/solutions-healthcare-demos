@@ -8,10 +8,7 @@ const string LOINC_CHOLESTEROL = "2093-3";
 const string LOINC_FASTING_GLUCOSE = "1558-6";
 const string LOINC_RESTING_ECG = "8601-7";
 
-// Kaggle stress-test / symptom features (Oldpeak, ST_Slope, ChestPainType, ExerciseAngina) have no
-// clean standard LOINC in the Kaggle categorical form, so Care Loop uses a project-local code system
-// for the seeded demo values. Swap these constants (and the seed data) for real codes when
-// integrating a genuine stress-test / symptom source.
+// Kaggle stress-test / symptom features (Oldpeak, ST_Slope, ChestPainType, ExerciseAngina) have no clean standard LOINC in the Kaggle categorical form, so Care Loop uses a project-local code system for the seeded demo values. Swap these constants (and the seed data) for real codes when integrating a genuine stress-test / symptom source.
 const string CODE_OLDPEAK = "st-depression-oldpeak";
 const string CODE_ST_SLOPE = "st-slope-peak-exercise";
 const string CODE_CHEST_PAIN = "chest-pain-type";
@@ -240,8 +237,7 @@ isolated function deriveChestPainType(string patientId) returns "TA"|"ATA"|"NAP"
     return best is ObservationValue ? classifyChestPainText(best.text) : ();
 }
 
-// Accepts the Kaggle codes (ASY/ATA/NAP/TA) or descriptive text. ASY and ATA are checked before the
-// TA keyword so "atypical" is not mistaken for "typical angina".
+// Accepts the Kaggle codes (ASY/ATA/NAP/TA) or descriptive text. ASY and ATA are checked before the TA keyword so "atypical" is not mistaken for "typical angina".
 isolated function classifyChestPainText(string? raw) returns "TA"|"ATA"|"NAP"|"ASY"? {
     string text = (raw ?: "").trim().toUpperAscii();
     if text.startsWith("ASY") || text.includes("ASYMPTOMATIC") {

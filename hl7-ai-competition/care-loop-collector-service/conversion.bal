@@ -64,8 +64,7 @@ isolated function buildQuestionnaireResponse(TranscriptCallback callback, Genera
     return questionnaireResponse;
 }
 
-// Builds a FHIR Questionnaire from the questions actually asked in a live session, so the paired
-// QuestionnaireResponse links to a persisted resource instead of dangling linkIds.
+// Builds a FHIR Questionnaire from the questions actually asked in a live session, so the paired QuestionnaireResponse links to a persisted resource instead of dangling linkIds.
 isolated function buildLiveQuestionnaire(GeneratedSession session) returns json {
     json[] items = [];
     foreach AskedQuestion question in session.asked {

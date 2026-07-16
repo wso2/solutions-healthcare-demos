@@ -28,8 +28,7 @@ def embedder() -> StubEmbedder:
 @pytest.fixture
 def retriever(embedder: StubEmbedder) -> Retriever:
     """A Retriever over an in-memory Chroma built from the mini corpus with the stub embedder."""
-    # EphemeralClient shares in-memory state within a process, so use a unique collection name per
-    # test to avoid "collection already exists" across fixture instantiations.
+    # EphemeralClient shares in-memory state per process, so use a unique collection name per test to avoid collisions.
     client = chromadb.EphemeralClient()
     collection = client.create_collection(
         f"hfref-{uuid.uuid4().hex}",

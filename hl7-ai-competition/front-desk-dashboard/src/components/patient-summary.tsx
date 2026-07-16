@@ -74,8 +74,7 @@ function PatientSummaryError({ patientId }: { patientId: string }) {
   );
 }
 
-// Self-contained: fetches and renders the patient's demographics/contact card from just an
-// id, so any page that needs "who is this about" (patient page, task page) can drop it in.
+// Self-contained: fetches and renders the patient's demographics/contact card from just an id, so any page that needs "who is this about" (patient page, task page) can drop it in.
 export function PatientSummary({ patientId }: { patientId: string }) {
   const [patient, setPatient] = React.useState<EhrPatientDetail | null>(null);
   const [status, setStatus] = React.useState<"loading" | "ready" | "error">(

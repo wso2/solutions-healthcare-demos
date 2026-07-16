@@ -8,8 +8,7 @@ import ballerinax/health.clients.fhir;
 import ballerinax/health.fhir.r4.international401;
 
 isolated function runVitalsReadyCycle(string patientId) {
-    // An emergency questionnaire is already in flight for this patient: skip so the demo's short
-    // vitals cadence doesn't re-escalate every cycle and spawn duplicate chat sessions.
+    // An emergency questionnaire is already in flight for this patient: skip so the demo's short vitals cadence doesn't re-escalate every cycle and spawn duplicate chat sessions.
     if getPendingCase(patientId) is PendingCase {
         log:printInfo("vitals-ready: skipping, an emergency questionnaire is already pending", patientId = patientId);
         return;
@@ -63,8 +62,7 @@ isolated function runVitalsReadyCycle(string patientId) {
         return;
     }
 
-    // Prefill everything the record already knows before scoring, so even the escalation gate uses
-    // the full feature set and the follow-up chat only has to ask for the genuine gaps.
+    // Prefill everything the record already knows before scoring, so even the escalation gate uses the full feature set and the follow-up chat only has to ask for the genuine gaps.
     FeatureSlots slots = prefillFeatures(patientId, <float>age, sex, maxHr.value, now);
     HeartRiskRequest heartRiskRequest = toHeartRiskRequest(slots);
     HeartRiskResponse|http:ClientError heartRiskResponse = heartRiskClient->post("/predict", heartRiskRequest, targetType = HeartRiskResponse);
@@ -115,8 +113,7 @@ isolated function runTimeoutWatcher(string patientId, float mlProbability) {
     }
     resolvePendingCase(patientId);
 
-    // Try to salvage whatever the patient answered before the timeout: the collector hands over the
-    // partial slots + answers and finalizes its live session so the two paths can't double up.
+    // Try to salvage whatever the patient answered before the timeout: the collector hands over the partial slots + answers and finalizes its live session so the two paths can't double up.
     ClaimResponse|http:ClientError claim = collectorClient->post(
             "/patients/" + patientId + "/conversation/claim", {}, targetType = ClaimResponse);
     if claim is ClaimResponse && claim.found {
@@ -180,8 +177,7 @@ isolated function runEmergencyAnswersCycle(EmergencyAnswersRequest request, Pend
     };
     AiRiskAssessmentResponse|http:ClientError aiResponse = aiClient->post("/risk-assessment", aiRequest, targetType = AiRiskAssessmentResponse);
     if aiResponse is http:ClientError {
-        // One retry: the agentic loop is nondeterministic and a single malformed answer or
-        // exceeded iteration cap otherwise kills the whole run with no Task and no dashboard trace.
+        // One retry: the agentic loop is nondeterministic and a single malformed answer or exceeded iteration cap otherwise kills the whole run with no Task and no dashboard trace.
         log:printWarn("emergency-answers: risk-assessment call failed, retrying once",
                 patientId = request.patientId, 'error = aiResponse);
         aiResponse = aiClient->post("/risk-assessment", aiRequest, targetType = AiRiskAssessmentResponse);
@@ -206,9 +202,7 @@ isolated function runEmergencyAnswersCycle(EmergencyAnswersRequest request, Pend
     if agenticSaveResult is fhir:FHIRError {
         log:printError("emergency-answers: failed to save agentic RiskAssessment", patientId = request.patientId, 'error = agenticSaveResult);
     }
-    // escalated mirrors the guard below, computed server-side so the dashboard never re-derives threshold
-    // math. Uses effectiveRisk (the chat-enriched re-score), not the original pendingCase.heartRisk, so a
-    // reassuring answer that lowers the probability below threshold is reflected here too.
+    // escalated mirrors the guard below, computed server-side so the dashboard never re-derives threshold math. Uses effectiveRisk (the chat-enriched re-score), not the original pendingCase.heartRisk, so a reassuring answer that lowers the probability below threshold is reflected here too.
     boolean escalated = effectiveRisk.probability >= mlEscalationThreshold && aiResponse.probability >= agenticEscalationThreshold;
     future<()> _ = start notifyDashboard(request.patientId, common:AGENTIC_RISK_ASSESSMENT_COMPLETE,
             aiResponse.risk + " risk, probability " + aiResponse.probability.toString(), {

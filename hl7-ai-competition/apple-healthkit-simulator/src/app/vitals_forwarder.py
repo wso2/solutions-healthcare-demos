@@ -9,8 +9,7 @@ from sqlmodel import Session, select
 from app.config import Settings
 from app.models import Patient, QuantitySample
 
-# LOINC code, display text, and UCUM unit code per HealthKit quantity type this
-# module forwards as a FHIR Observation.
+# LOINC code, display text, and UCUM unit code per HealthKit quantity type this module forwards as a FHIR Observation.
 VITALS_OBSERVATION_CODES = {
     "HKQuantityTypeIdentifierHeartRate": ("8867-4", "Heart rate", "beats/minute", "/min"),
     "HKQuantityTypeIdentifierOxygenSaturation": ("59408-5", "Oxygen saturation by pulse oximetry", "%", "%"),

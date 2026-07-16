@@ -23,7 +23,6 @@ def client() -> Generator[TestClient]:
             yield session
 
     app.dependency_overrides[get_session] = override_get_session
-    # Instantiated without a context manager so the app lifespan (which would
-    # touch the real database) does not run; the test engine above is used.
+    # Instantiated without a context manager so the app lifespan (which touches real DB) won't run; test engine used.
     yield TestClient(app)
     app.dependency_overrides.clear()

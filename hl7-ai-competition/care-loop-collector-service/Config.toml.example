@@ -1,7 +1,8 @@
-aiServiceUrl = "http://localhost:8003"
-fhirServerUrl = "http://localhost:9091/fhir"
-whatsappUrl = "http://localhost:3000"
-collectorPublicUrl = "http://localhost:8004"
-analysisServiceUrl = "http://localhost:8005"
-dashboardEventsUrl = "http://localhost:3003"
+# URLs target the docker-compose network (service names); for a standalone `bal run`, use localhost with each service's host port.
+aiServiceUrl = "http://care-loop-ai-service:8003"
+fhirServerUrl = "http://care-loop-fhir-server:9090/fhir/r4"
+whatsappUrl = "http://whatsapp-simulator:3000"
+collectorPublicUrl = "http://care-loop-collector-service:8004"
+analysisServiceUrl = "http://care-loop-analysis-service:8005"
+dashboardEventsUrl = "http://care-loop-dashboard:3003"
 listenPort = 8004

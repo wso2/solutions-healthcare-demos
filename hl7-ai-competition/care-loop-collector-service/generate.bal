@@ -9,8 +9,7 @@ isolated map<GeneratedSession> generatedSessions = {};
 #   session can be flagged for /transcripts to notify analysis-service once it's answered
 # + return - the outcome of this patient's generation attempt
 isolated function processPatient(Patient patient, EmergencyContext? emergencyContext = ()) returns GenerateResult {
-    // Emergency (ML-escalated) cases get the turn-by-turn adaptive check-in; everything else keeps
-    // the scripted one-shot questionnaire below.
+    // Emergency (ML-escalated) cases get the turn-by-turn adaptive check-in; everything else keeps the scripted one-shot questionnaire below.
     if emergencyContext is EmergencyContext {
         return startLiveConversation(patient, emergencyContext);
     }

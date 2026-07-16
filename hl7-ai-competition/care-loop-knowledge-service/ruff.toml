@@ -64,8 +64,7 @@ ignore = [
     "TRY",
     "ANN401",
     "G004",
-    # Return-type annotations on MCP tools and pydantic models are consumed at runtime (FastMCP
-    # schema generation), so they must stay real imports, not type-checking-only.
+    # Return-type annotations on MCP tools and pydantic models are consumed at runtime (FastMCP schema generation), so they must stay real imports, not type-checking-only.
     "TC001",
     "TC002",
     "TC003",

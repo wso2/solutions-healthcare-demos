@@ -158,8 +158,7 @@ async function seedHourlyVitals(
     },
   ]);
 
-  // A patient without a home blood-pressure cuff never streams BP, so RestingBP stays missing and
-  // the check-in chat asks them for a recent home reading instead.
+  // A patient without a home blood-pressure cuff never streams BP, so RestingBP stays missing and the check-in chat asks them for a recent home reading instead.
   if (!hasBpCuff) {
     return;
   }

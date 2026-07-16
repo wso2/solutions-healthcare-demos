@@ -1,28 +1,25 @@
 # care-loop-ai-service
 
-Standalone Ballerina agent (port 8003). `POST /questionnaires {patientId}`
-runs an `ai:Agent` wired to fhir-mcp-server via `ai:McpToolKit`: it calls the
-MCP `search` tool itself to pull that patient's Observations, then drafts a
-FHIR `Questionnaire` (questions only, no answers) targeted at the vitals
-trend. Not wired into the rest of the loop yet - standalone component for now.
+Ballerina agent service (port 8003) using either OpenAI (`GPT-4.1` /
+`GPT-4.1-nano`) or Anthropic (`Claude Sonnet 4.5` / `Claude Haiku 4.5`) via
+`ai:McpToolKit`s for FHIR, the knowledge base, and PubMed. Endpoints:
+`POST /questionnaires` drafts a FHIR `Questionnaire` from the patient's vitals
+trend; `POST /conversation/turn` drives the live adaptive check-in one turn at a
+time; `POST /risk-assessment` scores risk, grounding thresholds in the knowledge
+base and citing guideline sections; `POST /task-description` narrates the Task.
+Called by care-loop-collector-service and care-loop-analysis-service.
 
 ## Config
 
-Copy `Config.toml.example` to `Config.toml` (gitignored), set
-`modelProvider` to either `openai` or `anthropic`, and fill in the matching
-API key. docker-compose mounts `Config.toml` into the container, so this file
-must exist before `make up`/`docker compose up` will start this service.
+Copy `Config.toml.example` to `Config.toml` (gitignored), set `modelProvider`
+to `openai`, `anthropic`, or `anthropic-amp`, and fill in the matching API key.
+docker-compose mounts `Config.toml` into the container, so this file must exist
+before `make up`/`docker compose up` will start this service. See the WSO2 Agent
+Manager section of the main README to route a provider through the AMP gateway.
 
-When running through docker-compose, set `CARE_LOOP_AI_PROVIDER` to choose the
-provider used by the stack:
-
-```sh
-CARE_LOOP_AI_PROVIDER=anthropic docker compose up care-loop-ai-service
-```
-
-`fhirMcpUrl` in the example already points at the `fhir-mcp-server` compose
-service name; switch it back to `localhost` if running with `bal run` on the
-host instead.
+`fhirMcpUrl`, `knowledgeMcpUrl`, and `pubmedMcpUrl` in the example already point
+at the compose service names; switch them to `localhost` if running with
+`bal run` on the host instead.
 
 ## Run locally
 

@@ -38,9 +38,7 @@ function toEhrTask(task: FhirTask): Omit<EhrTask, "patientName"> {
   };
 }
 
-// The task list is patient-centric in the UI, but Task itself only carries a
-// reference - resolve each referenced patient's name in one batch so the list
-// doesn't have to make its own per-row request.
+// The task list is patient-centric in the UI, but Task itself only carries a reference - resolve each referenced patient's name in one batch so the list doesn't have to make its own per-row request.
 async function resolvePatientNames(
   client: Client,
   patientIds: string[],

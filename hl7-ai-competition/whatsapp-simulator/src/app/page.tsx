@@ -21,12 +21,10 @@ interface SessionSummary {
 
 type Busy = "scripted" | "live" | null;
 
-// Live sessions can appear at any moment (the healthkit cron runs on its own ~6 minute
-// schedule), so the list polls rather than loading once.
+// Live sessions can appear at any moment (the healthkit cron runs on its own ~6 minute schedule), so the list polls rather than loading once.
 const SESSIONS_POLL_MS = 5_000;
 
-// How long to wait, after triggering a vitals cycle, for the real pipeline (vitals -> ML
-// risk -> adaptive agent) to open a new live session before giving up.
+// How long to wait, after triggering a vitals cycle, for the real pipeline (vitals -> ML risk -> adaptive agent) to open a new live session before giving up.
 const LIVE_CHECKIN_TIMEOUT_MS = 45_000;
 const LIVE_CHECKIN_POLL_MS = 2_000;
 
@@ -91,10 +89,7 @@ export default function Home() {
     }
   }
 
-  // Forces a fresh vitals-forward cycle and opens whichever new live session the real
-  // pipeline (vitals -> ML risk -> adaptive agent) opens as a result. Never falls back to
-  // the scripted demo - if nobody crosses the risk threshold this cycle, that is reported
-  // plainly rather than silently substituting a canned questionnaire.
+  // Forces a fresh vitals-forward cycle and opens whichever new live session the real pipeline (vitals -> ML risk -> adaptive agent) opens as a result. Never falls back to the scripted demo - if nobody crosses the risk threshold this cycle, that is reported plainly rather than silently substituting a canned questionnaire.
   async function openLiveCheckIn() {
     setBusy("live");
     setError(null);
@@ -146,9 +141,9 @@ export default function Home() {
         <h1 className="text-2xl font-semibold">WhatsApp Simulator</h1>
         <p className="text-muted-foreground">
           Renders a pushed questionnaire as a chat and collects the replies.
-          Live check-ins are created by the real care-loop pipeline (vitals →
-          ML risk model → adaptive agent) and appear below as soon as the
-          pipeline escalates a patient.
+          Live check-ins are created by the real care-loop pipeline (vitals → ML
+          risk model → adaptive agent) and appear below as soon as the pipeline
+          escalates a patient.
         </p>
       </div>
 
@@ -170,7 +165,9 @@ export default function Home() {
       <div className="space-y-2">
         <div className="flex flex-wrap gap-2">
           <Button onClick={openLiveCheckIn} disabled={busy !== null}>
-            {busy === "live" ? "Waiting for escalation..." : "Open live check-in"}
+            {busy === "live"
+              ? "Waiting for escalation..."
+              : "Open live check-in"}
           </Button>
           <Button
             variant="outline"

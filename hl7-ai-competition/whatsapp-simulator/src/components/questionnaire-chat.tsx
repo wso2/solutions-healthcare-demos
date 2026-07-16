@@ -31,8 +31,7 @@ function sleep(ms: number) {
   });
 }
 
-// How long the typing indicator sits before a bubble lands, scaled to its length so longer
-// messages read as taking longer to type. Capped so nothing feels sluggish.
+// How long the typing indicator sits before a bubble lands, scaled to its length so longer messages read as taking longer to type. Capped so nothing feels sluggish.
 function typingDelay(text: string): number {
   return Math.min(1100, 350 + text.length * 9);
 }
@@ -53,8 +52,7 @@ export function QuestionnaireChat({ id }: { id: string }) {
 
   const scrollRef = React.useRef<HTMLDivElement>(null);
   const inputRef = React.useRef<HTMLTextAreaElement>(null);
-  // The auto-submit on a live "done" turn fires after a delay, so it reads the
-  // latest transcript from a ref rather than a stale render closure.
+  // The auto-submit on a live "done" turn fires after a delay, so it reads the latest transcript from a ref rather than a stale render closure.
   const messagesRef = React.useRef<Message[]>([]);
   // Stops any in-flight bubble reveal from touching state after the chat unmounts.
   const cancelledRef = React.useRef(false);
@@ -107,8 +105,7 @@ export function QuestionnaireChat({ id }: { id: string }) {
 
         if (sessionMode === "live") {
           const intro = liveIntroMessages(data.questionnaire);
-          // The collector seeds exactly one opening question; make it active so
-          // the first plain reply is auto-tagged with its id.
+          // The collector seeds exactly one opening question; make it active so the first plain reply is auto-tagged with its id.
           const opening = [...intro]
             .reverse()
             .find((message) => message.questionId);
@@ -119,8 +116,7 @@ export function QuestionnaireChat({ id }: { id: string }) {
             return;
           }
           setPhase("active");
-          // Play the opening bubbles in one at a time with a typing indicator so a
-          // fresh chat reads like the care team is messaging, not a form dump.
+          // Play the opening bubbles in one at a time with a typing indicator so a fresh chat reads like the care team is messaging, not a form dump.
           await revealBotMessages(
             intro.map((message) => ({
               text: message.text,
@@ -168,8 +164,7 @@ export function QuestionnaireChat({ id }: { id: string }) {
     }
   }
 
-  // Drops bot bubbles in sequentially, each preceded by the typing indicator, so a turn that
-  // returns several messages arrives like a person typing rather than all at once.
+  // Drops bot bubbles in sequentially, each preceded by the typing indicator, so a turn that returns several messages arrives like a person typing rather than all at once.
   async function revealBotMessages(
     bots: Array<{ text: string; questionId?: string }>,
   ) {
@@ -250,13 +245,10 @@ export function QuestionnaireChat({ id }: { id: string }) {
         return;
       }
       const data = (await res.json()) as TurnResult;
-      // Reveal the reply one bubble at a time; the indicator stays up from the request
-      // through the typing delay, so the wait always reads as the care team responding.
+      // Reveal the reply one bubble at a time; the indicator stays up from the request through the typing delay, so the wait always reads as the care team responding.
       await revealBotMessages(data.botMessages);
       if (cancelledRef.current) return;
-      // The next plain reply auto-tags with the newest bot question's id. The live agent
-      // never signals "done" - the chat stays open for follow-up questions after the
-      // clinical check-in finishes, so there is no auto-submit here.
+      // The next plain reply auto-tags with the newest bot question's id. The live agent never signals "done" - the chat stays open for follow-up questions after the clinical check-in finishes, so there is no auto-submit here.
       const nextQuestion = [...data.botMessages]
         .reverse()
         .find((bot) => bot.questionId);
