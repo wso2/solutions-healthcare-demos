@@ -1,24 +1,12 @@
 # care-loop-heart-risk-service
 
-Serves heart-disease risk predictions from Apple Watch / HealthKit signals.
-FastAPI + ONNX Runtime, managed with uv.
+Serves heart-disease risk predictions from Apple Watch / HealthKit signals. FastAPI + ONNX Runtime, managed with uv.
 
-The model is a CatBoost classifier trained on the wider clinical slice of the
-Kaggle
-[heart-failure dataset](https://www.kaggle.com/datasets/fedesoriano/heart-failure-prediction)
-(CC0, committed at `training/data/heart.csv`) via `notebooks/train.ipynb`, and
-exported to ONNX. Its preprocessing (label encoding + scaling) is **not** baked
-into the graph, so the service applies the identical transform from a committed
-`models/preprocessing_nb.json` before scoring, then returns a probability.
-Held-out ROC-AUC is around 0.93.
+The model is a CatBoost classifier trained on the wider clinical slice of the Kaggle [heart-failure dataset](https://www.kaggle.com/datasets/fedesoriano/heart-failure-prediction) (CC0, committed at `training/data/heart.csv`) via `notebooks/train.ipynb`, and exported to ONNX. Its preprocessing (label encoding + scaling) is **not** baked into the graph, so the service applies the identical transform from a committed `models/preprocessing_nb.json` before scoring, then returns a probability. Held-out ROC-AUC is around 0.928.
 
 ## Features
 
-The nb model scores nine features. The service is **reject-incomplete**: all
-nine are required, so an omitted field or an explicit JSON `null` on any of them
-is a `422`. The caller (care-loop-analysis-service) prefills the full set from
-FHIR before scoring. `resting_bp` and `resting_ecg` are still accepted for
-contract compatibility but are not consumed by this model.
+The nb model scores nine features. The service is **reject-incomplete**: all nine are required, so an omitted field or an explicit JSON `null` on any of them is a `422`. The caller (care-loop-analysis-service) prefills the full set from FHIR before scoring. `resting_bp` and `resting_ecg` are still accepted for contract compatibility but are not consumed by this model.
 
 | Feature | Request field | Type | Required | Source |
 | --- | --- | --- | --- | --- |
@@ -62,9 +50,7 @@ uv sync
 uv run fastapi dev src/app/main.py
 ```
 
-API docs at `http://127.0.0.1:8000/docs`. The service loads
-`models/heart_watch_model_nb.onnx` and `models/preprocessing_nb.json` (both
-committed) at startup.
+API docs at `http://127.0.0.1:8000/docs`. The service loads `models/heart_watch_model_nb.onnx` and `models/preprocessing_nb.json` (both committed) at startup.
 
 ## Run with Docker
 
@@ -76,26 +62,19 @@ make ps        # show status
 make down      # stop it
 ```
 
+In the stack the service is published on host port 8002 (container port 8000; see the root `docker-compose.yml`).
+
 ## Train
 
-`training/data/heart.csv` is the Kaggle
-[heart-failure dataset](https://www.kaggle.com/datasets/fedesoriano/heart-failure-prediction),
-committed here (CC0, so no licensing issue redistributing it) for reproducibility.
+`training/data/heart.csv` is the Kaggle [heart-failure dataset](https://www.kaggle.com/datasets/fedesoriano/heart-failure-prediction), committed here (CC0, so no licensing issue redistributing it) for reproducibility.
 
-The served nb model comes from `notebooks/train.ipynb`, which trains the
-CatBoost classifier on the wider clinical feature set and writes
-`models/heart_watch_model_nb.{joblib,onnx}` and `models/metrics_nb.json`. That
-notebook fits its preprocessing in memory, so the serving transform is
-regenerated from the committed data with:
+The served nb model comes from `notebooks/train.ipynb`, which trains the CatBoost classifier on the wider clinical feature set and writes `models/heart_watch_model_nb.{joblib,onnx}` and `models/metrics_nb.json`. That notebook fits its preprocessing in memory, so the serving transform is regenerated from the committed data with:
 
 ```sh
 make export-preprocessing   # reproduce preprocessing -> models/preprocessing_nb.json
 ```
 
-`training/export_preprocessing_nb.py` replays the notebook's imputation, label
-encoding and scaling on `heart.csv`, writes `models/preprocessing_nb.json`, and
-asserts it reproduces the notebook matrix and that the ONNX graph matches the
-joblib pipeline before saving.
+`training/export_preprocessing_nb.py` replays the notebook's imputation, label encoding and scaling on `heart.csv`, writes `models/preprocessing_nb.json`, and asserts it reproduces the notebook matrix and that the ONNX graph matches the joblib pipeline before saving.
 
 The earlier watch-only pipeline is still here for reference:
 
@@ -103,11 +82,7 @@ The earlier watch-only pipeline is still here for reference:
 make train     # sweep models, evaluate, export ONNX + metrics
 ```
 
-`training/train.py` runs 5-fold CV ROC-AUC over a zoo of models (logistic
-regression, random/extra trees, gradient/hist boosting, SVM, KNN, XGBoost,
-LightGBM, CatBoost), picks the best by cross-validated AUC, evaluates on a
-held-out test split, and writes `models/heart_watch_model.{joblib,onnx}` with
-`models/metrics.json`. The service no longer serves this 3-feature model.
+`training/train.py` runs 5-fold CV ROC-AUC over a zoo of models (logistic regression, random/extra trees, gradient/hist boosting, SVM, KNN, XGBoost, LightGBM, CatBoost), picks the best by cross-validated AUC, evaluates on a held-out test split, and writes `models/heart_watch_model.{joblib,onnx}` with `models/metrics.json`. The service no longer serves this 3-feature model.
 
 ## Develop
 
@@ -121,11 +96,7 @@ make test      # pytest
 
 ## Notes / current gaps
 
-- The service loads the exported ONNX graph plus `preprocessing_nb.json`, not the
-  joblib pipeline. ONNX/joblib probability parity is ~1e-7 max abs diff on a
-  sample (checked by `make export-preprocessing`), so scores match the joblib
-  model in practice.
-- Held-out ROC-AUC is around 0.93; treat the output as a screening signal.
-- Reject-incomplete: all nine model features are required, so the caller must
-  supply a complete set (prefilled from FHIR) or the request is a `422`.
+- The service loads the exported ONNX graph plus `preprocessing_nb.json`, not the joblib pipeline. ONNX/joblib probability parity is ~1e-7 max abs diff on a sample (checked by `make export-preprocessing`), so scores match the joblib model in practice.
+- Held-out ROC-AUC is around 0.928; treat the output as a screening signal.
+- Reject-incomplete: all nine model features are required, so the caller must supply a complete set (prefilled from FHIR) or the request is a `422`.
 - The decision threshold defaults to 0.5 (`HEART_RISK_THRESHOLD` to override).
