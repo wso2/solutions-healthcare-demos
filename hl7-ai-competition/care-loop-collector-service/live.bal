@@ -36,8 +36,7 @@ isolated function startLiveConversation(Patient patient, EmergencyContext emerge
 
     string? firstQuestion = turn.next_question;
     if turn.done || firstQuestion is () {
-        // The agent decided nothing needs asking (everything prefilled): hand the features straight
-        // to analysis-service so it can score and escalate without a chat.
+        // The agent decided nothing needs asking (everything prefilled): hand the features straight to analysis-service so it can score and escalate without a chat.
         notifyEmergencyAnswers(patient.id, [], slots);
         return result;
     }
@@ -95,8 +94,7 @@ isolated function handleTurn(TurnCallback callback) returns TurnReply|http:Gone 
     if loaded is () {
         return <http:Gone>{};
     }
-    // Rebuild into a genuinely mutable value here, outside the lock in loadActiveLiveSession - see
-    // that function's doc comment for why .clone() alone is not enough.
+    // Rebuild into a genuinely mutable value here, outside the lock in loadActiveLiveSession - see that function's doc comment for why .clone() alone is not enough.
     GeneratedSession|error mutableSession = loaded.cloneWithType(GeneratedSession);
     if mutableSession is error {
         return <http:Gone>{};
@@ -138,10 +136,7 @@ isolated function handleOpenQaTurn(TurnCallback callback, GeneratedSession sessi
 # the next question (or a finish), enforces the question budget, and finalizes exactly once when
 # done - then flips the session into open Q&A mode and keeps the chat live rather than closing it.
 isolated function handleClinicalTurn(TurnCallback callback, GeneratedSession session, FeatureSlots slots) returns TurnReply {
-    // Record the patient's answer against the pending question and gather the earlier pairs.
-    // session.asked can still carry a readonly array from the session's initial cloneReadOnly() at
-    // creation (even .clone() does not lift it), so build a fresh array via push() rather than
-    // mutating an existing one in place - that would throw InvalidUpdate.
+    // Record the patient's answer against the pending question and gather the earlier pairs. session.asked can still carry a readonly array from the session's initial cloneReadOnly() at creation (even .clone() does not lift it), so build a fresh array via push() rather than mutating an existing one in place - that would throw InvalidUpdate.
     string? pendingId = session.pendingQuestionId;
     string currentQuestion = "";
     EmergencyAnswer[] answered = [];
@@ -175,8 +170,7 @@ isolated function handleClinicalTurn(TurnCallback callback, GeneratedSession ses
     };
     AiConversationTurnResponse|error turn = callTurnWithRetry(turnRequest);
     if turn is error {
-        // The agent is unreachable/broken: finalize early with whatever slots we have. Safe because
-        // /predict tolerates missing features. The chat stays open in answer-less open Q&A mode.
+        // The agent is unreachable/broken: finalize early with whatever slots we have. Safe because /predict tolerates missing features. The chat stays open in answer-less open Q&A mode.
         session.slots = slots;
         session.pendingQuestionId = ();
         session.checkInComplete = true;
@@ -244,9 +238,7 @@ isolated function claimConversation(string patientId) returns ClaimResponse {
     return {found: true, slots: claimed.slots, answers: collectLiveAnswers(claimed)};
 }
 
-// Finalizes a live session unless someone else already claimed it, persisting FHIR resources and
-// notifying analysis-service of the answers. Used by the done-turn path, early "End conversation",
-// and an unreachable-agent early finish.
+// Finalizes a live session unless someone else already claimed it, persisting FHIR resources and notifying analysis-service of the answers. Used by the done-turn path, early "End conversation", and an unreachable-agent early finish.
 isolated function finalizeIfUnclaimed(string sessionId) {
     GeneratedSession? claimed = claimFinalize(sessionId);
     if claimed is GeneratedSession {
@@ -279,8 +271,7 @@ isolated function notifyEmergencyAnswers(string patientId, EmergencyAnswer[] ans
     }
 }
 
-// Merges chat-extracted slot updates into the running feature set, filling only empty slots so a
-// FHIR-prefilled value is never overwritten.
+// Merges chat-extracted slot updates into the running feature set, filling only empty slots so a FHIR-prefilled value is never overwritten.
 isolated function mergeSlots(FeatureSlots current, AiSlotUpdates updates) returns FeatureSlots {
     FeatureSlots merged = current.clone();
     if merged.chestPainType is () {
@@ -304,12 +295,7 @@ isolated function callTurnWithRetry(AiConversationTurnRequest request) returns A
     return aiClient->post("/conversation/turn", request);
 }
 
-// A finalized live session is not "gone" - it stays open for open Q&A (see handleOpenQaTurn) once
-// the clinical check-in has escalated. Only an unknown or non-live session is unavailable. The
-// returned value can still be `& readonly` under the hood (see startLiveConversation's
-// cloneReadOnly()) even after .clone() - callers that need to mutate it must reconstruct it via
-// cloneWithType() themselves, outside this lock (cloneWithType()'s result is not an isolated
-// expression, so the compiler rejects returning it directly from here).
+// A finalized live session is not "gone" - it stays open for open Q&A (see handleOpenQaTurn) once the clinical check-in has escalated. Only an unknown or non-live session is unavailable. The returned value can still be `& readonly` under the hood (see startLiveConversation's cloneReadOnly()) even after .clone() - callers that need to mutate it must reconstruct it via cloneWithType() themselves, outside this lock (cloneWithType()'s result is not an isolated expression, so the compiler rejects returning it directly from here).
 isolated function loadActiveLiveSession(string sessionId) returns GeneratedSession? {
     lock {
         if !generatedSessions.hasKey(sessionId) {
@@ -329,8 +315,7 @@ isolated function persistSession(string sessionId, GeneratedSession session) {
     }
 }
 
-// Marks a live session finalized and returns its snapshot, but only for the first caller - later
-// callers get () so the same session is never finalized twice.
+// Marks a live session finalized and returns its snapshot, but only for the first caller - later callers get () so the same session is never finalized twice.
 isolated function claimFinalize(string sessionId) returns GeneratedSession? {
     lock {
         if !generatedSessions.hasKey(sessionId) {

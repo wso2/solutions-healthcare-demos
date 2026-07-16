@@ -13,6 +13,46 @@ run on Ballerina.
 Earlier stages: [v1](assets/architecture-diagram-v1.png),
 [whiteboard sketch](assets/whiteboard-sketch.png).
 
+## Quickstart
+
+Prerequisites: Docker with Compose v2, [Bun](https://bun.sh) (the seed and sync
+scripts run on it), and `make`. The agent service needs one LLM key — an
+Anthropic or an OpenAI key.
+
+1. Create each Ballerina service's `Config.toml` from its example. The examples
+   are wired for the compose network, so nothing needs editing beyond the key:
+
+   ```sh
+   cd hl7-ai-competition
+   cp care-loop-ai-service/Config.toml.example       care-loop-ai-service/Config.toml
+   cp care-loop-collector-service/Config.toml.example care-loop-collector-service/Config.toml
+   cp care-loop-analysis-service/Config.toml.example  care-loop-analysis-service/Config.toml
+   ```
+
+2. Set the LLM key in `care-loop-ai-service/Config.toml`. The example ships with
+   `modelProvider = "openai"`; set `openAiApiKey`, or switch `modelProvider` to
+   `"anthropic"` and set `anthropicApiKey`. Both call the provider API directly,
+   so `make up` doesn't wait on the AMP gateway. The knowledge base embeds
+   locally by default, so it needs no OpenAI key; see the WSO2 Agent Manager
+   section to route the agent through the gateway instead.
+
+3. Build, start, and seed the stack:
+
+   ```sh
+   make up
+   ```
+
+   `make up` builds the images, starts every service, and seeds the three demo
+   patients (see Seeding demo data). `make watch` runs it in the foreground and
+   rebuilds on change; `make down` stops it; `make clean` also drops volumes. On
+   resource-limited Docker where parallel builds time out, use `make up-serial`.
+
+Once it's up, the main surfaces are the patient chat (whatsapp-simulator,
+http://localhost:3001), the clinician task list (front-desk-dashboard,
+http://localhost:3002), and the internal pipeline view (care-loop-dashboard,
+http://localhost:3003). The two FHIR stores are at http://localhost:9090 (EHR)
+and http://localhost:9091 (Care Loop), both under `/fhir/r4`.
+
 ## Components
 
 - [apple-healthkit-simulator](apple-healthkit-simulator/) — FastAPI service that
@@ -35,8 +75,8 @@ Earlier stages: [v1](assets/architecture-diagram-v1.png),
   standing in for the clinic's EHR/EMR FHIR API. Port 9090 (`/fhir/r4`). Has no
   auth of its own; fine for this local demo, put a gateway/auth proxy in front
   for anything real.
-- care-loop-fhir-server — HAPI FHIR server (`hapiproject/hapi`), the Care
-  Loop's own internal FHIR store, port 9091 (`/fhir`). Kept in sync from
+- care-loop-fhir-server — WSO2 FHIR R4 server (`wso2/fhir-server`), the Care
+  Loop's own internal FHIR store, port 9091 (`/fhir/r4`). Kept in sync from
   ehr-fhir-server by fhir-sync; this is what fhir-mcp-server actually reads
   from.
 - fhir-sync — Bun script (`scripts/sync/`) that mirrors every resource from
@@ -64,8 +104,9 @@ Earlier stages: [v1](assets/architecture-diagram-v1.png),
   answer and choosing the next question under a hard question budget);
   `POST /risk-assessment` scores risk, grounding thresholds in the knowledge
   base and citing guideline sections; `POST /task-description` narrates the
-  Task. The `openai` provider always routes through the WSO2 Agent Manager AI
-  gateway (`AmpModelProvider`; see the WSO2 Agent Manager section below);
+  Task. The `openai` provider calls the OpenAI API directly by default (point
+  `openAiServiceUrl` at the AMP gateway to route through AMP, via
+  `AmpModelProvider`; see the WSO2 Agent Manager section below);
   `anthropic` always calls the Anthropic API directly; `anthropic-amp` routes
   Anthropic through the AMP gateway instead (`AmpAnthropicModelProvider`), since
   AMP has a native `anthropic` provider template alongside its OpenAI-shaped
@@ -141,13 +182,14 @@ front-desk-dashboard's `/api/tasks` route only logs failures, via a plain
 
 ## WSO2 Agent Manager
 
-`docker compose up` brings up WSO2 Agent Manager (AMP v0.18.0) as the `amp`
-service (plus `amp-init`, `otel-collector`, `amp-thunder-fwd`, `amp-obs-fwd`), a
-docker-in-docker quick-start cluster whose state persists across restarts and
-whose own healthcheck has a 45-minute start_period. **care-loop-ai-service is
-not routed through it by default** in this compose file — it boots directly
-against Anthropic via the gitignored `Config.toml`, so `make up` doesn't
-depend on AMP finishing its bootstrap.
+WSO2 Agent Manager (AMP v0.18.0) is opt-in behind the `amp` compose profile:
+`docker compose up` and `make up` skip it; run `docker compose --profile amp up`
+to include the `amp`, `amp-init`, `otel-collector`, `amp-thunder-fwd`, and
+`amp-obs-fwd` services (a docker-in-docker quick-start cluster whose state
+persists across restarts, with a 45-minute healthcheck start_period).
+**care-loop-ai-service is not routed through it by default** — it boots directly
+against the configured provider (OpenAI by default) via the gitignored
+`Config.toml`, so `make up` doesn't depend on AMP finishing its bootstrap.
 
 To opt in instead, set `OPENAI_API_KEY` and/or `ANTHROPIC_API_KEY` in a
 gitignored `hl7-ai-competition/.env` (at least one is required); `amp-init`

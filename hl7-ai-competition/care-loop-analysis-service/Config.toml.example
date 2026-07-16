@@ -1,9 +1,10 @@
-fhirServerUrl = "http://localhost:9091/fhir"
-ehrFhirServerUrl = "http://localhost:9090/fhir/r4"
-heartRiskServiceUrl = "http://localhost:8000"
-aiServiceUrl = "http://localhost:8003"
-collectorServiceUrl = "http://localhost:8004"
-dashboardEventsUrl = "http://localhost:3003"
+# URLs target the docker-compose network (service names); for a standalone `bal run`, use localhost with each service's host port.
+fhirServerUrl = "http://care-loop-fhir-server:9090/fhir/r4"
+ehrFhirServerUrl = "http://ehr-fhir-server:9090/fhir/r4"
+heartRiskServiceUrl = "http://care-loop-heart-risk-service:8000"
+aiServiceUrl = "http://care-loop-ai-service:8003"
+collectorServiceUrl = "http://care-loop-collector-service:8004"
+dashboardEventsUrl = "http://care-loop-dashboard:3003"
 listenPort = 8005
 mlEscalationThreshold = 0.5
 agenticEscalationThreshold = 0.5

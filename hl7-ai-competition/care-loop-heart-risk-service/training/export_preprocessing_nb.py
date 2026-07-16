@@ -22,10 +22,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA = ROOT / "training" / "data" / "heart.csv"
 MODELS = ROOT / "models"
 
-# Mirrors the notebook exactly: LabelEncoder on these categoricals (RestingECG is
-# encoded there too but then dropped), StandardScaler on Age/Cholesterol/MaxHR,
-# MinMaxScaler on Oldpeak, and HeartDisease/RestingBP/RestingECG dropped from the
-# feature matrix. FastingBS is already 0/1 and passes through untransformed.
+# Mirrors the notebook: label-encode categoricals, standard/min-max scale, drop cols below; FastingBS 0/1 passthrough.
 LABEL_COLS = ["Sex", "ChestPainType", "RestingECG", "ExerciseAngina", "ST_Slope"]
 STANDARD_COLS = ["Age", "Cholesterol", "MaxHR"]
 MINMAX_COLS = ["Oldpeak"]
@@ -112,8 +109,7 @@ def main() -> None:
     print(f"wrote {out_path}")
     print(f"feature_order: {artifact['feature_order']}")
 
-    # Parity 1: reproducing the preprocessing from the JSON artifact alone (raw
-    # heart.csv rows -> imputed) must match the notebook-preprocessed matrix.
+    # Parity 1: preprocessing from the JSON artifact alone (raw heart.csv rows -> imputed) must match notebook matrix.
     raw = pd.read_csv(DATA)
     for c in ["Cholesterol", "RestingBP"]:
         raw[c] = raw[c].replace(0, np.nan)
@@ -124,8 +120,7 @@ def main() -> None:
     print(f"artifact-vs-notebook transform max abs diff: {transform_diff:.3e}")
     assert transform_diff < 1e-9, "artifact transform does not reproduce notebook preprocessing"
 
-    # Parity 2: nb ONNX served over the artifact-preprocessed vectors must match
-    # the joblib pipeline's probabilities (spot check on a sample of rows).
+    # Parity 2: nb ONNX over the artifact-preprocessed vectors must match joblib pipeline probabilities (sample check).
     import joblib
 
     clf = joblib.load(MODELS / "heart_watch_model_nb.joblib")

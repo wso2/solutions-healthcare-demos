@@ -3,8 +3,7 @@
 FROM ghcr.io/astral-sh/uv:python3.13-trixie-slim AS builder
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 
-# Omit development dependencies. The serving image includes the local embedding
-# extra so the stack can run without an OpenAI embeddings key.
+# Omit development dependencies. The serving image includes the local embedding extra so the stack can run without an OpenAI embeddings key.
 ENV UV_NO_DEV=1
 
 # Use the system interpreter across both images; disable managed Python downloads.

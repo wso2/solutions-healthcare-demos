@@ -10,9 +10,7 @@ const string ANTHROPIC_API_VERSION = "2023-06-01";
 # `x-api-key` upstream to Anthropic itself.
 public isolated distinct client class AmpAnthropicModelProvider {
     *ai:ModelProvider;
-    // Native `generate` reads AnthropicClient/apiKey/modelType/maxTokens/temperature by name;
-    // names/types must match ballerinax/ai.anthropic. Unused by the agents (see AmpModelProvider),
-    // and would send the wrong auth header (x-api-key, not API-Key) if it ever were invoked.
+    // Native `generate` reads AnthropicClient/apiKey/modelType/maxTokens/temperature by name; names/types must match ballerinax/ai.anthropic. Unused by the agents (see AmpModelProvider), and would send the wrong auth header (x-api-key, not API-Key) if it ever were invoked.
     private final http:Client AnthropicClient;
     private final string apiKey;
     private final string modelType;
@@ -54,8 +52,7 @@ public isolated distinct client class AmpAnthropicModelProvider {
             requestPayload["tools"] = mapToAmpAnthropicTools(tools);
         }
 
-        // Same gateway auth convention as AmpModelProvider: AMP wants API-Key, not the provider's
-        // own native header. anthropic-version still travels through and is required upstream.
+        // Same gateway auth convention as AmpModelProvider: AMP wants API-Key, not the provider's own native header. anthropic-version still travels through and is required upstream.
         map<string> headers = {
             "API-Key": self.apiKey,
             "anthropic-version": ANTHROPIC_API_VERSION,

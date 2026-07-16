@@ -1,8 +1,9 @@
 # Front Desk Dashboard
 
-A front-desk / reception dashboard for the Care Loop stack - a nicer UI wrapper
-over OpenEMR, focused on tasks and patient flow. Next.js (App Router) on Bun,
-styled entirely with shadcn/ui (port 3002).
+A front-desk / reception dashboard for the Care Loop stack - a UI over the EHR
+FHIR server (`ehr-fhir-server`), focused on tasks and patient flow (a real
+OpenEMR integration is planned separately). Next.js (App Router) on Bun, styled
+entirely with shadcn/ui (port 3002).
 
 The dashboard mostly renders empty - stat cards read zero and the tables and
 boards are empty - because no data source is wired in yet for patients,

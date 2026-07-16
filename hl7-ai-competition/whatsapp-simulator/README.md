@@ -4,7 +4,10 @@ Renders a pushed questionnaire as a chat. An upstream system POSTs a
 questionnaire and a callback URL; the patient answers in a chat UI, replying in
 free text and optionally quoting a specific question; the full conversation
 transcript is POSTed back to the callback URL when they end the conversation. A
-downstream agent is expected to combine the free-text replies.
+downstream agent is expected to combine the free-text replies. Emergency
+check-ins instead run in a live turn-by-turn mode: each reply is POSTed to the
+collector's `/turns`, which returns the next question (or a closing message) per
+answer; the scripted one-shot questionnaire below still works unchanged.
 
 Next.js (App Router) on the Bun runtime. Sessions are held in memory and reset
 on restart. Request bodies are validated with zod, HTTP calls use ky, and logs

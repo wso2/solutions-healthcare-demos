@@ -1,5 +1,4 @@
-// Demo-only triage assignment: there is no assignment concept in the FHIR backend,
-// so this is a client-side mock (localStorage) purely for showing the interaction.
+// Demo-only triage assignment: there is no assignment concept in the FHIR backend, so this is a client-side mock (localStorage) purely for showing the interaction.
 const STORAGE_KEY = "care-loop-task-assignments";
 
 export const MOCK_DOCTORS = [

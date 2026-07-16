@@ -5,9 +5,10 @@ care-loop-heart-risk-service, care-loop-ai-service, care-loop-fhir-server, and
 ehr-fhir-server (port 8005).
 
 - `POST /vitals-ready {patientId}` - acks immediately, then in the background:
-  fetches the `Patient`, derives age/sex, pulls the last hour of vitals
-  Observations from care-loop-fhir-server, computes `max_hr`, and scores
-  `{age, max_hr, sex}` against care-loop-heart-risk-service's `POST /predict`.
+  fetches the `Patient`, derives age/sex/max_hr from the last hour of vitals
+  Observations in care-loop-fhir-server, prefills the remaining clinical
+  features from FHIR, and scores the full nine-feature set against
+  care-loop-heart-risk-service's `POST /predict`.
   Below `mlEscalationThreshold` it saves a FHIR `RiskAssessment` and stops.
   At/above it, it records a pending case, asks care-loop-collector-service to
   start the emergency questionnaire via `POST /patients/{patientId}/generate`,

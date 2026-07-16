@@ -71,8 +71,7 @@ service / on new http:Listener(listenPort) {
             return <http:NotFound>{body: {message: "unknown sessionId: " + callback.sessionId}};
         }
 
-        // Live sessions finalize through /turns (on done) or here on an early "End conversation".
-        // A session finalized already (the common done case) is a no-op.
+        // Live sessions finalize through /turns (on done) or here on an early "End conversation". A session finalized already (the common done case) is a no-op.
         if session.live {
             finalizeIfUnclaimed(callback.sessionId);
             return <http:Created>{body: {saved: true}};

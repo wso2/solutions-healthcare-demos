@@ -66,8 +66,7 @@ services:
     image: whatsapp-simulator:latest
     container_name: whatsapp-simulator
     ports:
-      # Host port 3001, not 3000: a standalone AMP console (run outside this compose file) commonly
-      # takes 3000 on the host, and this is otherwise just an arbitrary container-facing port pick.
+      # Host port 3001, not 3000: a standalone AMP console (run outside this compose file) commonly takes 3000 on the host, and this is otherwise just an arbitrary container-facing port pick.
       - "3001:3000"
     environment:
       NODE_ENV: production
@@ -210,8 +209,7 @@ services:
     environment:
       KNOWLEDGE_HOST: 0.0.0.0
       KNOWLEDGE_PORT: "8000"
-      # OpenAI embeddings are still supported, but Anthropic does not provide an embeddings API.
-      # Use local embeddings for a keyless Anthropic stack, or set this to "openai" with OPENAI_API_KEY.
+      # OpenAI embeddings are still supported, but Anthropic does not provide an embeddings API. Use local embeddings for a keyless Anthropic stack, or set this to "openai" with OPENAI_API_KEY.
       KNOWLEDGE_EMBEDDING_PROVIDER: "${KNOWLEDGE_EMBEDDING_PROVIDER:-local}"
       KNOWLEDGE_OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
     healthcheck:
@@ -286,9 +284,7 @@ services:
           action: rebuild
 
   # WSO2 Agent Manager (AMP v0.18.0): docker-in-docker k3d cluster, state in amp-docker. Ports: API 9000, console 13000, gateway + otel ingest 22893.
-  # Opt-in only (profiles: amp) - `docker compose up` skips it; run `docker compose --profile amp up`
-  # to include it. care-loop-ai-service does not depend on it: its own healthcheck has a 45-minute
-  # start_period, and a failed/OOM-killed amp otherwise takes the whole default stack down with it.
+  # Opt-in only (profiles: amp) - `docker compose up` skips it; run `docker compose --profile amp up` to include it. care-loop-ai-service does not depend on it: its own healthcheck has a 45-minute start_period, and a failed/OOM-killed amp otherwise takes the whole default stack down with it.
   amp:
     profiles: ["amp"]
     build:
@@ -378,10 +374,7 @@ services:
     environment:
       BAL_CONFIG_VAR_DASHBOARDEVENTSURL: "http://care-loop-dashboard:3003"
     volumes:
-      # Not routed through AMP by default: that gateway is a docker-in-docker k3d cluster with a
-      # 45-minute healthcheck start_period and (per its own commit message) is unverified end-to-end.
-      # Config.toml keeps `make up` booting directly against OpenAI/Anthropic, same as before this
-      # merge; AmpModelProvider is still available in code for anyone who wants to opt in manually.
+      # Not routed through AMP by default: that gateway is a docker-in-docker k3d cluster with a 45-minute healthcheck start_period and (per its own commit message) is unverified end-to-end. Config.toml keeps `make up` booting directly against OpenAI/Anthropic, same as before this merge; AmpModelProvider is still available in code for anyone who wants to opt in manually.
       - ./care-loop-ai-service/Config.toml:/home/ballerina/Config.toml:ro
     depends_on:
       fhir-mcp-server:

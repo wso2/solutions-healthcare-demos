@@ -106,7 +106,7 @@ Runs on port 3003 by default (`bun --bun next dev`, matching front-desk-dashboar
 Copy `.env.example` to `.env` (gitignored):
 
 - `CARE_LOOP_FHIR_SERVER_URL` - care-loop-fhir-server, host port `9091`
-  (`localhost:9091/fhir` outside docker-compose;
+  (`localhost:9091/fhir/r4` outside docker-compose;
   `care-loop-fhir-server-readonly-proxy` has no host port). Patient roster,
   Observations, RiskAssessments, QuestionnaireResponses.
 - `EHR_FHIR_SERVER_URL` - ehr-fhir-server, host port `9090`. Tasks (the

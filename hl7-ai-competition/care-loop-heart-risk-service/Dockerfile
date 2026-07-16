@@ -3,9 +3,7 @@
 FROM ghcr.io/astral-sh/uv:python3.13-trixie-slim AS builder
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
 
-# Omit development dependencies. The serving image needs only the main deps
-# (fastapi + onnxruntime); the training stack stays out via --no-dev and the
-# train extra never being requested.
+# Omit development dependencies. The serving image needs only the main deps (fastapi + onnxruntime); the training stack stays out via --no-dev and the train extra never being requested.
 ENV UV_NO_DEV=1
 
 # Use the system interpreter across both images; disable managed Python downloads.

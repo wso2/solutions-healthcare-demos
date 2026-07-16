@@ -6,17 +6,13 @@ listenPort = 8003
 # Choose "openai" (AMP gateway only), "anthropic" (direct), or "anthropic-amp" (AMP gateway).
 modelProvider = "openai"
 
-# openAiServiceUrl/openAiApiKey default to direct OpenAI. To route through the AMP gateway instead,
-# set openAiServiceUrl to the AMP invoke URL (e.g. "http://amp:22893/careloop-openai") and
-# openAiApiKey to the AMP gateway key; nanoModel/fullModel then select the underlying OpenAI model.
+# openAiServiceUrl/openAiApiKey default to direct OpenAI. To route through the AMP gateway instead, set openAiServiceUrl to the AMP invoke URL (e.g. "http://amp:22893/careloop-openai") and openAiApiKey to the AMP gateway key; nanoModel/fullModel then select the underlying OpenAI model.
 openAiApiKey = "your-openai-api-key"
 openAiServiceUrl = "https://api.openai.com/v1"
 nanoModel = "gpt-4.1-nano"
 fullModel = "gpt-4.1"
 
-# anthropicServiceUrl/anthropicApiKey are shared by "anthropic" and "anthropic-amp": point them at
-# the real Anthropic API and your Anthropic key for "anthropic", or at the AMP gateway (e.g.
-# "http://amp:22893/careloop-anthropic", no "/v1" suffix) and the AMP gateway key for "anthropic-amp".
+# anthropicServiceUrl/anthropicApiKey are shared by "anthropic" and "anthropic-amp": point them at the real Anthropic API and your Anthropic key for "anthropic", or at the AMP gateway (e.g. "http://amp:22893/careloop-anthropic", no "/v1" suffix) and the AMP gateway key for "anthropic-amp".
 anthropicApiKey = "your-anthropic-api-key"
 anthropicServiceUrl = "https://api.anthropic.com/v1"
 

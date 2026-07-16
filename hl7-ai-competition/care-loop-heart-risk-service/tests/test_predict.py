@@ -3,8 +3,7 @@ from fastapi.testclient import TestClient
 
 DEFAULT_THRESHOLD = 0.5
 
-# The nb model is served reject-incomplete: all nine model features are required.
-# resting_bp / resting_ecg stay optional and are accepted but not scored.
+# The nb model is served reject-incomplete: all nine features required; resting_bp / resting_ecg optional, not scored.
 FULL_FEATURES = {
     "age": 60,
     "sex": "M",

@@ -7,14 +7,10 @@ import onnxruntime as ort
 from app.config import get_settings
 from app.schemas import HeartRiskRequest
 
-# The nb graph takes one dense [N, 9] "features" tensor of already-preprocessed
-# values and returns probabilities as a ZipMap (a list of {class: prob} dicts);
-# column/key 1 is P(heart disease = 1).
+# The nb graph takes a dense [N, 9] features tensor of preprocessed values and returns a ZipMap; key 1 is P(disease=1).
 _POSITIVE_CLASS = 1
 
-# preprocessing_nb.json feature name (Kaggle column) -> HeartRiskRequest field. The
-# artifact's feature_order drives the vector we feed, so its keys and this map must
-# cover the same nine features the model was trained on.
+# preprocessing_nb.json feature name (Kaggle column) -> HeartRiskRequest field; keys must cover the same nine features.
 _FIELD_BY_FEATURE_NAME = {
     "Age": "age",
     "Sex": "sex",

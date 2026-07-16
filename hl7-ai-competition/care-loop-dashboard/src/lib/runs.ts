@@ -24,12 +24,7 @@ export interface Run {
 
 const stageIndexByLabel = new Map<string, number>(STAGE_DEFS.map((s, i) => [s.label, i]));
 
-// The vitals cron re-fires every ~6 minutes, faster than a check-in chat plus the agentic
-// assessment completes. A boundary landing mid-escalation must not cut the run: analysis-service
-// skips the new reading ("already pending") and the in-flight case's remaining events would land
-// in the wrong run, leaving the real run's stages stuck on "pending". Fold boundaries into the
-// current run while it is escalated-but-unsettled, capped so a run that died mid-flight (e.g. a
-// failed agentic call) doesn't swallow every future run.
+// The vitals cron re-fires every ~6 minutes, faster than a check-in chat plus the agentic assessment completes. A boundary landing mid-escalation must not cut the run: analysis-service skips the new reading ("already pending") and the in-flight case's remaining events would land in the wrong run, leaving the real run's stages stuck on "pending". Fold boundaries into the current run while it is escalated-but-unsettled, capped so a run that died mid-flight (e.g. a failed agentic call) doesn't swallow every future run.
 const FOLD_WINDOW_MS = 30 * 60 * 1000;
 
 function escalatedButUnsettled(current: CareLoopEvent[], boundary: CareLoopEvent): boolean {
