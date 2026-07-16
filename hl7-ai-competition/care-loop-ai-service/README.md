@@ -8,11 +8,17 @@ trend. Not wired into the rest of the loop yet - standalone component for now.
 
 ## Config
 
-Copy `Config.toml.example` to `Config.toml` (gitignored) and fill in the
-`[ballerina.ai.wso2ProviderConfig]` `serviceUrl`/`accessToken` for
-`ballerina/ai`'s built-in `Wso2ModelProvider`. docker-compose mounts
-`Config.toml` into the container, so this file must exist before
-`make up`/`docker compose up` will start this service.
+Copy `Config.toml.example` to `Config.toml` (gitignored), set
+`modelProvider` to either `openai` or `anthropic`, and fill in the matching
+API key. docker-compose mounts `Config.toml` into the container, so this file
+must exist before `make up`/`docker compose up` will start this service.
+
+When running through docker-compose, set `CARE_LOOP_AI_PROVIDER` to choose the
+provider used by the stack:
+
+```sh
+CARE_LOOP_AI_PROVIDER=anthropic docker compose up care-loop-ai-service
+```
 
 `fhirMcpUrl` in the example already points at the `fhir-mcp-server` compose
 service name; switch it back to `localhost` if running with `bal run` on the

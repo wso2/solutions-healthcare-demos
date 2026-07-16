@@ -153,3 +153,105 @@ function testExtractPatientConvertsFhirPatientJson() returns error? {
     test:assertEquals(patient.id, "patient-7");
     test:assertEquals(patient.name, "Jane Doe");
 }
+
+@test:Config {}
+function testMergeSlotsFillsOnlyEmptySlots() {
+    // restingBp already prefilled from FHIR; the chat's value must not overwrite it.
+    FeatureSlots current = {age: 76, sex: "F", maxHr: 148, restingBp: 132.0};
+    AiSlotUpdates updates = {chestPainType: "ATA", exerciseAngina: "Y", restingBp: 118.0};
+    FeatureSlots merged = mergeSlots(current, updates);
+    test:assertEquals(merged.chestPainType, "ATA");
+    test:assertEquals(merged.exerciseAngina, "Y");
+    test:assertEquals(merged.restingBp, 132.0);
+}
+
+@test:Config {}
+function testMergeSlotsLeavesUnprovidedSlotsNil() {
+    FeatureSlots current = {age: 70, sex: "M", maxHr: 150};
+    FeatureSlots merged = mergeSlots(current, {});
+    test:assertTrue(merged.chestPainType is ());
+    test:assertTrue(merged.exerciseAngina is ());
+    test:assertTrue(merged.restingBp is ());
+}
+
+@test:Config {}
+function testCollectLiveAnswersSkipsUnanswered() {
+    GeneratedSession session = {
+        patientId: "patient-9",
+        patientName: "Dorothy",
+        questionnaire: {},
+        live: true,
+        asked: [
+            {id: "1", text: "Do you ever feel chest pain?", target: "chest_pain", answer: "No, none"},
+            {id: "2", text: "Any swelling in your ankles?", target: "red_flag"}
+        ]
+    };
+    EmergencyAnswer[] answers = collectLiveAnswers(session);
+    test:assertEquals(answers.length(), 1);
+    test:assertEquals(answers[0].question, "Do you ever feel chest pain?");
+    test:assertEquals(answers[0].answer, "No, none");
+}
+
+@test:Config {}
+function testBuildLiveQuestionnaireHasItemPerAskedQuestion() returns error? {
+    GeneratedSession session = {
+        patientId: "patient-9",
+        patientName: "Dorothy",
+        questionnaire: {},
+        live: true,
+        asked: [
+            {id: "1", text: "Do you ever feel chest pain?", target: "chest_pain", answer: "No"},
+            {id: "2", text: "Any swelling in your ankles?", target: "red_flag", answer: "A little"}
+        ]
+    };
+    map<json> questionnaire = check buildLiveQuestionnaire(session).cloneWithType();
+    test:assertEquals(questionnaire["status"], "active");
+    json[] items = <json[]>questionnaire["item"];
+    test:assertEquals(items.length(), 2);
+}
+
+@test:Config {}
+function testBuildLiveQuestionnaireResponseLinksAnswersToLinkIds() returns error? {
+    GeneratedSession session = {
+        patientId: "patient-9",
+        patientName: "Dorothy",
+        questionnaire: {},
+        live: true,
+        asked: [
+            {id: "q-a", text: "Do you ever feel chest pain?", target: "chest_pain", answer: "No"},
+            {id: "q-b", text: "Any swelling?", target: "red_flag"}
+        ]
+    };
+    map<json> response = check buildLiveQuestionnaireResponse(session, "Q1").cloneWithType();
+    test:assertEquals(response["resourceType"], "QuestionnaireResponse");
+    test:assertEquals(response["questionnaire"], "Questionnaire/Q1");
+    json[] items = <json[]>response["item"];
+    // Only the answered question is included.
+    test:assertEquals(items.length(), 1);
+    map<json> item = <map<json>>items[0];
+    test:assertEquals(item["linkId"], "q-a");
+}
+
+@test:Config {}
+function testAiConversationTurnResponseParses() returns error? {
+    json raw = {
+        updated_slots: {chestPainType: "ATA"},
+        answer_assessment: "ok",
+        done: false,
+        next_question: "Any swelling in your ankles?",
+        next_question_target: "red_flag",
+        closing_message: null
+    };
+    AiConversationTurnResponse turn = check raw.cloneWithType();
+    test:assertFalse(turn.done);
+    test:assertEquals(turn.updated_slots.chestPainType, "ATA");
+    test:assertEquals(turn.next_question, "Any swelling in your ankles?");
+}
+
+@test:Config {}
+function testAiConversationTurnResponseRejectsInventedSlot() {
+    // The interview agent tries to fill a FHIR-only slot; the closed AiSlotUpdates record must reject it.
+    json raw = {updated_slots: {oldpeak: 1.5}, done: true};
+    AiConversationTurnResponse|error turn = raw.cloneWithType();
+    test:assertTrue(turn is error);
+}

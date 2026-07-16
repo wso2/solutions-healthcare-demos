@@ -17,6 +17,8 @@ isolated function getPendingCase(string patientId) returns PendingCase? {
 
 # Marks a case resolved so a still-pending timeout watcher no-ops instead of double-escalating,
 # and removes it so a second /emergency-answers call for the same patient can't replay it.
+# 
+# + patientId - patient identifier
 isolated function resolvePendingCase(string patientId) {
     lock {
         _ = pendingCases.removeIfHasKey(patientId);

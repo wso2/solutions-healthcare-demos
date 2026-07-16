@@ -9,6 +9,12 @@ public type PatientDisplay record {|
 |};
 
 # Deliberately just identity/demographics - deeper medical history is the risk-assessment agent's own job via its MCP toolkit.
+# 
+# + patient - Patient Resource
+# + fallbackId - fallback identifier for the patient
+# + age - age of the patient
+# + sex - Sex of the patient
+# + return - PatientDisplay record containing name and age/sex summary
 isolated function patientDisplay(international401:Patient patient, string fallbackId, int age, "M"|"F" sex) returns PatientDisplay {
     return {patientName: extractPatientDisplayName(patient, fallbackId), ageSexSummary: age.toString() + sex};
 }

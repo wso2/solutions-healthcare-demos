@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import * as React from "react";
 
+import { PatientSummary } from "@/components/patient-summary";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -91,21 +92,6 @@ function TaskDetail({ task }: { task: EhrTaskDetail }) {
         <Separator />
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-          <Field
-            label="Patient"
-            value={
-              task.patientId ? (
-                <Link
-                  href={`/patients/${task.patientId}`}
-                  className="font-mono underline-offset-2 hover:underline"
-                >
-                  Patient/{task.patientId}
-                </Link>
-              ) : (
-                <span className="text-muted-foreground">Unknown</span>
-              )
-            }
-          />
           <Field
             label="Intent"
             value={
@@ -290,6 +276,9 @@ export default function TaskDetailPage() {
       ) : (
         <>
           <TaskDetail task={task} />
+          {task.patientId ? (
+            <PatientSummary patientId={task.patientId} />
+          ) : null}
           <TaskRiskAssessments basedOn={task.basedOnRiskAssessments} />
         </>
       )}

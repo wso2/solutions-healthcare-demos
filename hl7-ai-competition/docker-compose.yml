@@ -66,10 +66,13 @@ services:
     image: whatsapp-simulator:latest
     container_name: whatsapp-simulator
     ports:
-      - "3000:3000"
+      # Host port 3001, not 3000: a standalone AMP console (run outside this compose file) commonly
+      # takes 3000 on the host, and this is otherwise just an arbitrary container-facing port pick.
+      - "3001:3000"
     environment:
       NODE_ENV: production
       DASHBOARD_EVENTS_URL: "http://care-loop-dashboard:3003"
+      HEALTHKIT_SIMULATOR_URL: "http://apple-healthkit-simulator:8000"
     healthcheck:
       test:
         - "CMD"
@@ -197,6 +200,55 @@ services:
       - care-loop-fhir-server-readonly-proxy
     restart: unless-stopped
 
+  care-loop-knowledge-service:
+    build:
+      context: ./care-loop-knowledge-service
+    image: care-loop-knowledge-service:latest
+    container_name: care-loop-knowledge-service
+    ports:
+      - "8006:8000"
+    environment:
+      KNOWLEDGE_HOST: 0.0.0.0
+      KNOWLEDGE_PORT: "8000"
+      # OpenAI embeddings are still supported, but Anthropic does not provide an embeddings API.
+      # Use local embeddings for a keyless Anthropic stack, or set this to "openai" with OPENAI_API_KEY.
+      KNOWLEDGE_EMBEDDING_PROVIDER: "${KNOWLEDGE_EMBEDDING_PROVIDER:-local}"
+      KNOWLEDGE_OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+    healthcheck:
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    develop:
+      watch:
+        - path: ./care-loop-knowledge-service/pyproject.toml
+          action: rebuild
+        - path: ./care-loop-knowledge-service/uv.lock
+          action: rebuild
+        - path: ./care-loop-knowledge-service/src
+          action: rebuild
+
+  pubmed-mcp-server:
+    image: ghcr.io/cyanheads/pubmed-mcp-server:latest
+    container_name: pubmed-mcp-server
+    ports:
+      - "8007:3010"
+    environment:
+      MCP_TRANSPORT_TYPE: http
+      MCP_HTTP_PORT: "3010"
+      MCP_HTTP_HOST: "0.0.0.0"
+      MCP_HTTP_ENDPOINT_PATH: /mcp
+      MCP_AUTH_MODE: none
+      # Optional: raises the NCBI E-utilities rate limit from 3 to 10 req/s when set.
+      NCBI_API_KEY: "${NCBI_API_KEY:-}"
+    restart: unless-stopped
+
   front-desk-dashboard:
     build:
       context: ./front-desk-dashboard
@@ -234,7 +286,11 @@ services:
           action: rebuild
 
   # WSO2 Agent Manager (AMP v0.18.0): docker-in-docker k3d cluster, state in amp-docker. Ports: API 9000, console 13000, gateway + otel ingest 22893.
+  # Opt-in only (profiles: amp) - `docker compose up` skips it; run `docker compose --profile amp up`
+  # to include it. care-loop-ai-service does not depend on it: its own healthcheck has a 45-minute
+  # start_period, and a failed/OOM-killed amp otherwise takes the whole default stack down with it.
   amp:
+    profiles: ["amp"]
     build:
       context: ./scripts/amp
     image: care-loop/amp:v0.18.0
@@ -258,11 +314,13 @@ services:
 
   # One-shot idempotent registration (provider, catalog, agent, gateway key into amp-shared); needs only curl + jq, so it runs on alpine not the AMP image.
   amp-init:
+    profiles: ["amp"]
     image: alpine:3.20
     container_name: amp-init
     entrypoint: ["sh", "-c", "apk add -q --no-cache curl jq && exec sh /scripts/register.sh"]
     environment:
       OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
     volumes:
       - ./scripts/amp/register.sh:/scripts/register.sh:ro
       - amp-shared:/amp-shared
@@ -273,6 +331,7 @@ services:
 
   # Bridges Ballerina OTLP/gRPC spans to AMP's OTLP/HTTP otel ingest, using the identity-scoped config amp-init generates in amp-shared.
   otel-collector:
+    profiles: ["amp"]
     image: otel/opentelemetry-collector:0.128.0
     container_name: otel-collector
     command: ["--config=/amp-shared/otelcol-config.yaml"]
@@ -285,6 +344,7 @@ services:
 
   # Expose Thunder (login) and the observability API to the host for the browser console at :13000 (also add "127.0.0.1 thunder.amp.localhost" to /etc/hosts for the OAuth redirect).
   amp-thunder-fwd:
+    profiles: ["amp"]
     image: alpine/socat
     container_name: amp-thunder-fwd
     command: ["TCP-LISTEN:8080,fork,reuseaddr", "TCP:amp:8080"]
@@ -296,6 +356,7 @@ services:
     restart: unless-stopped
 
   amp-obs-fwd:
+    profiles: ["amp"]
     image: alpine/socat
     container_name: amp-obs-fwd
     command: ["TCP-LISTEN:9098,fork,reuseaddr", "TCP:amp:9098"]
@@ -315,17 +376,19 @@ services:
     ports:
       - "8003:8003"
     environment:
-      BAL_CONFIG_VAR_OPENAISERVICEURL: "http://amp:22893/careloop-openai"
-      # MCP direct to the FHIR server (the k3d gateway can't reach this compose service).
-      BAL_CONFIG_VAR_FHIRMCPURL: "http://fhir-mcp-server:8000/mcp"
       BAL_CONFIG_VAR_DASHBOARDEVENTSURL: "http://care-loop-dashboard:3003"
     volumes:
-      - ./care-loop-ai-service/Config.compose.toml:/home/ballerina/Config.toml:ro
-      - amp-shared:/amp-shared:ro
+      # Not routed through AMP by default: that gateway is a docker-in-docker k3d cluster with a
+      # 45-minute healthcheck start_period and (per its own commit message) is unverified end-to-end.
+      # Config.toml keeps `make up` booting directly against OpenAI/Anthropic, same as before this
+      # merge; AmpModelProvider is still available in code for anyone who wants to opt in manually.
+      - ./care-loop-ai-service/Config.toml:/home/ballerina/Config.toml:ro
     depends_on:
-      amp-init:
-        condition: service_completed_successfully
       fhir-mcp-server:
+        condition: service_started
+      care-loop-knowledge-service:
+        condition: service_started
+      pubmed-mcp-server:
         condition: service_started
     restart: unless-stopped
 

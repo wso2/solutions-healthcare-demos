@@ -14,15 +14,18 @@ export function MessageRow({
   previous,
   canReply,
   onReply,
+  large = false,
 }: {
   message: Message;
   previous?: Message;
   canReply: boolean;
   onReply: () => void;
+  large?: boolean;
 }) {
   const me = message.role === "user";
   const senderChanged = !previous || previous.role !== message.role;
   const showAvatar = !me && senderChanged;
+  const textSize = large ? "text-base" : "text-sm";
 
   return (
     <div
@@ -61,8 +64,8 @@ export function MessageRow({
           <div
             className={
               me
-                ? "max-w-[min(78vw,440px)] rounded-[13px] rounded-br-[4px] bg-[#0a0a0a] px-3 py-2 text-sm leading-normal text-[#fafafa]"
-                : "max-w-[min(78vw,440px)] rounded-[13px] rounded-bl-[4px] bg-[#f4f4f5] px-3 py-2 text-sm leading-normal text-[#18181b]"
+                ? `max-w-[min(78vw,440px)] rounded-[13px] rounded-br-[4px] bg-[#0a0a0a] px-3 py-2 ${textSize} leading-normal text-[#fafafa]`
+                : `max-w-[min(78vw,440px)] rounded-[13px] rounded-bl-[4px] bg-[#f4f4f5] px-3 py-2 ${textSize} leading-normal text-[#18181b]`
             }
           >
             {me ? (

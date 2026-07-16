@@ -3,9 +3,10 @@
 import type { EhrTask } from "@/app/api/tasks/route";
 
 import { ChevronRight, ClipboardCheck } from "lucide-react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import * as React from "react";
 
+import { AssignDoctorMenu } from "@/components/assign-doctor-menu";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -15,6 +16,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { summarize } from "@/lib/format";
+import { priorityBadgeVariant } from "@/lib/priority";
 
 const POLL_INTERVAL_MS = 15_000;
 
@@ -45,50 +56,64 @@ function TasksEmpty() {
   );
 }
 
-function TaskListItem({ task }: { task: EhrTask }) {
+function TaskTableRow({ task }: { task: EhrTask }) {
+  const router = useRouter();
+
   return (
-    <li className="flex items-center gap-4 px-6 py-4 transition-colors hover:bg-muted">
-      <span className="mt-1 size-1.5 shrink-0 rounded-full bg-foreground" />
-      <div className="min-w-0 flex-1 space-y-1">
-        <Link
-          href={`/tasks/${task.id}`}
-          className="block text-sm font-semibold text-foreground focus-visible:outline-none"
-        >
-          {task.description}
-        </Link>
-        <p className="truncate text-xs text-muted-foreground">
-          {task.patientId ? (
-            <Link
-              href={`/patients/${task.patientId}`}
-              className="underline-offset-2 hover:underline"
-            >
-              Patient/{task.patientId}
-            </Link>
-          ) : (
-            "Unknown patient"
-          )}
-          {formatAuthoredOn(task.authoredOn)
-            ? ` · ${formatAuthoredOn(task.authoredOn)}`
-            : ""}
-        </p>
-      </div>
-      <Badge variant="outline" className="shrink-0 uppercase tracking-wide">
-        {task.status}
-      </Badge>
-      <Link href={`/tasks/${task.id}`}>
+    <TableRow
+      className="cursor-pointer"
+      onClick={() => router.push(`/tasks/${task.id}`)}
+    >
+      <TableCell className="font-medium text-foreground">
+        {task.patientName ?? "Unknown patient"}
+      </TableCell>
+      <TableCell className="max-w-md min-w-0 truncate whitespace-nowrap text-muted-foreground">
+        {summarize(task.description)}
+      </TableCell>
+      <TableCell>
+        {task.priority ? (
+          <Badge
+            variant={priorityBadgeVariant(task.priority)}
+            className="uppercase tracking-wide"
+          >
+            {task.priority}
+          </Badge>
+        ) : (
+          <span className="text-muted-foreground">—</span>
+        )}
+      </TableCell>
+      <TableCell className="text-muted-foreground">
+        {formatAuthoredOn(task.authoredOn) ?? "Not recorded"}
+      </TableCell>
+      <TableCell>
+        <AssignDoctorMenu taskId={task.id} />
+      </TableCell>
+      <TableCell>
         <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
-      </Link>
-    </li>
+      </TableCell>
+    </TableRow>
   );
 }
 
-function TaskList({ tasks }: { tasks: EhrTask[] }) {
+function TaskTable({ tasks }: { tasks: EhrTask[] }) {
   return (
-    <ul className="divide-y">
-      {tasks.map((task) => (
-        <TaskListItem key={task.id} task={task} />
-      ))}
-    </ul>
+    <Table>
+      <TableHeader>
+        <TableRow>
+          <TableHead>Patient</TableHead>
+          <TableHead>Summary</TableHead>
+          <TableHead>Priority</TableHead>
+          <TableHead>Requested</TableHead>
+          <TableHead>Assigned</TableHead>
+          <TableHead className="w-8" />
+        </TableRow>
+      </TableHeader>
+      <TableBody>
+        {tasks.map((task) => (
+          <TaskTableRow key={task.id} task={task} />
+        ))}
+      </TableBody>
+    </Table>
   );
 }
 
@@ -141,7 +166,7 @@ export function EhrTasks() {
           ) : tasks.length === 0 ? (
             <TasksEmpty />
           ) : (
-            <TaskList tasks={tasks} />
+            <TaskTable tasks={tasks} />
           )}
         </ScrollArea>
       </CardContent>

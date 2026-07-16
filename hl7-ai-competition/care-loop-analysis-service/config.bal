@@ -8,3 +8,4 @@ configurable int listenPort = 8005;
 configurable float mlEscalationThreshold = 0.5;
 configurable float agenticEscalationThreshold = 0.5;
 configurable decimal questionnaireTimeoutHours = 4;
+configurable int bpRecentDays = 7;

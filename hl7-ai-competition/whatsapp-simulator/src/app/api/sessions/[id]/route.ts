@@ -18,6 +18,7 @@ export async function GET(
   return NextResponse.json({
     id: session.id,
     status: session.status,
+    mode: session.mode,
     questionnaire: session.questionnaire,
   });
 }

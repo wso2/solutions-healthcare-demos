@@ -4,7 +4,7 @@ export type Range = { min: number; max: number };
 export type QuantitySample = Record<string, unknown>;
 
 export type SeedPatient = {
-  patient: { mrn: string; given_name: string; family_name: string; date_of_birth: string; vitals_profile: VitalsProfile };
+  patient: { mrn: string; given_name: string; family_name: string; date_of_birth: string; vitals_profile: VitalsProfile; has_bp_cuff?: boolean };
   healthkit: {
     characteristics: Record<string, unknown>;
     quantity_samples: QuantitySample[];

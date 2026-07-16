@@ -1,0 +1,69 @@
+{
+  "feature_order": [
+    "Age",
+    "Sex",
+    "ChestPainType",
+    "Cholesterol",
+    "FastingBS",
+    "MaxHR",
+    "ExerciseAngina",
+    "Oldpeak",
+    "ST_Slope"
+  ],
+  "features": {
+    "Age": {
+      "type": "standard",
+      "mean": 53.510893246187365,
+      "scale": 9.427477516153495
+    },
+    "Sex": {
+      "type": "label",
+      "classes": [
+        "F",
+        "M"
+      ]
+    },
+    "ChestPainType": {
+      "type": "label",
+      "classes": [
+        "ASY",
+        "ATA",
+        "NAP",
+        "TA"
+      ]
+    },
+    "Cholesterol": {
+      "type": "standard",
+      "mean": 243.20479302832243,
+      "scale": 53.37220294070365
+    },
+    "FastingBS": {
+      "type": "passthrough"
+    },
+    "MaxHR": {
+      "type": "standard",
+      "mean": 136.80936819172112,
+      "scale": 25.44646307530939
+    },
+    "ExerciseAngina": {
+      "type": "label",
+      "classes": [
+        "N",
+        "Y"
+      ]
+    },
+    "Oldpeak": {
+      "type": "minmax",
+      "data_min": -2.6,
+      "data_range": 8.8
+    },
+    "ST_Slope": {
+      "type": "label",
+      "classes": [
+        "Down",
+        "Flat",
+        "Up"
+      ]
+    }
+  }
+}

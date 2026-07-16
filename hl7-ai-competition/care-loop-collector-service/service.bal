@@ -50,6 +50,16 @@ service / on new http:Listener(listenPort) {
         return result;
     }
 
+    // One turn of a live check-in: whatsapp-simulator posts each patient message here.
+    resource function post turns(TurnCallback callback) returns TurnReply|http:Gone {
+        return handleTurn(callback);
+    }
+
+    // analysis-service's timeout watcher claims a still-pending live session to salvage partial answers.
+    resource function post patients/[string patientId]/conversation/claim() returns ClaimResponse {
+        return claimConversation(patientId);
+    }
+
     resource function post transcripts(TranscriptCallback callback) returns http:Created|http:NotFound|http:BadGateway {
         GeneratedSession? session = ();
         lock {
@@ -59,6 +69,13 @@ service / on new http:Listener(listenPort) {
         }
         if session is () {
             return <http:NotFound>{body: {message: "unknown sessionId: " + callback.sessionId}};
+        }
+
+        // Live sessions finalize through /turns (on done) or here on an early "End conversation".
+        // A session finalized already (the common done case) is a no-op.
+        if session.live {
+            finalizeIfUnclaimed(callback.sessionId);
+            return <http:Created>{body: {saved: true}};
         }
 
         international401:QuestionnaireResponse questionnaireResponse = buildQuestionnaireResponse(callback, session);

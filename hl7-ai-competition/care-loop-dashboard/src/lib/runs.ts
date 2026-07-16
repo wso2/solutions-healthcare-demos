@@ -24,6 +24,25 @@ export interface Run {
 
 const stageIndexByLabel = new Map<string, number>(STAGE_DEFS.map((s, i) => [s.label, i]));
 
+// The vitals cron re-fires every ~6 minutes, faster than a check-in chat plus the agentic
+// assessment completes. A boundary landing mid-escalation must not cut the run: analysis-service
+// skips the new reading ("already pending") and the in-flight case's remaining events would land
+// in the wrong run, leaving the real run's stages stuck on "pending". Fold boundaries into the
+// current run while it is escalated-but-unsettled, capped so a run that died mid-flight (e.g. a
+// failed agentic call) doesn't swallow every future run.
+const FOLD_WINDOW_MS = 30 * 60 * 1000;
+
+function escalatedButUnsettled(current: CareLoopEvent[], boundary: CareLoopEvent): boolean {
+  const escalation = current.find((e) => e.label === "Escalation triggered");
+  if (!escalation) return false;
+  const settled = current.some(
+    (e) => e.label === "FHIR Task created for front-desk" || e.label === "Agentic risk assessment complete",
+  );
+  if (settled) return false;
+  const elapsed = new Date(boundary.receivedAt).getTime() - new Date(escalation.receivedAt).getTime();
+  return elapsed >= 0 && elapsed < FOLD_WINDOW_MS;
+}
+
 export function segmentRuns(events: CareLoopEvent[]): Run[] {
   const ascending = [...events].reverse();
   const runs: Run[] = [];
@@ -36,7 +55,7 @@ export function segmentRuns(events: CareLoopEvent[]): Run[] {
   }
 
   for (const event of ascending) {
-    if (event.label === RUN_BOUNDARY_LABEL) flush();
+    if (event.label === RUN_BOUNDARY_LABEL && !escalatedButUnsettled(current, event)) flush();
     current.push(event);
   }
   flush();

@@ -7,47 +7,76 @@ import onnxruntime as ort
 from app.config import get_settings
 from app.schemas import HeartRiskRequest
 
-# The classifier output is an [N, 2] probability tensor; column 1 is P(class=1).
-_PROBA_NDIM = 2
-_PROBA_COLUMNS = 2
+# The nb graph takes one dense [N, 9] "features" tensor of already-preprocessed
+# values and returns probabilities as a ZipMap (a list of {class: prob} dicts);
+# column/key 1 is P(heart disease = 1).
 _POSITIVE_CLASS = 1
+
+# preprocessing_nb.json feature name (Kaggle column) -> HeartRiskRequest field. The
+# artifact's feature_order drives the vector we feed, so its keys and this map must
+# cover the same nine features the model was trained on.
+_FIELD_BY_FEATURE_NAME = {
+    "Age": "age",
+    "Sex": "sex",
+    "ChestPainType": "chest_pain_type",
+    "Cholesterol": "cholesterol",
+    "FastingBS": "fasting_bs",
+    "MaxHR": "max_hr",
+    "ExerciseAngina": "exercise_angina",
+    "Oldpeak": "oldpeak",
+    "ST_Slope": "st_slope",
+}
 
 
 class HeartRiskModel:
-    """Thin wrapper over an ONNX Runtime session for the heart-risk pipeline."""
+    """Thin wrapper over an ONNX Runtime session for the nb heart-risk pipeline."""
 
-    def __init__(self, session: ort.InferenceSession, name: str) -> None:
-        """Store the ONNX session and the name of the exported source model."""
+    def __init__(self, session: ort.InferenceSession, preprocessing: dict, name: str) -> None:
+        """Store the ONNX session, the preprocessing artifact, and the source model name."""
         self._session = session
+        self._input_name = session.get_inputs()[0].name
+        self._feature_order = preprocessing["feature_order"]
+        self._features = preprocessing["features"]
         self.name = name
 
+    def _encode(self, feature_name: str, value: object) -> float:
+        """Apply the feature's baked transform (from preprocessing_nb.json) to one value."""
+        spec = self._features[feature_name]
+        kind = spec["type"]
+        if kind == "label":
+            # Categoricals were LabelEncoded to their sorted-class index at training.
+            return float(spec["classes"].index(str(value)))
+        if kind == "standard":
+            return (float(value) - spec["mean"]) / spec["scale"]
+        if kind == "minmax":
+            return (float(value) - spec["data_min"]) / spec["data_range"]
+        return float(value)  # passthrough (FastingBS is already 0/1)
+
     def predict_proba(self, request: HeartRiskRequest) -> float:
-        """Return P(heart disease = 1) for one raw watch feature set.
+        """Return P(heart disease = 1) for one fully-specified feature set.
 
-        Args:
-            request: Validated Age/MaxHR/Sex signals. Preprocessing (scaling,
-                one-hot encoding) is baked into the ONNX graph.
-
-        Returns:
-            The positive-class probability in ``[0, 1]``.
+        The request is validated reject-incomplete, so every model feature is
+        present. Values are transformed with the training-time preprocessing baked
+        into ``preprocessing_nb.json`` (label encoding, standard/min-max scaling),
+        packed into the graph's single ``[1, 9]`` input in ``feature_order``, and
+        the positive-class probability is read from the ZipMap output.
         """
-        feeds: dict[str, np.ndarray] = {
-            "Age": np.array([[request.age]], dtype=np.float32),
-            "MaxHR": np.array([[request.max_hr]], dtype=np.float32),
-            "Sex": np.array([[request.sex]], dtype=object),
-        }
+        row = [self._encode(name, getattr(request, _FIELD_BY_FEATURE_NAME[name])) for name in self._feature_order]
+        feeds = {self._input_name: np.array([row], dtype=np.float32)}
+
         outputs = self._session.run(None, feeds)
-        proba = next(o for o in outputs if getattr(o, "ndim", 0) == _PROBA_NDIM and o.shape[1] == _PROBA_COLUMNS)
-        return float(proba[0, _POSITIVE_CLASS])
+        probabilities = next(o for o in outputs if isinstance(o, list))
+        return float(probabilities[0][_POSITIVE_CLASS])
 
 
 @lru_cache
 def get_model() -> HeartRiskModel:
-    """Load and cache the ONNX model plus the name of the model it was exported from."""
+    """Load and cache the ONNX model, its preprocessing artifact, and the source model name."""
     settings = get_settings()
     session = ort.InferenceSession(str(settings.model_path), providers=["CPUExecutionProvider"])
+    preprocessing = json.loads(settings.preprocessing_path.read_text())
     name = "unknown"
     if settings.metrics_path.exists():
         metrics = json.loads(settings.metrics_path.read_text())
         name = str(metrics.get("onnx_exported_model") or metrics.get("selected_model") or name)
-    return HeartRiskModel(session=session, name=name)
+    return HeartRiskModel(session=session, preprocessing=preprocessing, name=name)

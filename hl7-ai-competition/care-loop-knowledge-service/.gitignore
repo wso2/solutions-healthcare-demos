@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+.ruff_cache/
+.pytest_cache/
+.env
+# Built by `make ingest`; regenerated from the committed corpus/snapshot, never committed.
+data/chroma/
+# Licensed source PDFs (StatPearls / guideline reprints); fetched locally, never committed.
+corpus/raw/

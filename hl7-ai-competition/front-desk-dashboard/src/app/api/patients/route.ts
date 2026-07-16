@@ -5,6 +5,8 @@ import process from "node:process";
 import { Client } from "fhir-kit-client";
 import { NextResponse } from "next/server";
 
+import { formatPatientName } from "@/lib/fhir-patient";
+
 export const runtime = "nodejs";
 
 export interface EhrPatient {
@@ -14,16 +16,10 @@ export interface EhrPatient {
   gender: string | undefined;
 }
 
-function formatName(patient: FhirPatient): string {
-  const name = patient.name?.[0];
-  if (!name) return "Unknown patient";
-  return [...(name.given ?? []), name.family].filter(Boolean).join(" ");
-}
-
 function toEhrPatient(patient: FhirPatient): EhrPatient {
   return {
     id: patient.id ?? "",
-    name: formatName(patient),
+    name: formatPatientName(patient),
     birthDate: patient.birthDate,
     gender: patient.gender,
   };

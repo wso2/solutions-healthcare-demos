@@ -1,1 +1,3 @@
+modelProvider = "openai"
 openAiApiKey = "test-key-not-used"
+anthropicApiKey = "test-key-not-used"

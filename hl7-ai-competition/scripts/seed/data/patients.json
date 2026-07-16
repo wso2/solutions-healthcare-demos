@@ -819,6 +819,177 @@
             "system": "http://unitsofmeasure.org",
             "code": "kg"
           }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "laboratory",
+                  "display": "Laboratory"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "2093-3",
+                "display": "Cholesterol [Mass/volume] in Serum or Plasma"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-10T09:00:00Z",
+          "valueQuantity": {
+            "value": 190,
+            "unit": "mg/dL",
+            "system": "http://unitsofmeasure.org",
+            "code": "mg/dL"
+          }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "laboratory",
+                  "display": "Laboratory"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "1558-6",
+                "display": "Fasting glucose [Mass/volume] in Serum or Plasma"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-10T09:00:00Z",
+          "valueQuantity": {
+            "value": 95,
+            "unit": "mg/dL",
+            "system": "http://unitsofmeasure.org",
+            "code": "mg/dL"
+          }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "procedure",
+                  "display": "Procedure"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://careloop.wso2.com/fhir/CodeSystem/exercise-stress-test",
+                "code": "st-depression-oldpeak",
+                "display": "ST depression induced by exercise (Oldpeak)"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-05-20T10:15:00Z",
+          "valueQuantity": {
+            "value": 0.0,
+            "unit": "mm",
+            "system": "http://unitsofmeasure.org",
+            "code": "mm"
+          }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "procedure",
+                  "display": "Procedure"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://careloop.wso2.com/fhir/CodeSystem/exercise-stress-test",
+                "code": "st-slope-peak-exercise",
+                "display": "Slope of the peak exercise ST segment"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-05-20T10:15:00Z",
+          "valueString": "Up"
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "procedure",
+                  "display": "Procedure"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://careloop.wso2.com/fhir/CodeSystem/exercise-stress-test",
+                "code": "chest-pain-type",
+                "display": "Chest pain type"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-05-20T10:15:00Z",
+          "valueString": "ATA"
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "procedure",
+                  "display": "Procedure"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://careloop.wso2.com/fhir/CodeSystem/exercise-stress-test",
+                "code": "exercise-induced-angina",
+                "display": "Exercise-induced angina"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-05-20T10:15:00Z",
+          "valueString": "N"
         }
       ]
     }
@@ -832,7 +1003,8 @@
       "biological_sex": "male",
       "blood_type": "A+",
       "fitzpatrick_skin_type": "IV",
-      "vitals_profile": "borderline"
+      "vitals_profile": "borderline",
+      "has_bp_cuff": false
     },
     "healthkit": {
       "characteristics": {
@@ -1652,6 +1824,146 @@
             "system": "http://unitsofmeasure.org",
             "code": "kg"
           }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "laboratory",
+                  "display": "Laboratory"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "2093-3",
+                "display": "Cholesterol [Mass/volume] in Serum or Plasma"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-10T09:00:00Z",
+          "valueQuantity": {
+            "value": 230,
+            "unit": "mg/dL",
+            "system": "http://unitsofmeasure.org",
+            "code": "mg/dL"
+          }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "procedure",
+                  "display": "Procedure"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://careloop.wso2.com/fhir/CodeSystem/exercise-stress-test",
+                "code": "st-depression-oldpeak",
+                "display": "ST depression induced by exercise (Oldpeak)"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-05-20T10:15:00Z",
+          "valueQuantity": {
+            "value": 0.8,
+            "unit": "mm",
+            "system": "http://unitsofmeasure.org",
+            "code": "mm"
+          }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "procedure",
+                  "display": "Procedure"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://careloop.wso2.com/fhir/CodeSystem/exercise-stress-test",
+                "code": "st-slope-peak-exercise",
+                "display": "Slope of the peak exercise ST segment"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-05-20T10:15:00Z",
+          "valueString": "Up"
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "procedure",
+                  "display": "Procedure"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://careloop.wso2.com/fhir/CodeSystem/exercise-stress-test",
+                "code": "chest-pain-type",
+                "display": "Chest pain type"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-05-20T10:15:00Z",
+          "valueString": "NAP"
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "procedure",
+                  "display": "Procedure"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://careloop.wso2.com/fhir/CodeSystem/exercise-stress-test",
+                "code": "exercise-induced-angina",
+                "display": "Exercise-induced angina"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-05-20T10:15:00Z",
+          "valueString": "N"
         }
       ]
     }
@@ -2568,6 +2880,205 @@
             "system": "http://unitsofmeasure.org",
             "code": "kg"
           }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "laboratory",
+                  "display": "Laboratory"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "2093-3",
+                "display": "Cholesterol [Mass/volume] in Serum or Plasma"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-10T09:00:00Z",
+          "valueQuantity": {
+            "value": 264,
+            "unit": "mg/dL",
+            "system": "http://unitsofmeasure.org",
+            "code": "mg/dL"
+          }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "laboratory",
+                  "display": "Laboratory"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "1558-6",
+                "display": "Fasting glucose [Mass/volume] in Serum or Plasma"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-06-10T09:00:00Z",
+          "valueQuantity": {
+            "value": 104,
+            "unit": "mg/dL",
+            "system": "http://unitsofmeasure.org",
+            "code": "mg/dL"
+          }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "procedure",
+                  "display": "Procedure"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://loinc.org",
+                "code": "8601-7",
+                "display": "EKG impression"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-05-20T10:00:00Z",
+          "valueCodeableConcept": {
+            "text": "Left ventricular hypertrophy"
+          }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "procedure",
+                  "display": "Procedure"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://careloop.wso2.com/fhir/CodeSystem/exercise-stress-test",
+                "code": "st-depression-oldpeak",
+                "display": "ST depression induced by exercise (Oldpeak)"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-05-20T10:15:00Z",
+          "valueQuantity": {
+            "value": 1.5,
+            "unit": "mm",
+            "system": "http://unitsofmeasure.org",
+            "code": "mm"
+          }
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "procedure",
+                  "display": "Procedure"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://careloop.wso2.com/fhir/CodeSystem/exercise-stress-test",
+                "code": "st-slope-peak-exercise",
+                "display": "Slope of the peak exercise ST segment"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-05-20T10:15:00Z",
+          "valueString": "Flat"
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "procedure",
+                  "display": "Procedure"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://careloop.wso2.com/fhir/CodeSystem/exercise-stress-test",
+                "code": "chest-pain-type",
+                "display": "Chest pain type"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-05-20T10:15:00Z",
+          "valueString": "ASY"
+        },
+        {
+          "resourceType": "Observation",
+          "status": "final",
+          "category": [
+            {
+              "coding": [
+                {
+                  "system": "http://terminology.hl7.org/CodeSystem/observation-category",
+                  "code": "procedure",
+                  "display": "Procedure"
+                }
+              ]
+            }
+          ],
+          "code": {
+            "coding": [
+              {
+                "system": "http://careloop.wso2.com/fhir/CodeSystem/exercise-stress-test",
+                "code": "exercise-induced-angina",
+                "display": "Exercise-induced angina"
+              }
+            ]
+          },
+          "effectiveDateTime": "2026-05-20T10:15:00Z",
+          "valueString": "Y"
         }
       ]
     }

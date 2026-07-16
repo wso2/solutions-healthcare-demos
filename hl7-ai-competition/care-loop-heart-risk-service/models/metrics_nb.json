@@ -1,0 +1,60 @@
+{
+  "selected_model": "catboost",
+  "selected_params": {
+    "depth": 4,
+    "iterations": 200,
+    "learning_rate": 0.03
+  },
+  "features": [
+    "Age",
+    "Sex",
+    "ChestPainType",
+    "Cholesterol",
+    "FastingBS",
+    "MaxHR",
+    "ExerciseAngina",
+    "Oldpeak",
+    "ST_Slope"
+  ],
+  "preprocessing": "LabelEncoder on categoricals; StandardScaler on Age/Cholesterol/MaxHR; MinMaxScaler on Oldpeak; Cholesterol/RestingBP zeros median-imputed",
+  "cv_roc_auc_untuned": {
+    "logistic_regression": 0.9119074565339809,
+    "svc": 0.9034749718438743,
+    "decision_tree": 0.8808865000175976,
+    "random_forest": 0.9246958918452821,
+    "lightgbm": 0.9245842847024249,
+    "catboost": 0.9235754760145003
+  },
+  "cv_roc_auc_tuned": {
+    "random_forest": 0.9251112494066321,
+    "lightgbm": 0.9274520078437577,
+    "catboost": 0.9305728754605666
+  },
+  "best_params": {
+    "random_forest": {
+      "max_depth": 4,
+      "min_samples_leaf": 5,
+      "n_estimators": 200
+    },
+    "lightgbm": {
+      "learning_rate": 0.03,
+      "max_depth": 3,
+      "n_estimators": 200
+    },
+    "catboost": {
+      "depth": 4,
+      "iterations": 200,
+      "learning_rate": 0.03
+    }
+  },
+  "test_metrics": {
+    "roc_auc": 0.9279716144293317,
+    "accuracy": 0.8695652173913043,
+    "precision": 0.8514851485148515,
+    "recall": 0.9052631578947369,
+    "f1": 0.8775510204081632
+  },
+  "n_train": 734,
+  "n_test": 184,
+  "note": "Notebook exploration on the wider clinical feature set, trained on preprocessed inputs. Separate from the service watch-only ONNX."
+}

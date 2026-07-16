@@ -10,7 +10,5 @@ RUN bal build --offline=false
 FROM eclipse-temurin:21-jre
 WORKDIR /home/ballerina
 COPY --from=builder /home/ballerina/build/target/bin/care_loop_ai_service.jar .
-COPY care-loop-ai-service/docker-entrypoint.sh .
-RUN chmod +x docker-entrypoint.sh
 EXPOSE 8003
-ENTRYPOINT ["/home/ballerina/docker-entrypoint.sh"]
+CMD ["java", "-jar", "care_loop_ai_service.jar"]

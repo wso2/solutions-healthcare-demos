@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help sync lock lint format format-check test train run clean
+.PHONY: help sync lock lint format format-check test train export-preprocessing run clean
 
 help: ## List available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -26,6 +26,9 @@ test: ## Run the test suite
 
 train: ## Train the model and export models/heart_watch_model.onnx
 	uv run --extra train python training/train.py
+
+export-preprocessing: ## Derive models/preprocessing_nb.json for the nb model serving path
+	uv run --extra train python training/export_preprocessing_nb.py
 
 run: ## Run the API locally with autoreload
 	uv run fastapi dev src/app/main.py

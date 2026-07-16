@@ -1,21 +1,21 @@
 #!/bin/sh
-# Register the Care Loop resources in AMP: the OpenAI LLM provider (deployed to
-# the gateway and published to the catalog) and a gateway API key written to
-# /amp-shared/gateway.key. Idempotent.
+# Register the Care Loop resources in AMP: an LLM provider per configured key
+# (OpenAI and/or Anthropic), deployed to the gateway and published to the
+# catalog, plus a gateway API key per provider written to /amp-shared. Idempotent.
 
 set -eu
 
 API=${AMP_API_URL:-http://amp:9000}
 THUNDER=${AMP_THUNDER_URL:-http://amp:8080}
 GATEWAY=${AMP_GATEWAY_URL:-http://amp:22893}
-KEY_FILE=/amp-shared/gateway.key
+SHARED_DIR=${AMP_SHARED_DIR:-/amp-shared}
 CURL="curl -s -m 30 --connect-timeout 5"
 SCOPES="amp:org:view amp:llm-provider:read amp:llm-provider:create amp:llm-provider:update amp:llm-provider:deploy amp:llm-provider:api-key-manage amp:gateway:read amp:project:read amp:agent:view amp:agent:read amp:agent:create"
 
 log() { printf '\n== %s\n' "$*"; }
 
-[ -n "${OPENAI_API_KEY:-}" ] || {
-    echo "OPENAI_API_KEY is not set; add it to hl7-ai-competition/.env" >&2
+[ -n "${OPENAI_API_KEY:-}" ] || [ -n "${ANTHROPIC_API_KEY:-}" ] || {
+    echo "Neither OPENAI_API_KEY nor ANTHROPIC_API_KEY is set; add at least one to hl7-ai-competition/.env" >&2
     exit 1
 }
 
@@ -43,70 +43,98 @@ GW_ID=$($CURL -f -H "Authorization: Bearer $TOK" "$API/api/v1/orgs/default/gatew
 log "Gateway: $GW_ID"
 
 provider_uuid() {
+    id=$1
     $CURL -f -H "Authorization: Bearer $TOK" "$API/api/v1/orgs/default/llm-providers" \
-        | jq -r '.providers[]? | select(.id == "careloop-openai") | .uuid'
+        | jq -r --arg id "$id" '.providers[]? | select(.id == $id) | .uuid'
 }
 
-# Full provider object (handle = `id`, template by handle); a partial body wipes auth.
-provider_body() {
-    jq -n --arg key "$OPENAI_API_KEY" '{
-        id: "careloop-openai", name: "Care Loop OpenAI", template: "openai",
-        context: "/careloop-openai", version: "v1",
-        accessControl: {mode: "allow_all"},
-        security: {enabled: true, apiKey: {enabled: true, key: "API-Key", in: "header"}},
-        upstream: {main: {url: "https://api.openai.com/v1",
-            auth: {type: "api-key", header: "Authorization", value: ("Bearer " + $key)}}}
-    }'
-}
+# Registers, deploys, and publishes one LLM provider, then mints (or reuses) its gateway key.
+#
+# $1 id            - provider handle (also used as the gateway context path and key filename)
+# $2 display_name   - human-readable name shown in the console
+# $3 template       - AMP provider template id (see GET .../llm-provider-templates)
+# $4 upstream_url   - real upstream base URL AMP calls on your behalf
+# $5 auth_header    - upstream auth header name (from the template's metadata.auth.header)
+# $6 auth_value     - upstream auth header value (e.g. "Bearer $KEY", or just "$KEY")
+register_provider() {
+    id=$1 display_name=$2 template=$3 upstream_url=$4 auth_header=$5 auth_value=$6
+    key_file="$SHARED_DIR/$id-gateway.key"
 
-log "LLM provider careloop-openai"
-PROVIDER_UUID=$(provider_uuid)
-if [ -z "$PROVIDER_UUID" ]; then
+    provider_body() {
+        jq -n --arg id "$id" --arg name "$display_name" --arg template "$template" \
+            --arg url "$upstream_url" --arg header "$auth_header" --arg value "$auth_value" '{
+            id: $id, name: $name, template: $template,
+            context: ("/" + $id), version: "v1",
+            accessControl: {mode: "allow_all"},
+            security: {enabled: true, apiKey: {enabled: true, key: "API-Key", in: "header"}},
+            upstream: {main: {url: $url, auth: {type: "api-key", header: $header, value: $value}}}
+        }'
+    }
+
+    log "LLM provider $id"
+    PROVIDER_UUID=$(provider_uuid "$id")
+    if [ -z "$PROVIDER_UUID" ]; then
+        $CURL -f -X POST -H "Authorization: Bearer $TOK" -H "Content-Type: application/json" \
+            "$API/api/v1/orgs/default/llm-providers" -d "$(provider_body)" >/dev/null
+        PROVIDER_UUID=$(provider_uuid "$id")
+    fi
+    [ -n "$PROVIDER_UUID" ] || { echo "provider creation failed for $id" >&2; exit 1; }
+
+    # PUT the full object every run so a rotated key or changed config is reapplied.
+    $CURL -f -X PUT -H "Authorization: Bearer $TOK" -H "Content-Type: application/json" \
+        "$API/api/v1/orgs/default/llm-providers/$PROVIDER_UUID" -d "$(provider_body)" >/dev/null
+
+    # Deploy body must be exactly these fields; the decoder rejects extras.
     $CURL -f -X POST -H "Authorization: Bearer $TOK" -H "Content-Type: application/json" \
-        "$API/api/v1/orgs/default/llm-providers" -d "$(provider_body)" >/dev/null
-    PROVIDER_UUID=$(provider_uuid)
-fi
-[ -n "$PROVIDER_UUID" ] || { echo "provider creation failed" >&2; exit 1; }
+        "$API/api/v1/orgs/default/llm-providers/$PROVIDER_UUID/deployments" \
+        -d "$(jq -n --arg gw "$GW_ID" --arg name "init-$(date +%s)" \
+            '{name: $name, base: "current", gatewayId: $gw}')" >/dev/null
+    log "Provider $id deployed"
 
-# PUT the full object every run so a rotated key or changed config is reapplied.
-$CURL -f -X PUT -H "Authorization: Bearer $TOK" -H "Content-Type: application/json" \
-    "$API/api/v1/orgs/default/llm-providers/$PROVIDER_UUID" -d "$(provider_body)" >/dev/null
+    # Publish to the catalog (artifacts.in_catalog); without it the console view stays empty.
+    $CURL -f -X PUT -H "Authorization: Bearer $TOK" -H "Content-Type: application/json" \
+        "$API/api/v1/orgs/default/llm-providers/$PROVIDER_UUID/catalog" \
+        -d '{"inCatalog":true}' >/dev/null
+    log "Provider $id published to catalog"
 
-# Deploy body must be exactly these fields; the decoder rejects extras.
-$CURL -f -X POST -H "Authorization: Bearer $TOK" -H "Content-Type: application/json" \
-    "$API/api/v1/orgs/default/llm-providers/$PROVIDER_UUID/deployments" \
-    -d "$(jq -n --arg gw "$GW_ID" --arg name "init-$(date +%s)" \
-        '{name: $name, base: "current", gatewayId: $gw}')" >/dev/null
-log "Provider deployed"
-
-# Publish to the catalog (artifacts.in_catalog); without it the console view stays empty.
-$CURL -f -X PUT -H "Authorization: Bearer $TOK" -H "Content-Type: application/json" \
-    "$API/api/v1/orgs/default/llm-providers/$PROVIDER_UUID/catalog" \
-    -d '{"inCatalog":true}' >/dev/null
-log "Provider published to catalog"
+    if key_valid "$key_file" "$id"; then
+        log "Existing gateway key for $id still accepted; keeping it"
+    else
+        log "Minting gateway API key for $id"
+        GW_KEY=$($CURL -f -X POST -H "Authorization: Bearer $TOK" -H "Content-Type: application/json" \
+            "$API/api/v1/orgs/default/llm-providers/$PROVIDER_UUID/api-keys" \
+            -d "$(jq -n --arg gw "$GW_ID" --arg name "$id-$(date +%s)" \
+                '{name: $name, gatewayId: $gw}')" | jq -r '.apiKey // empty')
+        [ -n "$GW_KEY" ] || { echo "gateway key minting failed for $id" >&2; exit 1; }
+        umask 077
+        printf '%s' "$GW_KEY" > "$key_file"
+        log "Gateway key written to $key_file"
+    fi
+}
 
 key_valid() {
-    [ -s "$KEY_FILE" ] || return 1
-    code=$($CURL -o /dev/null -w '%{http_code}' -H "API-Key: $(cat "$KEY_FILE")" \
-        "$GATEWAY/careloop-openai/models" || echo 000)
+    key_file=$1 id=$2
+    [ -s "$key_file" ] || return 1
+    code=$($CURL -o /dev/null -w '%{http_code}' -H "API-Key: $(cat "$key_file")" \
+        "$GATEWAY/$id/models" || echo 000)
     case "$code" in
         401|403|000) return 1 ;;
         *) return 0 ;;
     esac
 }
 
-if key_valid; then
-    log "Existing gateway key still accepted; keeping it"
+if [ -n "${OPENAI_API_KEY:-}" ]; then
+    register_provider careloop-openai "Care Loop OpenAI" openai \
+        "https://api.openai.com/v1" "Authorization" "Bearer $OPENAI_API_KEY"
 else
-    log "Minting gateway API key"
-    GW_KEY=$($CURL -f -X POST -H "Authorization: Bearer $TOK" -H "Content-Type: application/json" \
-        "$API/api/v1/orgs/default/llm-providers/$PROVIDER_UUID/api-keys" \
-        -d "$(jq -n --arg gw "$GW_ID" --arg name "careloop-$(date +%s)" \
-            '{name: $name, gatewayId: $gw}')" | jq -r '.apiKey // empty')
-    [ -n "$GW_KEY" ] || { echo "gateway key minting failed" >&2; exit 1; }
-    umask 077
-    printf '%s' "$GW_KEY" > "$KEY_FILE"
-    log "Gateway key written to $KEY_FILE"
+    log "OPENAI_API_KEY not set; skipping the careloop-openai provider"
+fi
+
+if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
+    register_provider careloop-anthropic "Care Loop Anthropic" anthropic \
+        "https://api.anthropic.com" "x-api-key" "$ANTHROPIC_API_KEY"
+else
+    log "ANTHROPIC_API_KEY not set; skipping the careloop-anthropic provider"
 fi
 
 # Register the external agent so its traces are visible in the console, then
@@ -132,7 +160,7 @@ while [ $i -lt 12 ]; do
 done
 [ -n "$COMPONENT_UID" ] || echo "warning: agent uuid unresolved; traces may not scope to the agent" >&2
 
-cat > /amp-shared/otelcol-config.yaml <<EOF
+cat > "$SHARED_DIR/otelcol-config.yaml" <<EOF
 receivers:
   otlp:
     protocols:
@@ -155,7 +183,7 @@ service:
       processors: [resource/openchoreo]
       exporters: [otlphttp/amp]
 EOF
-chmod 644 /amp-shared/otelcol-config.yaml
-log "Wrote otel-collector config to /amp-shared/otelcol-config.yaml"
+chmod 644 "$SHARED_DIR/otelcol-config.yaml"
+log "Wrote otel-collector config to $SHARED_DIR/otelcol-config.yaml"
 
 log "Registration complete"
