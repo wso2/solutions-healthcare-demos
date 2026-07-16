@@ -3,27 +3,38 @@
 Serves heart-disease risk predictions from Apple Watch / HealthKit signals.
 FastAPI + ONNX Runtime, managed with uv.
 
-The model is trained on the slice of the Kaggle
+The model is a CatBoost classifier trained on the wider clinical slice of the
+Kaggle
 [heart-failure dataset](https://www.kaggle.com/datasets/fedesoriano/heart-failure-prediction)
-(CC0, committed at `training/data/heart.csv`) that a watch + HealthKit profile
-can actually supply, so it can be scored live from watch data. The winning
-pipeline is exported to ONNX with preprocessing baked in; this service loads
-that graph and returns a probability.
+(CC0, committed at `training/data/heart.csv`) via `notebooks/train.ipynb`, and
+exported to ONNX. Its preprocessing (label encoding + scaling) is **not** baked
+into the graph, so the service applies the identical transform from a committed
+`models/preprocessing_nb.json` before scoring, then returns a probability.
+Held-out ROC-AUC is around 0.93.
 
 ## Features
 
-Only watch-available signals are kept; everything clinical is dropped.
+The nb model scores nine features. The service is **reject-incomplete**: all
+nine are required, so an omitted field or an explicit JSON `null` on any of them
+is a `422`. The caller (care-loop-analysis-service) prefills the full set from
+FHIR before scoring. `resting_bp` and `resting_ecg` are still accepted for
+contract compatibility but are not consumed by this model.
 
-| Feature | Request field | Watch source |
-| --- | --- | --- |
-| `Age` | `age` | HealthKit characteristic (date of birth) |
-| `Sex` | `sex` | HealthKit characteristic |
-| `MaxHR` | `max_hr` | derived from the heart-rate sensor |
+| Feature | Request field | Type | Required | Source |
+| --- | --- | --- | --- | --- |
+| `Age` | `age` | number | yes | HealthKit characteristic (date of birth) |
+| `Sex` | `sex` | `M`/`F` | yes | HealthKit characteristic |
+| `MaxHR` | `max_hr` | number | yes | heart-rate sensor |
+| `ChestPainType` | `chest_pain_type` | `TA`/`ATA`/`NAP`/`ASY` | yes | FHIR |
+| `Cholesterol` | `cholesterol` | number (mg/dL) | yes | FHIR lab |
+| `FastingBS` | `fasting_bs` | `0`/`1` | yes | FHIR lab / diabetes condition |
+| `ExerciseAngina` | `exercise_angina` | `Y`/`N` | yes | FHIR |
+| `Oldpeak` | `oldpeak` | number | yes | FHIR prior stress test |
+| `ST_Slope` | `st_slope` | `Up`/`Flat`/`Down` | yes | FHIR prior stress test |
+| `RestingBP` | `resting_bp` | number (mmHg) | no | unused |
+| `RestingECG` | `resting_ecg` | `Normal`/`ST`/`LVH` | no | unused |
 
-Target is `HeartDisease` (binary). With only three features this is a screening
-signal, not a diagnosis: the strongest predictors in the full dataset
-(`ST_Slope`, `ChestPainType`, `Oldpeak`) are exactly the ones a watch cannot
-measure, which sets the ceiling here.
+Target is `HeartDisease` (binary).
 
 ## Routes
 
@@ -37,9 +48,11 @@ Example:
 ```sh
 curl -s http://127.0.0.1:8000/predict \
   -H 'content-type: application/json' \
-  -d '{"age": 60, "max_hr": 140, "sex": "M"}'
+  -d '{"age": 60, "sex": "M", "max_hr": 140, "chest_pain_type": "ATA",
+       "cholesterol": 250, "fasting_bs": 0, "exercise_angina": "N",
+       "oldpeak": 1.5, "st_slope": "Flat"}'
 
-# -> {"probability": ..., "prediction": 0, "threshold": 0.5, "selected_model": "xgboost"}
+# -> {"probability": ..., "prediction": 0, "threshold": 0.5, "selected_model": "catboost"}
 ```
 
 ## Run locally
@@ -50,7 +63,8 @@ uv run fastapi dev src/app/main.py
 ```
 
 API docs at `http://127.0.0.1:8000/docs`. The service loads
-`models/heart_watch_model.onnx` (committed) at startup.
+`models/heart_watch_model_nb.onnx` and `models/preprocessing_nb.json` (both
+committed) at startup.
 
 ## Run with Docker
 
@@ -68,6 +82,23 @@ make down      # stop it
 [heart-failure dataset](https://www.kaggle.com/datasets/fedesoriano/heart-failure-prediction),
 committed here (CC0, so no licensing issue redistributing it) for reproducibility.
 
+The served nb model comes from `notebooks/train.ipynb`, which trains the
+CatBoost classifier on the wider clinical feature set and writes
+`models/heart_watch_model_nb.{joblib,onnx}` and `models/metrics_nb.json`. That
+notebook fits its preprocessing in memory, so the serving transform is
+regenerated from the committed data with:
+
+```sh
+make export-preprocessing   # reproduce preprocessing -> models/preprocessing_nb.json
+```
+
+`training/export_preprocessing_nb.py` replays the notebook's imputation, label
+encoding and scaling on `heart.csv`, writes `models/preprocessing_nb.json`, and
+asserts it reproduces the notebook matrix and that the ONNX graph matches the
+joblib pipeline before saving.
+
+The earlier watch-only pipeline is still here for reference:
+
 ```sh
 make train     # sweep models, evaluate, export ONNX + metrics
 ```
@@ -76,7 +107,7 @@ make train     # sweep models, evaluate, export ONNX + metrics
 regression, random/extra trees, gradient/hist boosting, SVM, KNN, XGBoost,
 LightGBM, CatBoost), picks the best by cross-validated AUC, evaluates on a
 held-out test split, and writes `models/heart_watch_model.{joblib,onnx}` with
-`models/metrics.json`.
+`models/metrics.json`. The service no longer serves this 3-feature model.
 
 ## Develop
 
@@ -90,10 +121,11 @@ make test      # pytest
 
 ## Notes / current gaps
 
-- This is a very basic first cut; a more thorough version comes later.
-- The service loads the exported ONNX graph, not the joblib pipeline. For the
-  current XGBoost export the ONNX/sklearn probability parity is ~0.14 max abs
-  diff (see `models/metrics.json`), so probabilities approximate the joblib
-  model rather than matching it exactly.
-- Held-out ROC-AUC is around 0.80; treat the output as a screening signal.
+- The service loads the exported ONNX graph plus `preprocessing_nb.json`, not the
+  joblib pipeline. ONNX/joblib probability parity is ~1e-7 max abs diff on a
+  sample (checked by `make export-preprocessing`), so scores match the joblib
+  model in practice.
+- Held-out ROC-AUC is around 0.93; treat the output as a screening signal.
+- Reject-incomplete: all nine model features are required, so the caller must
+  supply a complete set (prefilled from FHIR) or the request is a `422`.
 - The decision threshold defaults to 0.5 (`HEART_RISK_THRESHOLD` to override).

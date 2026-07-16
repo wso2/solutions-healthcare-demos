@@ -16,8 +16,9 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "care-loop-heart-risk-service"
-    model_path: Path = Path("models/heart_watch_model.onnx")
-    metrics_path: Path = Path("models/metrics.json")
+    model_path: Path = Path("models/heart_watch_model_nb.onnx")
+    metrics_path: Path = Path("models/metrics_nb.json")
+    preprocessing_path: Path = Path("models/preprocessing_nb.json")
     threshold: float = 0.5
 
 

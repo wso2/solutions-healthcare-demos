@@ -27,7 +27,10 @@ Earlier stages: [v1](assets/architecture-diagram-v1.png),
   pushed questionnaire and posts the conversation transcript to a callback URL
   (port 3000). Chat sessions are created by care-loop-collector-service and
   listed on the home page; there's no longer a button to trigger generation
-  from this app.
+  from this app. Emergency check-ins run in a **live turn-by-turn mode**: each
+  patient message is POSTed to the collector's `/turns`, which returns the next
+  question (or a closing message) decided per-answer; scripted one-shot
+  questionnaires still work unchanged.
 - ehr-fhir-server — WSO2 FHIR R4 server (`wso2/fhir-server`, Go + Postgres)
   standing in for the clinic's EHR/EMR FHIR API. Port 9090 (`/fhir/r4`). Has no
   auth of its own; fine for this local demo, put a gateway/auth proxy in front
@@ -43,41 +46,64 @@ Earlier stages: [v1](assets/architecture-diagram-v1.png),
   front of care-loop-fhir-server, exposing the FHIR API as MCP tools on port
   8001. Reaches it through care-loop-fhir-server-readonly-proxy (nginx), which
   403s anything but GET/HEAD, so the bridge can only read.
-- [care-loop-ai-service](care-loop-ai-service/) — standalone Ballerina agent
-  (port 8003). `POST /questionnaires` with a `patientId` runs an `ai:Agent`
-  wired to fhir-mcp-server (via `ai:McpToolKit`), which calls the MCP `search`
-  tool itself to pull that patient's recent Observations, then drafts a FHIR
-  `Questionnaire` (questions only, no answers) targeted at the vitals trend.
-  Not wired into the rest of the loop yet — this is a standalone component
-  for now. In compose it runs its LLM calls through the WSO2 Agent Manager AI
-  gateway with tracing on (reaching fhir-mcp-server directly for MCP), via the
-  tracked `Config.compose.toml` plus `BAL_CONFIG_VAR_*` env vars (see the WSO2
-  Agent Manager section below); for a standalone run, copy `Config.toml.example`
-  to a gitignored `Config.toml`.
+- [care-loop-knowledge-service](care-loop-knowledge-service/) — FastAPI/FastMCP
+  RAG server (port 8006) exposing a curated HFrEF knowledge base (open-access
+  guidelines + patient-education corpus, embedded Chroma) as MCP tools:
+  `search_guidelines`, `search_patient_education`, `get_feature_definition`.
+  Speaks streamable-HTTP at `/mcp`, matching fhir-mcp-server so the Ballerina
+  `ai:McpToolKit` consumes it. Build the vector store with `make ingest`.
+- pubmed-mcp-server — third-party live PubMed MCP
+  (`ghcr.io/cyanheads/pubmed-mcp-server`, port 8007) giving the risk agent
+  recent-literature lookups over NCBI E-utilities.
+- [care-loop-ai-service](care-loop-ai-service/) — Ballerina agent service
+  (port 8003) using either OpenAI (`GPT-4.1` / `GPT-4.1-nano`) or Anthropic
+  (`Claude Sonnet 4.5` / `Claude Haiku 4.5`) via `ai:McpToolKit`s for FHIR, the
+  knowledge base, and PubMed. Endpoints: `POST /questionnaires`
+  drafts a FHIR `Questionnaire`; `POST /conversation/turn` drives the live
+  adaptive check-in one turn at a time (extracting feature slots from each
+  answer and choosing the next question under a hard question budget);
+  `POST /risk-assessment` scores risk, grounding thresholds in the knowledge
+  base and citing guideline sections; `POST /task-description` narrates the
+  Task. The `openai` provider always routes through the WSO2 Agent Manager AI
+  gateway (`AmpModelProvider`; see the WSO2 Agent Manager section below);
+  `anthropic` always calls the Anthropic API directly; `anthropic-amp` routes
+  Anthropic through the AMP gateway instead (`AmpAnthropicModelProvider`), since
+  AMP has a native `anthropic` provider template alongside its OpenAI-shaped
+  one. Needs a `Config.toml` (copy `Config.toml.example`); gitignored, never
+  commit it.
+- [care-loop-dashboard](care-loop-dashboard/) — Next.js internal ops view of
+  the demo pipeline (port 3003), backed by its own Drizzle-managed database.
+  `POST /api/events` receives fire-and-forget milestone notifications (vitals
+  ingested, ML/agentic scoring, Task created, etc.) from the Ballerina services
+  via `care-loop-common`'s `notifyDashboard`, and surfaces them as a live event
+  feed alongside a per-patient history and home summary.
 
 - [care-loop-collector-service](care-loop-collector-service/) — standalone
   Ballerina bridge (port 8004). `POST /vitals` saves an incoming Observation
   bundle to care-loop-fhir-server and notifies care-loop-analysis-service on
   `/vitals-ready`. `POST /patients/{patientId}/generate` asks
-  care-loop-ai-service to draft a Questionnaire for that patient, converts it
-  into whatsapp-simulator's chat shape, and opens a chat session there.
-  `POST /transcripts` is the callback each session posts its completed
-  answers to; it builds a FHIR `QuestionnaireResponse` from them, saves it to
-  care-loop-fhir-server, and, for emergency sessions, also forwards the
-  flattened answers to care-loop-analysis-service on `/emergency-answers`.
-  Needs a `Config.toml` (copy `Config.toml.example`); gitignored.
+  care-loop-ai-service for the opening question, opens a live chat session, and
+  drives it: `POST /turns` relays each patient message to the interview agent,
+  merges the extracted feature slots (never overwriting a FHIR-prefilled
+  value), enforces the question budget, and finalizes on completion —
+  persisting the `Questionnaire` + `QuestionnaireResponse` and forwarding
+  answers plus the enriched feature set to care-loop-analysis-service.
+  `POST /patients/{id}/conversation/claim` hands a still-pending session to the
+  analysis timeout watcher. `POST /transcripts` remains the scripted-session
+  callback. Needs a `Config.toml` (copy `Config.toml.example`); gitignored.
 - [care-loop-analysis-service](care-loop-analysis-service/) — standalone
   Ballerina service (port 8005) that turns vitals and questionnaire answers
-  into a risk decision. `POST /vitals-ready` pulls the patient's recent
-  vitals and demographics, calls care-loop-heart-risk-service for an ML
+  into a risk decision. `POST /vitals-ready` pulls the patient's recent vitals
+  and demographics, **prefills the full 11-feature set from FHIR** (labs, prior
+  ECG/stress-test data), calls care-loop-heart-risk-service for an ML
   probability, and either escalates straight away or asks
-  care-loop-collector-service to generate a follow-up questionnaire, with a
-  timeout fail-safe if it's never answered. `POST /emergency-answers` runs
-  the answers plus the ML probability through care-loop-ai-service's
-  `/risk-assessment` agent and escalates if either signal crosses its
-  threshold, writing a `RiskAssessment` and, on escalation, a `Task` to
-  ehr-fhir-server. Needs a `Config.toml` (copy `Config.toml.example`);
-  gitignored.
+  care-loop-collector-service to run a live check-in, with a timeout fail-safe
+  that claims partial answers if it's never completed. `POST /emergency-answers`
+  **re-scores /predict with the chat-enriched features** (so reassuring answers
+  can de-escalate), runs the answers through care-loop-ai-service's
+  `/risk-assessment`, and escalates if both signals cross threshold, writing a
+  `RiskAssessment` and, on escalation, a `Task` to ehr-fhir-server. Needs a
+  `Config.toml` (copy `Config.toml.example`); gitignored.
 
 - [front-desk-dashboard](front-desk-dashboard/) — Next.js clinician-facing UI
   (port 3002). `GET /api/tasks` searches ehr-fhir-server for `Task?status=
@@ -116,16 +142,30 @@ front-desk-dashboard's `/api/tasks` route only logs failures, via a plain
 ## WSO2 Agent Manager
 
 `docker compose up` brings up WSO2 Agent Manager (AMP v0.18.0) as the `amp`
-service, a docker-in-docker quick-start cluster whose state persists across
-restarts. Set `OPENAI_API_KEY` in a gitignored `hl7-ai-competition/.env`; the
-`amp-init` one-shot service then registers the `careloop-openai` LLM provider on
-the AI gateway and publishes it to the catalog, mints a gateway API key into a
-shared volume, registers the `careloop-ai-service` external agent, and generates
-the otel-collector config with the agent's OpenChoreo identity so traces scope to
-the agent in the console. care-loop-ai-service routes its LLM calls through
-`http://amp:22893/careloop-openai` (gateway key sent as an `API-Key` header) and
-reads FHIR directly from fhir-mcp-server; its spans go OTLP/gRPC to
-`otel-collector`, which forwards them to AMP's otel ingest.
+service (plus `amp-init`, `otel-collector`, `amp-thunder-fwd`, `amp-obs-fwd`), a
+docker-in-docker quick-start cluster whose state persists across restarts and
+whose own healthcheck has a 45-minute start_period. **care-loop-ai-service is
+not routed through it by default** in this compose file — it boots directly
+against Anthropic via the gitignored `Config.toml`, so `make up` doesn't
+depend on AMP finishing its bootstrap.
+
+To opt in instead, set `OPENAI_API_KEY` and/or `ANTHROPIC_API_KEY` in a
+gitignored `hl7-ai-competition/.env` (at least one is required); `amp-init`
+registers an LLM provider per key present (`careloop-openai` and/or
+`careloop-anthropic`), deploys and publishes each to the catalog, and mints a
+gateway key per provider into the shared `amp-shared` volume
+(`openai-gateway.key` / `anthropic-gateway.key`). Then point
+care-loop-ai-service's `Config.toml` at the gateway:
+- `openai`: `openAiServiceUrl = "http://amp:22893/careloop-openai"`,
+  `openAiApiKey` = the contents of `openai-gateway.key` (see `AmpModelProvider`
+  in `care-loop-ai-service/service.bal`).
+- `anthropic-amp`: `anthropicServiceUrl = "http://amp:22893/careloop-anthropic"`
+  (no `/v1` suffix), `anthropicApiKey` = the contents of
+  `anthropic-gateway.key` (see `AmpAnthropicModelProvider` in
+  `care-loop-ai-service/amp_anthropic_model_provider.bal`).
+
+`modelProvider = "anthropic"` always calls the Anthropic API directly and never
+touches AMP.
 
 To use the console at http://localhost:13000 (admin/admin), add
 `127.0.0.1 thunder.amp.localhost` to `/etc/hosts` (the login redirect needs it).

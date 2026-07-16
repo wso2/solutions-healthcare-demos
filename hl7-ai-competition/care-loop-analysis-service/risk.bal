@@ -8,6 +8,13 @@ import ballerinax/health.clients.fhir;
 import ballerinax/health.fhir.r4.international401;
 
 isolated function runVitalsReadyCycle(string patientId) {
+    // An emergency questionnaire is already in flight for this patient: skip so the demo's short
+    // vitals cadence doesn't re-escalate every cycle and spawn duplicate chat sessions.
+    if getPendingCase(patientId) is PendingCase {
+        log:printInfo("vitals-ready: skipping, an emergency questionnaire is already pending", patientId = patientId);
+        return;
+    }
+
     fhir:FHIRResponse|fhir:FHIRError patientResponse = fhirConnector->getById("Patient", patientId);
     if patientResponse is fhir:FHIRError {
         log:printError("vitals-ready: failed to fetch patient", patientId = patientId, 'error = patientResponse);
@@ -56,7 +63,10 @@ isolated function runVitalsReadyCycle(string patientId) {
         return;
     }
 
-    HeartRiskRequest heartRiskRequest = {age: <float>age, max_hr: maxHr.value, sex};
+    // Prefill everything the record already knows before scoring, so even the escalation gate uses
+    // the full feature set and the follow-up chat only has to ask for the genuine gaps.
+    FeatureSlots slots = prefillFeatures(patientId, <float>age, sex, maxHr.value, now);
+    HeartRiskRequest heartRiskRequest = toHeartRiskRequest(slots);
     HeartRiskResponse|http:ClientError heartRiskResponse = heartRiskClient->post("/predict", heartRiskRequest, targetType = HeartRiskResponse);
     if heartRiskResponse is http:ClientError {
         log:printError("vitals-ready: heart-risk-service call failed", patientId = patientId, 'error = heartRiskResponse);
@@ -85,11 +95,11 @@ isolated function runVitalsReadyCycle(string patientId) {
             "ML probability " + heartRiskResponse.probability.toString() + " crossed threshold " + mlEscalationThreshold.toString(),
             {probability: heartRiskResponse.probability.toString(), threshold: mlEscalationThreshold.toString()});
     PatientDisplay display = patientDisplay(patient, patientId, age, sex);
-    putPendingCase(patientId, {heartRisk: heartRiskResponse, observationRefs, display});
+    putPendingCase(patientId, {heartRisk: heartRiskResponse, observationRefs, display, slots});
 
     http:Response|http:ClientError generateResult = collectorClient->post(
             "/patients/" + patientId + "/generate",
-            {emergencyContext: {mlProbability: heartRiskResponse.probability}});
+            {emergencyContext: {mlProbability: heartRiskResponse.probability, slots}});
     if generateResult is http:ClientError {
         log:printError("vitals-ready: failed to start emergency questionnaire", patientId = patientId, 'error = generateResult);
     }
@@ -103,10 +113,26 @@ isolated function runTimeoutWatcher(string patientId, float mlProbability) {
     if pendingCase is () {
         return;
     }
-    log:printWarn("emergency questionnaire timed out with no patient response, fail-safe escalating on ML probability alone",
-            patientId = patientId, mlProbability = mlProbability);
     resolvePendingCase(patientId);
 
+    // Try to salvage whatever the patient answered before the timeout: the collector hands over the
+    // partial slots + answers and finalizes its live session so the two paths can't double up.
+    ClaimResponse|http:ClientError claim = collectorClient->post(
+            "/patients/" + patientId + "/conversation/claim", {}, targetType = ClaimResponse);
+    if claim is ClaimResponse && claim.found {
+        log:printWarn("emergency questionnaire timed out; running enriched assessment on partial answers",
+                patientId = patientId);
+        EmergencyAnswersRequest partialRequest = {
+            patientId,
+            answers: claim.answers,
+            slots: claim.slots ?: pendingCase.slots
+        };
+        runEmergencyAnswersCycle(partialRequest, pendingCase, timedOut = true);
+        return;
+    }
+
+    log:printWarn("emergency questionnaire timed out with no answers, fail-safe escalating on ML probability alone",
+            patientId = patientId, mlProbability = mlProbability);
     HeartRiskResponse timeoutHeartRisk = {probability: mlProbability, prediction: 1, threshold: mlEscalationThreshold, selected_model: "unavailable - questionnaire timed out"};
     international401:RiskAssessment riskAssessment = buildMlRiskAssessment(patientId, pendingCase.observationRefs, timeoutHeartRisk);
     fhir:FHIRResponse|fhir:FHIRError raSaveResult = fhirConnector->create(riskAssessment.toJson());
@@ -128,21 +154,46 @@ isolated function runTimeoutWatcher(string patientId, float mlProbability) {
     });
 }
 
-# Runs in the background: /risk-assessment's multi-tool-call round-trips were blowing past whatsapp-simulator's request timeout when run synchronously.
-isolated function runEmergencyAnswersCycle(EmergencyAnswersRequest request, PendingCase pendingCase) {
+# Runs in the background: /risk-assessment's multi-tool-call round-trips were blowing past
+# whatsapp-simulator's request timeout when run synchronously. Re-scores /predict with the
+# chat-enriched feature set first, so reassuring answers can lower the probability (and abnormal
+# ones raise it) before the escalation decision.
+# + request - Emergency answers request containing patient answers and slots
+# + pendingCase - The current pending emergency questionnaire state, including prior vitals readings, display details, and feature slots.
+# + timedOut - Whether the patient answered on time or not
+isolated function runEmergencyAnswersCycle(EmergencyAnswersRequest request, PendingCase pendingCase, boolean timedOut = false) {
+    FeatureSlots slots = request.slots ?: pendingCase.slots;
+    HeartRiskResponse effectiveRisk = pendingCase.heartRisk;
+    HeartRiskResponse|http:ClientError enriched = heartRiskClient->post("/predict", toHeartRiskRequest(slots), targetType = HeartRiskResponse);
+    if enriched is HeartRiskResponse {
+        effectiveRisk = enriched;
+    } else {
+        log:printWarn("emergency-answers: enriched /predict failed, using initial probability",
+                patientId = request.patientId, 'error = enriched);
+    }
+
     AiRiskAssessmentRequest aiRequest = {
         patientId: request.patientId,
-        mlProbability: pendingCase.heartRisk.probability,
-        answers: request.answers
+        mlProbability: effectiveRisk.probability,
+        answers: request.answers,
+        slots
     };
     AiRiskAssessmentResponse|http:ClientError aiResponse = aiClient->post("/risk-assessment", aiRequest, targetType = AiRiskAssessmentResponse);
+    if aiResponse is http:ClientError {
+        // One retry: the agentic loop is nondeterministic and a single malformed answer or
+        // exceeded iteration cap otherwise kills the whole run with no Task and no dashboard trace.
+        log:printWarn("emergency-answers: risk-assessment call failed, retrying once",
+                patientId = request.patientId, 'error = aiResponse);
+        aiResponse = aiClient->post("/risk-assessment", aiRequest, targetType = AiRiskAssessmentResponse);
+    }
     if aiResponse is http:ClientError {
         log:printError("emergency-answers: risk-assessment call failed", patientId = request.patientId, 'error = aiResponse);
         return;
     }
 
+    string mlContext = timedOut ? "post-questionnaire features (questionnaire timed out; partial answers used)" : "post-questionnaire features";
     international401:RiskAssessment mlRiskAssessment = buildMlRiskAssessment(
-            request.patientId, pendingCase.observationRefs, pendingCase.heartRisk);
+            request.patientId, pendingCase.observationRefs, effectiveRisk, mlContext);
     fhir:FHIRResponse|fhir:FHIRError mlSaveResult = fhirConnector->create(mlRiskAssessment.toJson());
     string? mlRiskAssessmentId = mlSaveResult is fhir:FHIRResponse ? extractFhirId(mlSaveResult) : ();
     if mlSaveResult is fhir:FHIRError {
@@ -155,8 +206,10 @@ isolated function runEmergencyAnswersCycle(EmergencyAnswersRequest request, Pend
     if agenticSaveResult is fhir:FHIRError {
         log:printError("emergency-answers: failed to save agentic RiskAssessment", patientId = request.patientId, 'error = agenticSaveResult);
     }
-    // escalated mirrors the guard below, computed server-side so the dashboard never re-derives threshold math.
-    boolean escalated = pendingCase.heartRisk.probability >= mlEscalationThreshold && aiResponse.probability >= agenticEscalationThreshold;
+    // escalated mirrors the guard below, computed server-side so the dashboard never re-derives threshold
+    // math. Uses effectiveRisk (the chat-enriched re-score), not the original pendingCase.heartRisk, so a
+    // reassuring answer that lowers the probability below threshold is reflected here too.
+    boolean escalated = effectiveRisk.probability >= mlEscalationThreshold && aiResponse.probability >= agenticEscalationThreshold;
     future<()> _ = start notifyDashboard(request.patientId, common:AGENTIC_RISK_ASSESSMENT_COMPLETE,
             aiResponse.risk + " risk, probability " + aiResponse.probability.toString(), {
         risk: aiResponse.risk,
@@ -171,7 +224,7 @@ isolated function runEmergencyAnswersCycle(EmergencyAnswersRequest request, Pend
 
     TaskDescriptionRequest descriptionRequest = {
         patientId: request.patientId,
-        mlProbability: pendingCase.heartRisk.probability,
+        mlProbability: effectiveRisk.probability,
         answers: request.answers,
         display: pendingCase.display,
         agentic: aiResponse
@@ -184,7 +237,7 @@ isolated function runEmergencyAnswersCycle(EmergencyAnswersRequest request, Pend
     }
 
     international401:Task task = buildEscalationTask(
-            request.patientId, pendingCase.heartRisk.probability, aiResponse, pendingCase.display,
+            request.patientId, effectiveRisk.probability, aiResponse, pendingCase.display,
             descriptionResponse.description, mlRiskAssessmentId, agenticRiskAssessmentId,
             pendingCase.observationRefs, request.questionnaireResponseId);
     fhir:FHIRResponse|fhir:FHIRError taskSaveResult = ehrFhirConnector->create(task.toJson());

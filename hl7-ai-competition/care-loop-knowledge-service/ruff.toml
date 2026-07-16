@@ -1,0 +1,111 @@
+line-length = 120
+
+target-version = "py313"
+
+exclude = [
+    ".bzr",
+    ".direnv",
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".nox",
+    ".pants.d",
+    ".pytype",
+    ".ruff_cache",
+    ".svn",
+    ".tox",
+    ".venv",
+    "__pypackages__",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+    "node_modules",
+    "venv",
+    ".serverless",
+    ".aws-sam",
+    "cdk.out",
+    "notebooks",
+]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+docstring-code-format = true
+
+[lint]
+select = ["ALL"]
+
+ignore = [
+    "DJ",
+    "EXE",
+    "T10",
+    "S",
+    "D100",
+    "D101",
+    "D102",
+    "D103",
+    "D104",
+    "D401",
+    "D205",
+    "D212",
+    "E402",
+    "TRY003",
+    "TD002",
+    "TD003",
+    "FIX002",
+    "RET504",
+    "PGH004",
+    "INP001",
+    "COM812",
+    "TRY",
+    "ANN401",
+    "G004",
+    # Return-type annotations on MCP tools and pydantic models are consumed at runtime (FastMCP
+    # schema generation), so they must stay real imports, not type-checking-only.
+    "TC001",
+    "TC002",
+    "TC003",
+]
+
+fixable = ["ALL"]
+unfixable = []
+
+[lint.isort]
+known-first-party = ["app"]
+
+[lint.mccabe]
+max-complexity = 10
+
+[lint.pydocstyle]
+convention = "google"
+
+[lint.per-file-ignores]
+"__init__.py" = [
+    "F401",
+    "D104",
+]
+
+"tests/**/*.py" = [
+    "S101",
+    "D10",
+    "ANN",
+]
+
+# Ingestion is a research/CLI script: prints, big fetch/chunk functions, lazy heavy imports.
+"scripts/**/*.py" = [
+    "T201",
+    "N803",
+    "N806",
+    "PLR2004",
+    "PLR0912",
+    "PLR0915",
+    "C901",
+    "PERF203",
+    "PLC0415",
+    "EM101",
+    "EM102",
+]

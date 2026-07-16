@@ -1,22 +1,23 @@
-# Standalone-run config (compose uses Config.compose.toml + BAL_CONFIG_VAR_* env).
-fhirMcpUrl = "http://fhir-mcp-server:8000/mcp"
-dashboardEventsUrl = "http://localhost:3003"
+fhirMcpUrl = "http://fhir-mcp-server:8000/mcp/"
+knowledgeMcpUrl = "http://care-loop-knowledge-service:8000/mcp"
+pubmedMcpUrl = "http://pubmed-mcp-server:3010/mcp"
 listenPort = 8003
 
-# openAiServiceUrl = AMP gateway invoke URL; openAiApiKey = gateway API key.
-openAiServiceUrl = "http://localhost:22893/careloop-openai"
-openAiApiKey = "your-amp-gateway-key"
+# Choose "openai" (AMP gateway only), "anthropic" (direct), or "anthropic-amp" (AMP gateway).
+modelProvider = "openai"
 
-# nanoModel = "gpt-4.1-nano"
-# fullModel = "gpt-4.1"
+# openAiServiceUrl/openAiApiKey default to direct OpenAI. To route through the AMP gateway instead,
+# set openAiServiceUrl to the AMP invoke URL (e.g. "http://amp:22893/careloop-openai") and
+# openAiApiKey to the AMP gateway key; nanoModel/fullModel then select the underlying OpenAI model.
+openAiApiKey = "your-openai-api-key"
+openAiServiceUrl = "https://api.openai.com/v1"
+nanoModel = "gpt-4.1-nano"
+fullModel = "gpt-4.1"
 
-# Tracing to AMP (off unless uncommented).
-# [ballerina.observe]
-# tracingEnabled = true
-# tracingProvider = "jaeger"
-#
-# [ballerinax.jaeger]
-# agentHostname = "otel-collector"
-# agentPort = 4317
-# samplerType = "const"
-# samplerParam = 1.0
+# anthropicServiceUrl/anthropicApiKey are shared by "anthropic" and "anthropic-amp": point them at
+# the real Anthropic API and your Anthropic key for "anthropic", or at the AMP gateway (e.g.
+# "http://amp:22893/careloop-anthropic", no "/v1" suffix) and the AMP gateway key for "anthropic-amp".
+anthropicApiKey = "your-anthropic-api-key"
+anthropicServiceUrl = "https://api.anthropic.com/v1"
+
+dashboardEventsUrl = "http://care-loop-dashboard:3003"

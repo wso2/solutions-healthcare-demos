@@ -2,7 +2,7 @@ COMPOSE := docker compose
 
 .DEFAULT_GOAL := help
 
-.PHONY: help build up watch down ps clean seed trigger-vitals
+.PHONY: help build build-serial up up-serial watch down ps clean seed trigger-vitals
 
 help: ## List available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) \
@@ -11,8 +11,16 @@ help: ## List available targets
 build: ## Build all stack images
 	$(COMPOSE) build
 
+build-serial: ## Build stack images one at a time (use on resource-limited Docker where parallel builds time out)
+	bash scripts/build.sh
+
 up: ## Build and start the stack, then seed demo data
 	$(COMPOSE) up -d --build
+	$(MAKE) seed
+
+up-serial: ## Like `up`, but build images serially first (use when `make up` fails pulling deps, e.g. Docker Desktop on macOS)
+	$(MAKE) build-serial
+	$(COMPOSE) up -d
 	$(MAKE) seed
 
 seed: ## Load demo patient data into apple-healthkit-simulator and ehr-fhir-server, then sync it into care-loop-fhir-server

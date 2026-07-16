@@ -119,7 +119,12 @@ function randomInRange({ min, max }: Range): number {
   return Math.round((min + Math.random() * (max - min)) * 10) / 10;
 }
 
-async function seedHourlyVitals(patient: HealthkitPatient, profile: ProfileRanges, hourStart: Date): Promise<void> {
+async function seedHourlyVitals(
+  patient: HealthkitPatient,
+  profile: ProfileRanges,
+  hourStart: Date,
+  hasBpCuff: boolean,
+): Promise<void> {
   const hourEnd = new Date(hourStart.getTime() + 60 * 60 * 1000);
   const isoStart = hourStart.toISOString();
 
@@ -152,6 +157,12 @@ async function seedHourlyVitals(patient: HealthkitPatient, profile: ProfileRange
       end_date: hourEnd.toISOString(),
     },
   ]);
+
+  // A patient without a home blood-pressure cuff never streams BP, so RestingBP stays missing and
+  // the check-in chat asks them for a recent home reading instead.
+  if (!hasBpCuff) {
+    return;
+  }
 
   const [correlation] = await healthkitPost("/correlations", {
     patient_id: patient.id,
@@ -191,6 +202,7 @@ export async function seedVitalsTimeline(
   futureHours: number,
 ): Promise<void> {
   const profileByMrn = new Map(patients.map((p) => [p.patient.mrn, p.patient.vitals_profile]));
+  const bpCuffByMrn = new Map(patients.map((p) => [p.patient.mrn, p.patient.has_bp_cuff !== false]));
   const now = new Date();
 
   for (const patient of healthkitPatients) {
@@ -199,9 +211,10 @@ export async function seedVitalsTimeline(
       continue;
     }
     const profile = PROFILES[profileName];
+    const hasBpCuff = bpCuffByMrn.get(patient.mrn) ?? true;
     for (let hour = -pastHours; hour <= futureHours; hour++) {
-      await seedHourlyVitals(patient, profile, new Date(now.getTime() + hour * 60 * 60 * 1000));
+      await seedHourlyVitals(patient, profile, new Date(now.getTime() + hour * 60 * 60 * 1000), hasBpCuff);
     }
-    log(`seeded ${pastHours}h past + ${futureHours}h future vitals for ${patient.mrn} (${profileName})`);
+    log(`seeded ${pastHours}h past + ${futureHours}h future vitals for ${patient.mrn} (${profileName}, bpCuff=${hasBpCuff})`);
   }
 }

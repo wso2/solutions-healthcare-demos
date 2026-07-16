@@ -23,6 +23,21 @@ const createBody = z.object({
   ),
   patientId: z.string().optional(),
   patientName: z.string().optional(),
+  live: z
+    .object({
+      turnUrl: z.url().refine(
+        (value) => {
+          try {
+            const { protocol } = new URL(value);
+            return protocol === "http:" || protocol === "https:";
+          } catch {
+            return false;
+          }
+        },
+        { message: "turnUrl must be a valid http(s) URL" },
+      ),
+    })
+    .optional(),
 });
 
 export async function POST(request: Request) {
@@ -35,13 +50,16 @@ export async function POST(request: Request) {
       );
     }
 
-    const { questionnaire, callbackUrl, patientId, patientName } = parsed.data;
+    const { questionnaire, callbackUrl, patientId, patientName, live } =
+      parsed.data;
     const session = createSession(
       questionnaire,
       callbackUrl,
       new Date().toISOString(),
       patientId,
       patientName,
+      live ? "live" : "scripted",
+      live?.turnUrl,
     );
 
     notifyDashboard({
@@ -77,6 +95,7 @@ export async function GET() {
       patientName: session.patientName,
       title: session.questionnaire.title,
       status: session.status,
+      mode: session.mode,
       createdAt: session.createdAt,
       path: `/q/${session.id}`,
     }));

@@ -5,3 +5,4 @@ configurable string collectorPublicUrl = "http://localhost:8004";
 configurable string analysisServiceUrl = "http://localhost:8005";
 configurable string dashboardEventsUrl = "http://localhost:3003";
 configurable int listenPort = 8004;
+configurable int maxQuestionsPerConversation = 5;

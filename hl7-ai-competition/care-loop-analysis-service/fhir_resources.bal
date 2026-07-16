@@ -1,13 +1,17 @@
 import ballerinax/health.fhir.r4;
 import ballerinax/health.fhir.r4.international401;
 
-isolated function buildMlRiskAssessment(string patientId, string[] observationRefs, HeartRiskResponse heartRisk) returns international401:RiskAssessment {
+isolated function buildMlRiskAssessment(string patientId, string[] observationRefs, HeartRiskResponse heartRisk, string context = "") returns international401:RiskAssessment {
     r4:Reference[] basis = observationRefs.map(ref => <r4:Reference>{reference: ref});
+    string methodText = "care-loop-heart-risk-service (" + heartRisk.selected_model + ")";
+    if context != "" {
+        methodText += " - " + context;
+    }
     return {
         status: international401:CODE_STATUS_FINAL,
         subject: {reference: "Patient/" + patientId},
         basis,
-        method: {text: "care-loop-heart-risk-service (" + heartRisk.selected_model + ")"},
+        method: {text: methodText},
         prediction: [{probabilityDecimal: <decimal>heartRisk.probability}]
     };
 }

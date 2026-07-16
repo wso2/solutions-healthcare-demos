@@ -6,12 +6,16 @@ export enum SessionStatus {
   Completed = "completed",
 }
 
+export type SessionMode = "scripted" | "live";
+
 export interface Session {
   id: string;
   questionnaire: Questionnaire;
   callbackUrl: string;
   status: SessionStatus;
   createdAt: string;
+  mode: SessionMode;
+  turnUrl?: string;
   messages?: ChatMessage[];
   completedAt?: string;
   deliveryError?: string;
@@ -27,6 +31,8 @@ export function createSession(
   now: string,
   patientId?: string,
   patientName?: string,
+  mode: SessionMode = "scripted",
+  turnUrl?: string,
 ): Session {
   const session: Session = {
     id: crypto.randomUUID(),
@@ -34,6 +40,8 @@ export function createSession(
     callbackUrl,
     status: SessionStatus.Pending,
     createdAt: now,
+    mode,
+    turnUrl,
     patientId,
     patientName,
   };

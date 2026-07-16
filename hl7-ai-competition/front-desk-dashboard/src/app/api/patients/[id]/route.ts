@@ -5,6 +5,13 @@ import process from "node:process";
 import { Client } from "fhir-kit-client";
 import { NextResponse } from "next/server";
 
+import {
+  formatPatientAddress,
+  formatPatientEmail,
+  formatPatientName,
+  formatPatientPhone,
+} from "@/lib/fhir-patient";
+
 export const runtime = "nodejs";
 
 export interface EhrPatientDetail {
@@ -12,20 +19,20 @@ export interface EhrPatientDetail {
   name: string;
   birthDate: string | undefined;
   gender: string | undefined;
-}
-
-function formatName(patient: FhirPatient): string {
-  const name = patient.name?.[0];
-  if (!name) return "Unknown patient";
-  return [...(name.given ?? []), name.family].filter(Boolean).join(" ");
+  phone: string | undefined;
+  email: string | undefined;
+  address: string | undefined;
 }
 
 function toEhrPatientDetail(patient: FhirPatient): EhrPatientDetail {
   return {
     id: patient.id ?? "",
-    name: formatName(patient),
+    name: formatPatientName(patient),
     birthDate: patient.birthDate,
     gender: patient.gender,
+    phone: formatPatientPhone(patient),
+    email: formatPatientEmail(patient),
+    address: formatPatientAddress(patient),
   };
 }
 

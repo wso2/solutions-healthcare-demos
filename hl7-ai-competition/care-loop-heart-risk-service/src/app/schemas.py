@@ -4,15 +4,34 @@ from pydantic import BaseModel, Field
 
 
 class HeartRiskRequest(BaseModel):
-    """Raw Apple Watch / HealthKit signals the model consumes.
+    """The heart-failure features the model scores.
 
-    These are the only three features the model was trained on, because they are
-    the only ones a watch + HealthKit profile can supply.
+    The nb model consumes nine features and is served reject-incomplete: all nine
+    are required, so an omitted field or an explicit JSON ``null`` on any of them
+    is a 422. The caller (care-loop-analysis-service) prefills the full set from
+    FHIR before scoring. ``resting_bp`` and ``resting_ecg`` remain optional and are
+    accepted but not consumed by this model.
+
+    Categorical spellings match the Kaggle dataset exactly.
     """
 
     age: float = Field(ge=0, le=120, description="Age in years (HealthKit characteristic).")
-    max_hr: float = Field(ge=40, le=240, description="Maximum heart rate in bpm (heart-rate sensor).")
     sex: Literal["M", "F"] = Field(description="Biological sex (HealthKit characteristic).")
+    max_hr: float = Field(ge=40, le=240, description="Maximum heart rate in bpm (heart-rate sensor).")
+    chest_pain_type: Literal["TA", "ATA", "NAP", "ASY"] = Field(
+        description="Chest pain type: TA typical angina, ATA atypical, NAP non-anginal, ASY asymptomatic.",
+    )
+    cholesterol: float = Field(ge=0, le=700, description="Serum cholesterol in mg/dL.")
+    fasting_bs: Literal[0, 1] = Field(description="1 if fasting blood sugar > 120 mg/dL, else 0.")
+    exercise_angina: Literal["Y", "N"] = Field(description="Exercise-induced angina: Y or N.")
+    oldpeak: float = Field(ge=-3, le=7, description="ST depression induced by exercise relative to rest.")
+    st_slope: Literal["Up", "Flat", "Down"] = Field(
+        description="Slope of the peak exercise ST segment: Up, Flat, or Down."
+    )
+    resting_bp: float | None = Field(default=None, ge=0, le=250, description="Resting systolic BP (mmHg); unused.")
+    resting_ecg: Literal["Normal", "ST", "LVH"] | None = Field(
+        default=None, description="Resting ECG (Normal/ST/LVH); unused by this model."
+    )
 
 
 class HeartRiskResponse(BaseModel):

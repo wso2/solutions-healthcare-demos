@@ -14,13 +14,29 @@ interface SessionSummary {
   patientName?: string;
   title: string;
   status: string;
+  mode: "scripted" | "live";
   createdAt: string;
   path: string;
 }
 
+type Busy = "scripted" | "live" | null;
+
+// Live sessions can appear at any moment (the healthkit cron runs on its own ~6 minute
+// schedule), so the list polls rather than loading once.
+const SESSIONS_POLL_MS = 5_000;
+
+// How long to wait, after triggering a vitals cycle, for the real pipeline (vitals -> ML
+// risk -> adaptive agent) to open a new live session before giving up.
+const LIVE_CHECKIN_TIMEOUT_MS = 45_000;
+const LIVE_CHECKIN_POLL_MS = 2_000;
+
+function sleep(ms: number) {
+  return new Promise<void>((resolve) => setTimeout(resolve, ms));
+}
+
 export default function Home() {
   const router = useRouter();
-  const [busy, setBusy] = React.useState(false);
+  const [busy, setBusy] = React.useState<Busy>(null);
   const [error, setError] = React.useState<string | null>(null);
   const [sessions, setSessions] = React.useState<SessionSummary[]>([]);
 
@@ -37,35 +53,90 @@ export default function Home() {
 
   React.useEffect(() => {
     void loadSessions();
+    const interval = setInterval(() => void loadSessions(), SESSIONS_POLL_MS);
+    return () => clearInterval(interval);
   }, [loadSessions]);
 
-  async function launchDemo() {
-    setBusy(true);
+  // Creates a scripted (no-backend) demo chat and returns its path, or null on failure.
+  async function createScriptedSession(): Promise<string | null> {
+    const callbackUrl = new URL(
+      "/api/demo-callback",
+      window.location.origin,
+    ).toString();
+    const res = await ky.post("/api/sessions", {
+      json: { questionnaire: sampleQuestionnaire, callbackUrl },
+      throwHttpErrors: false,
+    });
+    if (!res.ok) {
+      const data = (await res.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      setError(data?.error ?? "Could not create the demo session.");
+      return null;
+    }
+    const data = (await res.json()) as { path: string };
+    return data.path;
+  }
+
+  async function launchScriptedDemo() {
+    setBusy("scripted");
     setError(null);
     try {
-      const res = await ky.post("/api/sessions", {
-        json: {
-          questionnaire: sampleQuestionnaire,
-          callbackUrl: new URL(
-            "/api/demo-callback",
-            window.location.origin,
-          ).toString(),
-        },
-        throwHttpErrors: false,
-      });
-      if (!res.ok) {
-        const data = (await res.json().catch(() => null)) as {
-          error?: string;
-        } | null;
-        setError(data?.error ?? "Could not create the demo session.");
-        return;
-      }
-      const data = (await res.json()) as { path: string };
-      router.push(data.path);
+      const path = await createScriptedSession();
+      if (path) router.push(path);
     } catch {
       setError("Could not create the demo session.");
     } finally {
-      setBusy(false);
+      setBusy(null);
+    }
+  }
+
+  // Forces a fresh vitals-forward cycle and opens whichever new live session the real
+  // pipeline (vitals -> ML risk -> adaptive agent) opens as a result. Never falls back to
+  // the scripted demo - if nobody crosses the risk threshold this cycle, that is reported
+  // plainly rather than silently substituting a canned questionnaire.
+  async function openLiveCheckIn() {
+    setBusy("live");
+    setError(null);
+    try {
+      const before = await ky.get("/api/sessions", { throwHttpErrors: false });
+      const seenLiveIds = new Set<string>();
+      if (before.ok) {
+        const data = (await before.json()) as { sessions: SessionSummary[] };
+        for (const session of data.sessions) {
+          if (session.mode === "live") seenLiveIds.add(session.id);
+        }
+      }
+
+      const triggerRes = await ky.post("/api/trigger-check", {
+        throwHttpErrors: false,
+      });
+      if (!triggerRes.ok) {
+        setError("Could not trigger the vitals check.");
+        return;
+      }
+
+      const deadline = Date.now() + LIVE_CHECKIN_TIMEOUT_MS;
+      while (Date.now() < deadline) {
+        await sleep(LIVE_CHECKIN_POLL_MS);
+        const res = await ky.get("/api/sessions", { throwHttpErrors: false });
+        if (!res.ok) continue;
+        const data = (await res.json()) as { sessions: SessionSummary[] };
+        const fresh = data.sessions.find(
+          (session) => session.mode === "live" && !seenLiveIds.has(session.id),
+        );
+        if (fresh) {
+          router.push(fresh.path);
+          return;
+        }
+      }
+      setError(
+        "No patient crossed the risk threshold this cycle. Try again in a bit.",
+      );
+    } catch {
+      setError("Could not open a live check-in.");
+    } finally {
+      setBusy(null);
     }
   }
 
@@ -74,32 +145,39 @@ export default function Home() {
       <div className="space-y-2">
         <h1 className="text-2xl font-semibold">WhatsApp Simulator</h1>
         <p className="text-muted-foreground">
-          Renders a pushed questionnaire as a chat, collects the replies, and
-          posts the conversation transcript back to the caller&apos;s callback
-          URL.
+          Renders a pushed questionnaire as a chat and collects the replies.
+          Live check-ins are created by the real care-loop pipeline (vitals →
+          ML risk model → adaptive agent) and appear below as soon as the
+          pipeline escalates a patient.
         </p>
       </div>
 
       <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
         <li>
-          An upstream system POSTs{" "}
-          <code className="rounded bg-muted px-1 py-0.5">
-            {"{ questionnaire, callbackUrl }"}
-          </code>{" "}
-          to <code className="rounded bg-muted px-1 py-0.5">/api/sessions</code>
-          .
+          The healthkit vitals cron forwards each patient&apos;s vitals to the
+          collector, which runs automatically every ~6 minutes.
         </li>
-        <li>The patient opens the returned link and answers in chat.</li>
         <li>
-          The conversation transcript is POSTed to the callback URL on End
-          conversation.
+          Analysis-service scores the vitals with the heart-risk ML model; a
+          patient who crosses the risk threshold gets a live check-in here.
+        </li>
+        <li>
+          The patient answers in chat; the agent can also answer general
+          questions. The chat stays open for follow-ups after the check-in.
         </li>
       </ol>
 
       <div className="space-y-2">
-        <div className="flex gap-2">
-          <Button onClick={launchDemo} disabled={busy}>
-            {busy ? "Starting..." : "Launch demo questionnaire"}
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={openLiveCheckIn} disabled={busy !== null}>
+            {busy === "live" ? "Waiting for escalation..." : "Open live check-in"}
+          </Button>
+          <Button
+            variant="outline"
+            onClick={launchScriptedDemo}
+            disabled={busy !== null}
+          >
+            {busy === "scripted" ? "Starting..." : "Launch scripted demo"}
           </Button>
         </div>
         {error && <p className="text-sm text-destructive">{error}</p>}
