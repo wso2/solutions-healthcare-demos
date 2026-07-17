@@ -2,7 +2,9 @@
 
 ## The problem
 
-Heart failure is one of the most common, deadly, and costly chronic conditions in the world, affecting an estimated 64 million people and rising as populations age (Global Public Health Burden of Heart Failure review). The form this platform targets, heart failure with reduced ejection fraction (HFrEF), is the sharp end of it: five-year mortality runs as high as 43 to 75% (Burger et al., European Journal of Heart Failure, 2023), and only about a quarter of patients survive five years after a hospitalisation for it (Heart Failure With Reduced Ejection Fraction: A Review, JAMA, 2020).
+Heart failure is one of the most common, deadly, and costly chronic conditions in the world, affecting an estimated 64 million people and rising as populations age (Global Public Health Burden of Heart Failure review).
+
+The form this platform targets, heart failure with reduced ejection fraction (HFrEF), is the sharp end of it: five-year mortality runs as high as 43 to 75% (Burger et al., European Journal of Heart Failure, 2023), and only about a quarter of patients survive five years after a hospitalisation for it (Heart Failure With Reduced Ejection Fraction: A Review, JAMA, 2020).
 
 The cruel part for patients is that the deterioration that lands them in hospital builds silently for days, often weeks, before they feel anything. The signs they are usually told to watch, like their weight, change late and unreliably, so by the time a patient feels sick enough to call, a problem that could have been handled at home has often become an emergency admission. The result is a costly revolving door: close to one in five heart failure patients is readmitted within 30 days (Khan et al., Circulation: Heart Failure), and roughly a third within a year (Global Comparison of Readmission Rates, JACC, 2023).
 

@@ -1,8 +1,9 @@
 # care-loop-knowledge-service
 
-A FastMCP RAG server that exposes a curated HFrEF (heart failure with reduced ejection fraction) knowledge base as MCP tools for the Care Loop agents. Python 3.13 + the official `mcp` SDK (FastMCP) + embedded Chroma, managed with uv.
+A FastMCP RAG server that exposes a curated HFrEF (heart failure with reduced ejection fraction) knowledge base as MCP tools for the Care Loop agents.
 
-It speaks streamable-HTTP at `/mcp` with the same `json_response` + `stateless_http` configuration as the `wso2/fhir-mcp-server` the stack already consumes, so `care-loop-ai-service`'s Ballerina `ai:McpToolKit` connects to it the same way.
+- Stack: Python 3.13, the official `mcp` SDK (FastMCP), and embedded Chroma, managed with uv.
+- Transport: streamable-HTTP at `/mcp`, using the same `json_response` + `stateless_http` configuration as the `wso2/fhir-mcp-server` the stack already consumes, so `care-loop-ai-service`'s Ballerina `ai:McpToolKit` connects to it the same way.
 
 ## Tools
 
@@ -37,7 +38,15 @@ make ingest    # fetches/snapshots the corpus, embeds it, writes data/chroma/
 EMBED=local make ingest    # uses fastembed (installs the embed-local extra)
 ```
 
-On first run each source is fetched and written to `corpus/snapshot/<id>.json`; commit those snapshots to make ingestion reproducible without re-fetching. The running container needs a query-time embedder that matches the Chroma store. The compose stack defaults `KNOWLEDGE_EMBEDDING_PROVIDER=local` so an Anthropic-backed AI service can run without an OpenAI key. Set `KNOWLEDGE_EMBEDDING_PROVIDER=openai` plus `OPENAI_API_KEY` if the store was built with OpenAI embeddings. Anthropic does not provide a compatible embeddings API for this vector store.
+On first run each source is fetched and written to `corpus/snapshot/<id>.json`; commit those snapshots to make ingestion reproducible without re-fetching.
+
+## Query-time embeddings
+
+The running container needs a query-time embedder that matches the Chroma store:
+
+- The compose stack defaults `KNOWLEDGE_EMBEDDING_PROVIDER=local` so an Anthropic-backed AI service can run without an OpenAI key.
+- Set `KNOWLEDGE_EMBEDDING_PROVIDER=openai` plus `OPENAI_API_KEY` if the store was built with OpenAI embeddings.
+- Anthropic does not provide a compatible embeddings API for this vector store.
 
 ## Run
 

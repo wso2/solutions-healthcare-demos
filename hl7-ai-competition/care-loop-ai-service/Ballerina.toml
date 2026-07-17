@@ -19,10 +19,3 @@ path = "libs/ai.openai-native-1.3.4.jar"
 groupId = "io.ballerina.lib"
 artifactId = "ai.openai-native"
 version = "1.3.4"
-
-# Same jar ballerinax/ai.anthropic ships at runtime; needed on the compile classpath for the native `generate`.
-[[platform.java21.dependency]]
-path = "libs/ai.anthropic-native-1.3.3.jar"
-groupId = "io.ballerina.lib"
-artifactId = "ai.anthropic-native"
-version = "1.3.3"

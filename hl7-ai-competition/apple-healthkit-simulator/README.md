@@ -24,7 +24,16 @@ Patients are a first-class resource too (`/patients`, same three routes). `PATCH
 
 ## Forwarding to the Care Loop
 
-A background job (APScheduler) runs `run_cycle` every `HEALTHKIT_VITALS_FORWARD_INTERVAL_HOURS` (default 1 hour). Each cycle collects the last interval's quantity samples for the vital-sign types (heart rate, SpO2, respiratory rate, systolic and diastolic blood pressure), maps them to LOINC-coded FHIR `Observation` resources, and posts one FHIR transaction bundle per FHIR-linked patient to `HEALTHKIT_VITALS_TARGET_URL`. In the docker stack that target is `care-loop-collector-service`'s `/vitals` endpoint. With no target set the cycle still builds the bundle but does not send it. `GET /vitals-cron/status` returns the last cycle summary; `POST /vitals-cron/run-now` forwards on demand.
+A background job (APScheduler) runs `run_cycle` every `HEALTHKIT_VITALS_FORWARD_INTERVAL_HOURS` (default 1 hour). Each cycle:
+
+- Collects the last interval's quantity samples for the vital-sign types (heart rate, SpO2, respiratory rate, systolic and diastolic blood pressure).
+- Maps them to LOINC-coded FHIR `Observation` resources.
+- Posts one FHIR transaction bundle per FHIR-linked patient to `HEALTHKIT_VITALS_TARGET_URL`. In the docker stack that target is `care-loop-collector-service`'s `/vitals` endpoint. With no target set the cycle still builds the bundle but does not send it.
+
+Manual controls:
+
+- `GET /vitals-cron/status` returns the last cycle summary.
+- `POST /vitals-cron/run-now` forwards on demand.
 
 ## Run locally
 
@@ -37,7 +46,12 @@ API docs at `http://127.0.0.1:8000/docs`. The SQLite file is created at `data/he
 
 ## Web UI
 
-`http://127.0.0.1:8000/` serves an Apple Health styled control page. Pick a patient, set the vital values (heart rate, SpO2, respiratory rate, systolic and diastolic blood pressure) or use a Normal / Elevated / Critical preset, then send them to the Care Loop. "Send to Care Loop" ingests the readings and forwards that patient's window as a FHIR Observation bundle (`POST /vitals-cron/run-now?patient_uuid=`); "Send for all patients" forwards every patient (`POST /vitals-cron/run-now`). The page reports whether a `HEALTHKIT_VITALS_TARGET_URL` is configured, so with no target set it builds the bundle without sending.
+`http://127.0.0.1:8000/` serves an Apple Health styled control page. Pick a patient, set the vital values (heart rate, SpO2, respiratory rate, systolic and diastolic blood pressure) or use a Normal / Elevated / Critical preset, then send them to the Care Loop.
+
+- "Send to Care Loop" ingests the readings and forwards that patient's window as a FHIR Observation bundle (`POST /vitals-cron/run-now?patient_uuid=`).
+- "Send for all patients" forwards every patient (`POST /vitals-cron/run-now`).
+
+The page reports whether a `HEALTHKIT_VITALS_TARGET_URL` is configured, so with no target set it builds the bundle without sending.
 
 ## Run with Docker
 

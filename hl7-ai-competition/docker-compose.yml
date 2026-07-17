@@ -284,9 +284,8 @@ services:
           action: rebuild
 
   # WSO2 Agent Manager (AMP v0.18.0): docker-in-docker k3d cluster, state in amp-docker. Ports: API 9000, console 13000, gateway + otel ingest 22893.
-  # Opt-in only (profiles: amp) - `docker compose up` skips it; run `docker compose --profile amp up` to include it. care-loop-ai-service does not depend on it: its own healthcheck has a 45-minute start_period, and a failed/OOM-killed amp otherwise takes the whole default stack down with it.
+  # Required: all LLM traffic routes through this gateway (no direct-provider fallback), so care-loop-ai-service depends on amp-init and `make up` brings AMP up. Its healthcheck has a 45-minute start_period, and it is a docker-in-docker k3d cluster, so the first boot is slow and memory-hungry.
   amp:
-    profiles: ["amp"]
     build:
       context: ./scripts/amp
     image: care-loop/amp:v0.18.0
@@ -310,7 +309,6 @@ services:
 
   # One-shot idempotent registration (provider, catalog, agent, gateway key into amp-shared); needs only curl + jq, so it runs on alpine not the AMP image.
   amp-init:
-    profiles: ["amp"]
     image: alpine:3.20
     container_name: amp-init
     entrypoint: ["sh", "-c", "apk add -q --no-cache curl jq && exec sh /scripts/register.sh"]
@@ -327,7 +325,6 @@ services:
 
   # Bridges Ballerina OTLP/gRPC spans to AMP's OTLP/HTTP otel ingest, using the identity-scoped config amp-init generates in amp-shared.
   otel-collector:
-    profiles: ["amp"]
     image: otel/opentelemetry-collector:0.128.0
     container_name: otel-collector
     command: ["--config=/amp-shared/otelcol-config.yaml"]
@@ -340,7 +337,6 @@ services:
 
   # Expose Thunder (login) and the observability API to the host for the browser console at :13000 (also add "127.0.0.1 thunder.amp.localhost" to /etc/hosts for the OAuth redirect).
   amp-thunder-fwd:
-    profiles: ["amp"]
     image: alpine/socat
     container_name: amp-thunder-fwd
     command: ["TCP-LISTEN:8080,fork,reuseaddr", "TCP:amp:8080"]
@@ -352,7 +348,6 @@ services:
     restart: unless-stopped
 
   amp-obs-fwd:
-    profiles: ["amp"]
     image: alpine/socat
     container_name: amp-obs-fwd
     command: ["TCP-LISTEN:9098,fork,reuseaddr", "TCP:amp:9098"]
@@ -371,12 +366,13 @@ services:
     container_name: care-loop-ai-service
     ports:
       - "8003:8003"
-    environment:
-      BAL_CONFIG_VAR_DASHBOARDEVENTSURL: "http://care-loop-dashboard:3003"
     volumes:
-      # Not routed through AMP by default: that gateway is a docker-in-docker k3d cluster with a 45-minute healthcheck start_period and (per its own commit message) is unverified end-to-end. Config.toml keeps `make up` booting directly against OpenAI/Anthropic, same as before this merge; AmpModelProvider is still available in code for anyone who wants to opt in manually.
-      - ./care-loop-ai-service/Config.toml:/home/ballerina/Config.toml:ro
+      # AMP-only: Config.compose.toml points every LLM URL at the AMP gateway, and docker-entrypoint.sh injects the minted gateway keys from amp-shared (refusing to boot without one).
+      - ./care-loop-ai-service/Config.compose.toml:/home/ballerina/Config.toml:ro
+      - amp-shared:/amp-shared:ro
     depends_on:
+      amp-init:
+        condition: service_completed_successfully
       fhir-mcp-server:
         condition: service_started
       care-loop-knowledge-service:
