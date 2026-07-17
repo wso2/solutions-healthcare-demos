@@ -131,8 +131,8 @@ else
 fi
 
 if [ -n "${ANTHROPIC_API_KEY:-}" ]; then
-    register_provider careloop-anthropic "Care Loop Anthropic" anthropic \
-        "https://api.anthropic.com" "x-api-key" "$ANTHROPIC_API_KEY"
+    register_provider careloop-anthropic "Care Loop Anthropic (OpenAI-compatible)" openai \
+        "https://api.anthropic.com/v1" "Authorization" "Bearer $ANTHROPIC_API_KEY"
 else
     log "ANTHROPIC_API_KEY not set; skipping the careloop-anthropic provider"
 fi

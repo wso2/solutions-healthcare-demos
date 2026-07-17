@@ -2,11 +2,18 @@
 
 Serves heart-disease risk predictions from Apple Watch / HealthKit signals. FastAPI + ONNX Runtime, managed with uv.
 
-The model is a CatBoost classifier trained on the wider clinical slice of the Kaggle [heart-failure dataset](https://www.kaggle.com/datasets/fedesoriano/heart-failure-prediction) (CC0, committed at `training/data/heart.csv`) via `notebooks/train.ipynb`, and exported to ONNX. Its preprocessing (label encoding + scaling) is **not** baked into the graph, so the service applies the identical transform from a committed `models/preprocessing_nb.json` before scoring, then returns a probability. Held-out ROC-AUC is around 0.928.
+## Model
+
+- CatBoost classifier trained on the wider clinical slice of the Kaggle [heart-failure dataset](https://www.kaggle.com/datasets/fedesoriano/heart-failure-prediction) (CC0, committed at `training/data/heart.csv`) via `notebooks/train.ipynb`, exported to ONNX.
+- Preprocessing (label encoding + scaling) is **not** baked into the graph; the service applies the identical transform from a committed `models/preprocessing_nb.json` before scoring, then returns a probability.
+- Held-out ROC-AUC is around 0.928.
 
 ## Features
 
-The nb model scores nine features. The service is **reject-incomplete**: all nine are required, so an omitted field or an explicit JSON `null` on any of them is a `422`. The caller (care-loop-analysis-service) prefills the full set from FHIR before scoring. `resting_bp` and `resting_ecg` are still accepted for contract compatibility but are not consumed by this model.
+The nb model scores nine features.
+
+- **Reject-incomplete**: all nine are required, so an omitted field or an explicit JSON `null` on any of them is a `422`. The caller (care-loop-analysis-service) prefills the full set from FHIR before scoring.
+- `resting_bp` and `resting_ecg` are still accepted for contract compatibility but are not consumed by this model.
 
 | Feature | Request field | Type | Required | Source |
 | --- | --- | --- | --- | --- |
@@ -82,7 +89,13 @@ The earlier watch-only pipeline is still here for reference:
 make train     # sweep models, evaluate, export ONNX + metrics
 ```
 
-`training/train.py` runs 5-fold CV ROC-AUC over a zoo of models (logistic regression, random/extra trees, gradient/hist boosting, SVM, KNN, XGBoost, LightGBM, CatBoost), picks the best by cross-validated AUC, evaluates on a held-out test split, and writes `models/heart_watch_model.{joblib,onnx}` with `models/metrics.json`. The service no longer serves this 3-feature model.
+`training/train.py`:
+
+- Runs 5-fold CV ROC-AUC over a zoo of models (logistic regression, random/extra trees, gradient/hist boosting, SVM, KNN, XGBoost, LightGBM, CatBoost).
+- Picks the best by cross-validated AUC, evaluates on a held-out test split.
+- Writes `models/heart_watch_model.{joblib,onnx}` with `models/metrics.json`.
+
+The service no longer serves this 3-feature model.
 
 ## Develop
 

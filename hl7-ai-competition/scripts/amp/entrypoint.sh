@@ -252,8 +252,9 @@ install_amp_chart() {
         retry 3 install_gateway_operator
         wait_for_crd apigateways.gateway.api-platform.wso2.com
         wait_for_crd restapis.gateway.api-platform.wso2.com
-        retry 5 install_gateway_extension
-        retry 5 kubectl apply -f "https://raw.githubusercontent.com/wso2/agent-manager/amp/v${AMP_VERSION}/deployments/values/otel-collector-rest-api.yaml"
+        # Non-fatal: a slow/failed gateway-extension bootstrap must not crash-loop the whole container (the gateway runtime and routes may already be up); main() still reaches the ready file and the DNAT reconcile loop.
+        retry 1 install_gateway_extension || log "gateway extension did not converge; continuing"
+        retry 5 kubectl apply -f "https://raw.githubusercontent.com/wso2/agent-manager/amp/v${AMP_VERSION}/deployments/values/otel-collector-rest-api.yaml" || true
         # Drop the jwt-auth the gateway extension puts on the otel route (local demo).
         disable_otel_trace_auth || true
     )

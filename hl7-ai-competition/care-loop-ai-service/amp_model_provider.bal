@@ -1,33 +1,43 @@
+// AmpModelProvider is the single, provider-agnostic model client the agents use:
+// it always speaks OpenAI chat-completions to the AMP AI gateway with an `API-Key`
+// header (the minted gateway key). `serviceUrl` picks the route and `modelType`
+// the model - "openai" -> careloop-openai (gpt-*), "anthropic" -> careloop-anthropic
+// (claude-*, registered under the OpenAI-compatible template against Anthropic's
+// OpenAI-compatible endpoint). AMP holds the real provider keys and injects the
+// upstream `Authorization: Bearer` itself, so this client never sends Bearer -
+// which is also why it's hand-written: the stock ballerinax/ai providers hardwire
+// Bearer with no way to send `API-Key`.
+//
+// `generate` and the vendored libs/ai.openai-native jar are unavoidable overhead:
+// ai:Agent needs an ai:ModelProvider (a `distinct` type, so we must `*ai:ModelProvider`),
+// which mandates `generate`; being dependently-typed it can only be an external Java
+// function, bound to the SDK's native Generator in that jar. The agents only call `chat`.
+
 import ballerina/ai;
 import ballerina/http;
 import ballerina/jballerina.java;
 import ballerina/observe;
-import ballerinax/ai.openai;
 import ballerinax/openai.chat;
 
 const int DEFAULT_MAX_TOKEN_COUNT = 512;
 const decimal DEFAULT_TEMPERATURE = 0.7;
 
-# OpenAI model provider for the AMP egress gateway: `chat` sends an `API-Key`
-# header (not `Authorization: Bearer`) so it goes through the gateway.
 public isolated distinct client class AmpModelProvider {
     *ai:ModelProvider;
-    // Native `generate` reads llmClient and modelType; names/types must match ballerinax/ai.openai.
     private final chat:Client llmClient;
-    private final openai:OPEN_AI_MODEL_NAMES modelType;
+    private final string modelType;
     private final http:Client gatewayClient;
     private final string apiKey;
     private final decimal temperature;
     private final int maxTokens;
 
-    public isolated function init(string apiKey, openai:OPEN_AI_MODEL_NAMES modelType,
-            string serviceUrl = "https://api.openai.com/v1", int maxTokens = DEFAULT_MAX_TOKEN_COUNT,
+    public isolated function init(string apiKey, string modelType,
+            string serviceUrl = "http://amp:22893/careloop-openai", int maxTokens = DEFAULT_MAX_TOKEN_COUNT,
             decimal temperature = DEFAULT_TEMPERATURE) returns ai:Error? {
         http:Client|error gatewayClient = new (serviceUrl);
         if gatewayClient is error {
             return error ai:Error("Failed to initialize AmpModelProvider", gatewayClient);
         }
-        // Only `generate` uses this Bearer-authenticated client; the gateway does not accept it.
         chat:Client|error llmClient = new ({auth: {token: apiKey}}, serviceUrl);
         if llmClient is error {
             return error ai:Error("Failed to initialize AmpModelProvider", llmClient);
@@ -40,7 +50,6 @@ public isolated distinct client class AmpModelProvider {
         self.maxTokens = maxTokens;
     }
 
-    // Sends a chat request to the model through the AMP gateway.
     isolated remote function chat(ai:ChatMessage[]|ai:ChatUserMessage messages, ai:ChatCompletionFunctions[] tools = [],
             string? stop = ()) returns ai:ChatAssistantMessage|ai:Error {
         chat:CreateChatCompletionRequest request = {
@@ -55,7 +64,6 @@ public isolated distinct client class AmpModelProvider {
         }
         chat:CreateChatCompletionResponse|error response =
             self.gatewayClient->post("/chat/completions", request.toJson(), {"API-Key": self.apiKey});
-        // Add GenAI token-usage tags so Agent Manager renders them on the span.
         if response is chat:CreateChatCompletionResponse {
             chat:CompletionUsage? usage = response.usage;
             if usage is chat:CompletionUsage {
@@ -74,13 +82,11 @@ public isolated distinct client class AmpModelProvider {
         return mapToAssistantMessage(choices[0].message);
     }
 
-    // Required by ai:ModelProvider but unused by the agents; borrows the native impl.
     isolated remote function generate(ai:Prompt prompt, typedesc<anydata> td = <>) returns td|ai:Error = @java:Method {
         'class: "io.ballerina.lib.ai.openai.Generator"
     } external;
 }
 
-// Best-effort span tag; observability failures must not break the LLM call.
 isolated function spanTag(string key, string value) {
     error? result = observe:addTagToSpan(key, value);
     if result is error {
