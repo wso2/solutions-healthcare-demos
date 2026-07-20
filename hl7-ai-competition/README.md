@@ -1,12 +1,35 @@
 # WSO2 Care Loop
 
+![HL7 AI Challenge — WSO2 Care Loop architecture](assets/care-loop-architecture.png)
+
 An AI-assisted care loop connecting remote patients with a heart clinic, built for the HL7 AI competition. Patient-side home monitoring and messaging feed an agent-driven engine that converts incoming data to FHIR, predicts risk, and routes clinical notifications and telehealth back to the care team. Integrations run on Ballerina.
 
-## Architecture
+## Screens
 
-![WSO2 Care Loop architecture](assets/architecture-diagram-v2.png)
+The user-facing surfaces the stack brings up. Click any screen for the full image.
 
-Earlier stages: [v1](assets/architecture-diagram-v1.png), [whiteboard sketch](assets/whiteboard-sketch.png).
+<table>
+  <tr>
+    <td width="50%" align="center">
+      <a href="assets/screens/whatsapp-simulator.png"><img src="assets/screens/whatsapp-simulator.png" alt="whatsapp-simulator patient chat" width="100%"></a>
+      <sub><b>whatsapp-simulator</b> — patient chat check-in (3001)</sub>
+    </td>
+    <td width="50%" align="center">
+      <a href="assets/screens/front-desk-dashboard.png"><img src="assets/screens/front-desk-dashboard.png" alt="front-desk-dashboard clinician task list" width="100%"></a>
+      <sub><b>front-desk-dashboard</b> — clinician task list (3002)</sub>
+    </td>
+  </tr>
+  <tr>
+    <td width="50%" align="center">
+      <a href="assets/screens/care-loop-dashboard.png"><img src="assets/screens/care-loop-dashboard.png" alt="care-loop-dashboard pipeline view" width="100%"></a>
+      <sub><b>care-loop-dashboard</b> — internal pipeline view (3003)</sub>
+    </td>
+    <td width="50%" align="center">
+      <a href="assets/screens/apple-healthkit-simulator.png"><img src="assets/screens/apple-healthkit-simulator.png" alt="apple-healthkit-simulator vitals ingest" width="100%"></a>
+      <sub><b>apple-healthkit-simulator</b> — HealthKit vitals ingest (8000)</sub>
+    </td>
+  </tr>
+</table>
 
 ## Quickstart
 

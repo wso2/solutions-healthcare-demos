@@ -1,4 +1,4 @@
-// Maps the real stage keys from src/lib/stages.ts onto the boxes drawn in hl7-ai-competition/assets/architecture-diagram-v2.png. A box lights up when any of its stageKeys has a "done"/"active" event in the selected run. Several real events fold into one architecture box because the diagram is the target-state system description, not a 1:1 rendering of every event this demo's services happen to fire.
+// Maps the real stage keys from src/lib/stages.ts onto the boxes drawn in hl7-ai-competition/assets/care-loop-architecture.png. A box lights up when any of its stageKeys has a "done"/"active" event in the selected run. Several real events fold into one architecture box because the diagram is the target-state system description, not a 1:1 rendering of every event this demo's services happen to fire.
 export interface ArchitectureBoxDef {
   key: string;
   label: string;
