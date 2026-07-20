@@ -84,7 +84,7 @@ Tooling: `bun run format` (biome), `bun run lint` (eslint, antfu config),
 
 ## Docker
 
-From the `hl7-ai-competition` directory:
+From the `use-cases/care-loop` directory:
 
 ```sh
 make up # start in the background

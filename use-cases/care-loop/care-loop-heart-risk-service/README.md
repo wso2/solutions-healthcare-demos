@@ -61,7 +61,7 @@ API docs at `http://127.0.0.1:8000/docs`. The service loads `models/heart_watch_
 
 ## Run with Docker
 
-From the `hl7-ai-competition` root (docker stack):
+From the `use-cases/care-loop` root (docker stack):
 
 ```sh
 make up        # build and start the stack

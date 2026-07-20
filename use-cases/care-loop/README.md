@@ -35,10 +35,10 @@ The user-facing surfaces the stack brings up. Click any screen for the full imag
 
 Prerequisites: Docker with Compose v2, [Bun](https://bun.sh) (the seed and sync scripts run on it), and `make`. All LLM calls route through the WSO2 Agent Manager AI gateway (there is no direct-provider mode), so you need one LLM key — an OpenAI or an Anthropic key — which `amp-init` registers with the gateway.
 
-1. Put the LLM key in a gitignored `hl7-ai-competition/.env` so `amp-init` can register the provider and mint a gateway key:
+1. Put the LLM key in a gitignored `use-cases/care-loop/.env` so `amp-init` can register the provider and mint a gateway key:
 
    ```sh
-   cd hl7-ai-competition
+   cd use-cases/care-loop
    cp .env.example .env   # then set OPENAI_API_KEY (and/or ANTHROPIC_API_KEY)
    ```
 
@@ -114,7 +114,7 @@ WSO2 Agent Manager (AMP v0.18.0) is a **required** part of the stack. **All care
 
 `make up` brings up the `amp`, `amp-init`, `otel-collector`, `amp-thunder-fwd`, and `amp-obs-fwd` services: a docker-in-docker quick-start cluster whose state persists across restarts, with a 45-minute healthcheck start_period. AMP is heavy and slow to bootstrap, so the ai-service (and everything downstream of it) waits on it; on a memory-constrained host the gateway bootstrap can fail to converge.
 
-**Keys in, gateway keys out.** Set `OPENAI_API_KEY` and/or `ANTHROPIC_API_KEY` in a gitignored `hl7-ai-competition/.env` (at least one is required). For each key present, `amp-init`:
+**Keys in, gateway keys out.** Set `OPENAI_API_KEY` and/or `ANTHROPIC_API_KEY` in a gitignored `use-cases/care-loop/.env` (at least one is required). For each key present, `amp-init`:
 
 - registers a provider (`careloop-openai` and/or `careloop-anthropic`) and deploys and publishes it to the catalog;
 - mints a gateway key into the shared `amp-shared` volume (`careloop-openai-gateway.key` / `careloop-anthropic-gateway.key`).
@@ -132,8 +132,8 @@ So one OpenAI-shaped request reaches either model.
 
 ## Pre-commit hooks
 
-ruff (apple-healthkit-simulator), biome plus knip (whatsapp-simulator), and `bal format` plus `bal scan` (care-loop-ai-service) run on staged files at commit time. The config lives at `hl7-ai-competition/.pre-commit-config.yaml`; install the hook pointing at it once, from the fork root (needs `pre-commit`, e.g. `uv tool install pre-commit`; the whatsapp-simulator hooks also need `bun`, care-loop-ai-service needs `bal`):
+ruff (apple-healthkit-simulator), biome plus knip (whatsapp-simulator), and `bal format` plus `bal scan` (care-loop-ai-service) run on staged files at commit time. The config lives at `use-cases/care-loop/.pre-commit-config.yaml`; install the hook pointing at it once, from the fork root (needs `pre-commit`, e.g. `uv tool install pre-commit`; the whatsapp-simulator hooks also need `bun`, care-loop-ai-service needs `bal`):
 
 ```sh
-pre-commit install -c hl7-ai-competition/.pre-commit-config.yaml
+pre-commit install -c use-cases/care-loop/.pre-commit-config.yaml
 ```

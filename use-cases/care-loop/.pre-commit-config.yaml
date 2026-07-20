@@ -15,33 +15,33 @@ repos:
     hooks:
       - id: ruff-check
         args: [--fix]
-        files: ^hl7-ai-competition/apple-healthkit-simulator/
+        files: ^use-cases/care-loop/apple-healthkit-simulator/
       - id: ruff-format
-        files: ^hl7-ai-competition/apple-healthkit-simulator/
+        files: ^use-cases/care-loop/apple-healthkit-simulator/
 
   - repo: local
     hooks:
       - id: biome-format
         name: biome format (whatsapp-simulator)
-        entry: bash -c 'cd hl7-ai-competition/whatsapp-simulator && bunx biome format --write .'
+        entry: bash -c 'cd use-cases/care-loop/whatsapp-simulator && bunx biome format --write .'
         language: system
-        files: ^hl7-ai-competition/whatsapp-simulator/
+        files: ^use-cases/care-loop/whatsapp-simulator/
         pass_filenames: false
       - id: knip
         name: knip (whatsapp-simulator)
-        entry: bash -c 'cd hl7-ai-competition/whatsapp-simulator && bunx knip'
+        entry: bash -c 'cd use-cases/care-loop/whatsapp-simulator && bunx knip'
         language: system
-        files: ^hl7-ai-competition/whatsapp-simulator/
+        files: ^use-cases/care-loop/whatsapp-simulator/
         pass_filenames: false
       - id: bal-format
         name: bal format (care-loop-ai-service)
-        entry: bash -c 'cd hl7-ai-competition/care-loop-ai-service && bal format'
+        entry: bash -c 'cd use-cases/care-loop/care-loop-ai-service && bal format'
         language: system
-        files: ^hl7-ai-competition/care-loop-ai-service/.*\.bal$
+        files: ^use-cases/care-loop/care-loop-ai-service/.*\.bal$
         pass_filenames: false
       - id: bal-scan
         name: bal scan (care-loop-ai-service)
-        entry: bash -c 'cd hl7-ai-competition/care-loop-ai-service && bal scan'
+        entry: bash -c 'cd use-cases/care-loop/care-loop-ai-service && bal scan'
         language: system
-        files: ^hl7-ai-competition/care-loop-ai-service/.*\.bal$
+        files: ^use-cases/care-loop/care-loop-ai-service/.*\.bal$
         pass_filenames: false

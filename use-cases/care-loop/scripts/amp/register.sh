@@ -15,7 +15,7 @@ SCOPES="amp:org:view amp:llm-provider:read amp:llm-provider:create amp:llm-provi
 log() { printf '\n== %s\n' "$*"; }
 
 [ -n "${OPENAI_API_KEY:-}" ] || [ -n "${ANTHROPIC_API_KEY:-}" ] || {
-    echo "Neither OPENAI_API_KEY nor ANTHROPIC_API_KEY is set; add at least one to hl7-ai-competition/.env" >&2
+    echo "Neither OPENAI_API_KEY nor ANTHROPIC_API_KEY is set; add at least one to use-cases/care-loop/.env" >&2
     exit 1
 }
 

@@ -31,7 +31,7 @@ bal run
 
 ## Run with Docker
 
-From the `hl7-ai-competition` root (docker stack):
+From the `use-cases/care-loop` root (docker stack):
 
 ```sh
 make up        # build and start care-loop-ai-service on :8003
