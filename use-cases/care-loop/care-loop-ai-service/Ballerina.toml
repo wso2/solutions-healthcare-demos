@@ -1,0 +1,21 @@
+[package]
+org = "care_loop"
+name = "care_loop_ai_service"
+version = "0.1.0"
+distribution = "2201.13.4"
+
+[[dependency]]
+org = "care_loop"
+name = "care_loop_common"
+version = "0.1.0"
+repository = "local"
+
+[build-options]
+observabilityIncluded = true
+
+# Same jar ballerinax/ai.openai ships at runtime; needed on the compile classpath for the native `generate`.
+[[platform.java21.dependency]]
+path = "libs/ai.openai-native-1.3.4.jar"
+groupId = "io.ballerina.lib"
+artifactId = "ai.openai-native"
+version = "1.3.4"

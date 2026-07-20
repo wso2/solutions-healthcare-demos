@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<title>Apple Health Simulator — Care Loop</title>
+<style>
+  :root {
+    --ink: #1d1d1f;
+    --muted: #6e6e73;
+    --muted2: #86868b;
+    --panel: #f5f5f7;
+    --blue: #0071e3;
+    --hr: #ff2d55;
+    --ok: #34c759;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: #fff;
+    color: var(--ink);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: #0066cc; text-decoration: none; }
+  input:focus, select:focus, button:focus { outline: none; }
+  @keyframes cl-fade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+
+  nav {
+    position: sticky; top: 0; z-index: 50;
+    background: rgba(251,251,253,.8);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border-bottom: 1px solid rgba(0,0,0,.08);
+  }
+  .nav-inner {
+    max-width: 1024px; margin: 0 auto; padding: 0 22px; height: 48px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .brand { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 600; letter-spacing: -.01em; }
+  .status { display: flex; align-items: center; gap: 9px; font-size: 12px; color: #424245; }
+  .status .dot { width: 8px; height: 8px; border-radius: 50%; background: #c7c7cc; }
+
+  header.hero { background: #fbfbfd; text-align: center; padding: 88px 24px 72px; }
+  .eyebrow { font-size: 14px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--muted2); margin-bottom: 14px; }
+  header.hero h1 { font-size: 64px; line-height: 1.05; font-weight: 700; letter-spacing: -.015em; margin: 0; }
+  header.hero p { font-size: 24px; line-height: 1.3; color: var(--muted); letter-spacing: .007em; max-width: 640px; margin: 18px auto 0; }
+
+  main { max-width: 1024px; margin: 0 auto; padding: 64px 22px 120px; display: flex; flex-direction: column; gap: 24px; }
+  section.panel { background: var(--panel); border-radius: 28px; padding: 48px 56px; }
+  section.panel h2 { font-size: 32px; font-weight: 700; letter-spacing: -.012em; margin: 0 0 6px; }
+  section.panel .lead { font-size: 17px; color: var(--muted); margin: 0 0 32px; }
+
+  .patient-row { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+  .select { position: relative; flex: 1; min-width: 280px; }
+  .select-btn {
+    width: 100%; font: inherit; font-size: 17px; font-weight: 500; color: var(--ink);
+    background: #fff; border: none; border-radius: 14px; padding: 15px 18px; cursor: pointer;
+    box-shadow: 0 1px 4px rgba(0,0,0,.08); display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    text-align: left;
+  }
+  .select-btn .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .select-btn .chev { flex: none; color: #86868b; transition: transform .2s ease; }
+  .select.open .select-btn { box-shadow: 0 0 0 4px rgba(0,113,227,.15), 0 1px 4px rgba(0,0,0,.08); }
+  .select.open .chev { transform: rotate(180deg); }
+  .select-menu {
+    position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 60;
+    background: rgba(255,255,255,.85); backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border: 1px solid rgba(0,0,0,.06); border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,.18);
+    padding: 6px; max-height: 320px; overflow: auto; display: none; transform-origin: top center;
+  }
+  .select.open .select-menu { display: block; animation: cl-fade .16s ease; }
+  .opt {
+    display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 11px 12px; border-radius: 10px;
+    font-size: 16px; color: var(--ink); cursor: pointer; transition: background .12s ease;
+  }
+  .opt:hover { background: rgba(0,0,0,.05); }
+  .opt.selected { color: var(--blue); font-weight: 590; }
+  .opt .check { flex: none; width: 16px; opacity: 0; }
+  .opt.selected .check { opacity: 1; }
+  .segmented { display: inline-flex; padding: 4px; background: rgba(0,0,0,.06); border-radius: 999px; gap: 2px; }
+  .segmented button {
+    font: inherit; font-size: 14px; font-weight: 590; border: none; border-radius: 999px; padding: 9px 22px;
+    cursor: pointer; transition: .18s; background: transparent; color: #494949; box-shadow: none;
+  }
+  .segmented button.active { background: #fff; color: var(--ink); box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+
+  .vitals { display: grid; grid-template-columns: repeat(auto-fit, minmax(168px, 1fr)); gap: 16px; }
+  .vital { background: #fff; border-radius: 18px; padding: 20px; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+  .vital .top { display: flex; align-items: center; gap: 9px; margin-bottom: 16px; }
+  .vital .name { font-size: 14px; font-weight: 600; color: var(--muted); }
+  .vital input {
+    width: 100%; min-width: 0; font: inherit; font-size: 32px; font-weight: 700; letter-spacing: -.02em;
+    color: var(--ink); background: transparent; border: none; padding: 0; margin: 0 0 2px;
+  }
+  .vital .unit { font-size: 13px; color: var(--muted2); }
+
+  .send-row { display: flex; justify-content: center; gap: 16px; flex-wrap: wrap; margin-top: 40px; }
+  button.pill { font: inherit; font-size: 17px; font-weight: 400; border-radius: 999px; padding: 13px 28px; transition: .15s; cursor: pointer; }
+  button.pill.primary { border: none; background: var(--blue); color: #fff; }
+  button.pill.ghost { border: 1px solid var(--blue); background: transparent; color: var(--blue); }
+  button.pill:disabled { opacity: .5; cursor: default; }
+
+  .split { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; }
+  section.result { background: #000; border-radius: 28px; padding: 40px 44px; color: #f5f5f7; }
+  section.result h2 { font-size: 24px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 4px; color: #f5f5f7; }
+  section.result .lead { font-size: 15px; color: var(--muted2); margin: 0 0 24px; }
+  section.result pre { margin: 0; overflow: auto; font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: 12.5px; line-height: 1.7; color: #a1a1a6; }
+  section.activity h2 { font-size: 24px; font-weight: 700; letter-spacing: -.01em; margin: 0 0 4px; }
+  section.activity .lead { font-size: 15px; color: var(--muted); margin: 0 0 20px; }
+  .log { list-style: none; margin: 0; padding: 0; }
+  .log li { display: flex; gap: 14px; padding: 12px 0; border-top: 1px solid rgba(0,0,0,.08); font-size: 14px; line-height: 1.45; animation: cl-fade .25s ease; }
+  .log li .t { color: var(--muted2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .empty { color: var(--muted2); font-size: 14px; margin: 0; }
+
+  footer { background: var(--panel); border-top: 1px solid #d2d2d7; }
+  footer .foot-inner { max-width: 1024px; margin: 0 auto; padding: 20px 22px; font-size: 12px; color: var(--muted2); }
+
+  @media (max-width: 640px) {
+    header.hero h1 { font-size: 44px; }
+    header.hero p { font-size: 19px; }
+    section.panel { padding: 32px 24px; }
+  }
+</style>
+</head>
+<body>
+  <nav>
+    <div class="nav-inner">
+      <div class="brand">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="#ff2d55"><path d="M12 21s-7.5-4.9-10-9.2C.4 8.6 2 5 5.5 5 7.7 5 9 6.3 12 9c3-2.7 4.3-4 6.5-4C22 5 23.6 8.6 22 11.8 19.5 16.1 12 21 12 21z"/></svg>
+        Health Simulator
+      </div>
+      <div class="status">
+        <span class="dot" id="statusDot"></span>
+        <span id="statusText">No forward run yet</span>
+      </div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="eyebrow">Care Loop</div>
+    <h1>Vitals. Forwarded.</h1>
+    <p>Push simulated Apple Watch vitals into the Care Loop as FHIR Observations.</p>
+  </header>
+
+  <main>
+    <section class="panel">
+      <h2>Patient.</h2>
+      <p class="lead">Choose who receives the readings, and where their vitals sit.</p>
+      <div class="patient-row">
+        <div class="select" id="patientSelect">
+          <button type="button" class="select-btn" id="patientBtn" aria-haspopup="listbox" aria-expanded="false">
+            <span class="label" id="patientLabel">Loading…</span>
+            <svg class="chev" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M2.5 4.5 6 8l3.5-3.5"/></svg>
+          </button>
+          <div class="select-menu" id="patientMenu" role="listbox"></div>
+        </div>
+        <div class="segmented" id="presets">
+          <button data-preset="normal">Normal</button>
+          <button data-preset="elevated">Elevated</button>
+          <button data-preset="critical">Critical</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>Vitals.</h2>
+      <p class="lead">Every reading, exactly the way HealthKit records it.</p>
+      <div class="vitals" id="vitals"></div>
+      <div class="send-row">
+        <button class="pill primary" id="sendOne">Send to Care Loop</button>
+        <button class="pill ghost" id="sendAll">Send for all patients</button>
+      </div>
+    </section>
+
+    <div class="split">
+      <section class="result">
+        <h2>Last forward result.</h2>
+        <p class="lead">Straight from the forwarder.</p>
+        <pre id="result">No forward run yet.</pre>
+      </section>
+      <section class="panel activity">
+        <h2>Activity.</h2>
+        <p class="lead">Everything you've sent this session.</p>
+        <ul class="log" id="log"><li class="empty">Nothing sent yet.</li></ul>
+      </section>
+    </div>
+  </main>
+
+  <footer>
+    <div class="foot-inner">
+      Simulated data only. Readings are back-dated one minute so they land inside the forwarder's lookback window.
+    </div>
+  </footer>
+
+<script>
+const HEART = '<svg width="18" height="18" viewBox="0 0 24 24" fill="#ff2d55"><path d="M12 21s-7.5-4.9-10-9.2C.4 8.6 2 5 5.5 5 7.7 5 9 6.3 12 9c3-2.7 4.3-4 6.5-4C22 5 23.6 8.6 22 11.8 19.5 16.1 12 21 12 21z"/></svg>';
+const DROP = '<svg width="18" height="18" viewBox="0 0 24 24" fill="#007aff"><path d="M12 2s7 8 7 12a7 7 0 1 1-14 0c0-4 7-12 7-12z"/></svg>';
+const WAVE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#30b0c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h4l2-6 4 12 2-6h6"/></svg>';
+const GAUGE = '<svg width="18" height="18" viewBox="0 0 24 24" fill="#af52de"><path d="M12 4a8 8 0 0 0-8 8 8 8 0 0 0 2 5.3l1.5-1.4A6 6 0 1 1 18 12h-3l4 5 4-5h-3a8 8 0 0 0-8-8z"/></svg>';
+
+// Each vital: HealthKit quantity type, unit stored on the sample, its label and icon.
+const VITALS = [
+  { key: "hr",   name: "Heart Rate",     type: "HKQuantityTypeIdentifierHeartRate",              unit: "count/min", icon: HEART },
+  { key: "spo2", name: "Oxygen (SpO₂)", type: "HKQuantityTypeIdentifierOxygenSaturation",   unit: "%",         icon: DROP  },
+  { key: "resp", name: "Respiratory",    type: "HKQuantityTypeIdentifierRespiratoryRate",        unit: "count/min", icon: WAVE  },
+  { key: "sys",  name: "BP Systolic",    type: "HKQuantityTypeIdentifierBloodPressureSystolic",  unit: "mmHg",      icon: GAUGE },
+  { key: "dia",  name: "BP Diastolic",   type: "HKQuantityTypeIdentifierBloodPressureDiastolic", unit: "mmHg",      icon: GAUGE },
+];
+
+const PRESETS = {
+  normal:   { hr: 72,  spo2: 98, resp: 15, sys: 118, dia: 76 },
+  elevated: { hr: 104, spo2: 94, resp: 22, sys: 148, dia: 94 },
+  critical: { hr: 133, spo2: 88, resp: 28, sys: 176, dia: 110 },
+};
+
+const $ = (id) => document.getElementById(id);
+const CHECK = '<svg class="check" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5 6.5 12 13 4.5"/></svg>';
+let patients = [];
+let selectedUuid = "";
+
+function patientLabel(p) {
+  return `${p.given_name} ${p.family_name} — MRN ${p.mrn}${p.fhir_patient_id ? "" : " (no FHIR link)"}`;
+}
+
+function openMenu(open) {
+  const sel = $("patientSelect");
+  sel.classList.toggle("open", open);
+  $("patientBtn").setAttribute("aria-expanded", open ? "true" : "false");
+}
+
+function selectPatient(uuid) {
+  selectedUuid = uuid;
+  const p = patients.find((x) => x.uuid === uuid);
+  $("patientLabel").textContent = p ? patientLabel(p) : "Select a patient";
+  document.querySelectorAll("#patientMenu .opt").forEach((o) =>
+    o.classList.toggle("selected", o.dataset.uuid === uuid));
+  openMenu(false);
+}
+
+function tileHtml(v) {
+  return `<div class="vital">
+    <div class="top">${v.icon}<span class="name">${v.name}</span></div>
+    <input type="number" id="v_${v.key}" step="0.1" />
+    <div class="unit">${v.unit}</div>
+  </div>`;
+}
+
+function applyPreset(name) {
+  const p = PRESETS[name];
+  VITALS.forEach((v) => { $("v_" + v.key).value = p[v.key]; });
+  document.querySelectorAll("#presets button").forEach((c) =>
+    c.classList.toggle("active", c.dataset.preset === name));
+}
+
+function readVitals() {
+  return VITALS.map((v) => ({ ...v, value: parseFloat($("v_" + v.key).value) }))
+               .filter((v) => !Number.isNaN(v.value));
+}
+
+function samplesFor(patient, vitals) {
+  const end = new Date();
+  // Back-date one minute so the reading lands inside the forwarder's lookback window.
+  const start = new Date(end.getTime() - 60000);
+  return vitals.map((v) => ({
+    patient_id: patient.id,
+    quantity_type: v.type,
+    value: v.value,
+    unit: v.unit,
+    start_date: start.toISOString(),
+    end_date: end.toISOString(),
+    source_name: "Apple Watch (Simulator)",
+    device_name: "Apple Watch",
+    device_manufacturer: "Apple Inc.",
+  }));
+}
+
+function logLine(msg, isError) {
+  const ul = $("log");
+  if (ul.querySelector(".empty")) ul.innerHTML = "";
+  const t = new Date().toLocaleTimeString();
+  const li = document.createElement("li");
+  li.innerHTML = `<span class="t">${t}</span><span style="color:${isError ? "#ff2d55" : "#1d1d1f"}">${msg}</span>`;
+  ul.prepend(li);
+}
+
+async function ingest(samples) {
+  const r = await fetch("/quantity-samples", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(samples),
+  });
+  if (!r.ok) throw new Error(`ingest failed (${r.status})`);
+  return r.json();
+}
+
+async function forward(patientUuid) {
+  const url = patientUuid ? `/vitals-cron/run-now?patient_uuid=${encodeURIComponent(patientUuid)}` : "/vitals-cron/run-now";
+  const r = await fetch(url, { method: "POST" });
+  if (!r.ok) throw new Error(`forward failed (${r.status})`);
+  return r.json();
+}
+
+function showResult(res) {
+  $("result").textContent = JSON.stringify(res, null, 2);
+  const configured = !!res.target_configured;
+  $("statusDot").style.background = configured ? "#34c759" : "#ff2d55";
+  $("statusText").textContent = configured
+    ? "Care Loop target configured"
+    : "No target set — bundle built, not sent";
+}
+
+function setBusy(b) { $("sendOne").disabled = b; $("sendAll").disabled = b; }
+
+async function sendOne() {
+  const patient = patients.find((p) => p.uuid === selectedUuid);
+  const vitals = readVitals();
+  if (!patient || !vitals.length) return;
+  setBusy(true);
+  try {
+    await ingest(samplesFor(patient, vitals));
+    const res = await forward(patient.uuid);
+    showResult(res);
+    logLine(`Sent ${vitals.length} reading(s) for ${patient.given_name} ${patient.family_name} — ${res.readings_forwarded} forwarded`);
+  } catch (e) {
+    logLine("Error: " + e.message, true);
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function sendAll() {
+  const vitals = readVitals();
+  if (!patients.length || !vitals.length) return;
+  setBusy(true);
+  try {
+    const all = patients.flatMap((p) => samplesFor(p, vitals));
+    await ingest(all);
+    const res = await forward(null);
+    showResult(res);
+    logLine(`Sent readings for all ${patients.length} patients — ${res.readings_forwarded} forwarded across ${res.patients_forwarded}`);
+  } catch (e) {
+    logLine("Error: " + e.message, true);
+  } finally {
+    setBusy(false);
+  }
+}
+
+async function loadPatients() {
+  let list = [];
+  try {
+    const r = await fetch("/patients?limit=1000");
+    list = r.ok ? await r.json() : [];
+  } catch (e) { list = []; }
+  patients = list;
+  const menu = $("patientMenu");
+  if (!patients.length) {
+    $("patientLabel").textContent = "No patients — seed the simulator first";
+    $("patientBtn").disabled = true;
+    setBusy(true);
+    return;
+  }
+  menu.innerHTML = patients.map((p) =>
+    `<div class="opt" role="option" data-uuid="${p.uuid}"><span>${patientLabel(p)}</span>${CHECK}</div>`
+  ).join("");
+  menu.querySelectorAll(".opt").forEach((o) =>
+    o.addEventListener("click", () => selectPatient(o.dataset.uuid)));
+  selectPatient(patients[0].uuid);
+}
+
+async function loadStatus() {
+  try {
+    const r = await fetch("/vitals-cron/status");
+    const s = r.ok ? await r.json() : null;
+    if (s) showResult(s);
+  } catch (e) { /* keep default */ }
+}
+
+function init() {
+  $("vitals").innerHTML = VITALS.map(tileHtml).join("");
+  applyPreset("normal");
+  document.querySelectorAll("#presets button").forEach((c) =>
+    c.addEventListener("click", () => applyPreset(c.dataset.preset)));
+  $("sendOne").addEventListener("click", sendOne);
+  $("sendAll").addEventListener("click", sendAll);
+
+  $("patientBtn").addEventListener("click", (e) => {
+    e.stopPropagation();
+    openMenu(!$("patientSelect").classList.contains("open"));
+  });
+  document.addEventListener("click", (e) => {
+    if (!$("patientSelect").contains(e.target)) openMenu(false);
+  });
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") openMenu(false); });
+
+  loadPatients();
+  loadStatus();
+}
+
+init();
+</script>
+</body>
+</html>

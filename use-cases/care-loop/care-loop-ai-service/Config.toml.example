@@ -1,0 +1,20 @@
+fhirMcpUrl = "http://fhir-mcp-server:8000/mcp/"
+knowledgeMcpUrl = "http://care-loop-knowledge-service:8000/mcp"
+pubmedMcpUrl = "http://pubmed-mcp-server:3010/mcp"
+listenPort = 8003
+
+# Choose "openai" or "anthropic". Both route only through the AMP AI gateway via one OpenAI-shaped client; there is no direct-to-provider mode. Set nanoModel/fullModel to the chosen provider's model ids.
+modelProvider = "openai"
+
+# openAiApiKey is the minted careloop-openai gateway key (contents of amp-shared/careloop-openai-gateway.key); openAiServiceUrl is the AMP route, never api.openai.com.
+openAiApiKey = "your-careloop-openai-gateway-key"
+openAiServiceUrl = "http://amp:22893/careloop-openai"
+nanoModel = "gpt-4.1-nano"
+fullModel = "gpt-4.1"
+# For modelProvider = "anthropic", set the models above to Claude ids, e.g. nanoModel = "claude-haiku-4-5-20251001", fullModel = "claude-sonnet-4-5-20250929".
+
+# anthropicApiKey is the minted careloop-anthropic gateway key (contents of amp-shared/careloop-anthropic-gateway.key); anthropicServiceUrl is the AMP route, never api.anthropic.com. AMP registers careloop-anthropic under the OpenAI-compatible template against Anthropic's OpenAI-compatible endpoint.
+anthropicApiKey = "your-careloop-anthropic-gateway-key"
+anthropicServiceUrl = "http://amp:22893/careloop-anthropic"
+
+dashboardEventsUrl = "http://care-loop-dashboard:3003"

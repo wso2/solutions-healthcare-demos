@@ -1,0 +1,462 @@
+services:
+  apple-healthkit-simulator:
+    build:
+      context: ./apple-healthkit-simulator
+    image: apple-healthkit-simulator:latest
+    container_name: apple-healthkit-simulator
+    ports:
+      - "8000:8000"
+    environment:
+      HEALTHKIT_DATABASE_URL: "sqlite:///./data/healthkit.db"
+      HEALTHKIT_VITALS_TARGET_URL: "http://care-loop-collector-service:8004/vitals"
+      # Demo-speed cadence (real default hourly); forward window = interval so checks tile without gaps.
+      HEALTHKIT_VITALS_FORWARD_INTERVAL_HOURS: "0.1"
+    volumes:
+      - healthkit-data:/app/data
+    healthcheck:
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    develop:
+      watch:
+        - path: ./apple-healthkit-simulator/pyproject.toml
+          action: rebuild
+        - path: ./apple-healthkit-simulator/uv.lock
+          action: rebuild
+        - path: ./apple-healthkit-simulator/src
+          action: rebuild
+
+  care-loop-heart-risk-service:
+    build:
+      context: ./care-loop-heart-risk-service
+    image: care-loop-heart-risk-service:latest
+    container_name: care-loop-heart-risk-service
+    ports:
+      - "8002:8000"
+    healthcheck:
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    develop:
+      watch:
+        - path: ./care-loop-heart-risk-service/pyproject.toml
+          action: rebuild
+        - path: ./care-loop-heart-risk-service/uv.lock
+          action: rebuild
+        - path: ./care-loop-heart-risk-service/src
+          action: rebuild
+
+  whatsapp-simulator:
+    build:
+      context: ./whatsapp-simulator
+    image: whatsapp-simulator:latest
+    container_name: whatsapp-simulator
+    ports:
+      # Host port 3001, not 3000: a standalone AMP console (run outside this compose file) commonly takes 3000 on the host, and this is otherwise just an arbitrary container-facing port pick.
+      - "3001:3000"
+    environment:
+      NODE_ENV: production
+      DASHBOARD_EVENTS_URL: "http://care-loop-dashboard:3003"
+      HEALTHKIT_SIMULATOR_URL: "http://apple-healthkit-simulator:8000"
+    healthcheck:
+      test:
+        - "CMD"
+        - "bun"
+        - "-e"
+        - "fetch('http://localhost:3000/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    develop:
+      watch:
+        - path: ./whatsapp-simulator/package.json
+          action: rebuild
+        - path: ./whatsapp-simulator/bun.lock
+          action: rebuild
+        - path: ./whatsapp-simulator/next.config.ts
+          action: rebuild
+        - path: ./whatsapp-simulator/src
+          action: rebuild
+
+  ehr-fhir-server-db:
+    image: postgres:16-alpine
+    container_name: ehr-fhir-server-db
+    environment:
+      POSTGRES_DB: fhirdb
+      POSTGRES_USER: fhir
+      POSTGRES_PASSWORD: fhir
+    volumes:
+      - ehr-fhir-server-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fhir -d fhirdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  ehr-fhir-server:
+    build:
+      context: "https://github.com/wso2/fhir-server.git#v0.5.0"
+    image: care-loop/fhir-server:v0.5.0
+    container_name: ehr-fhir-server
+    ports:
+      - "9090:9090"
+    environment:
+      DATABASE_URL: "postgres://fhir:fhir@ehr-fhir-server-db:5432/fhirdb?sslmode=disable"
+      FHIR_CREATE_TABLES: "true"
+      SERVER_PORT: "9090"
+      BASE_URL: "http://localhost:9090/fhir/r4"
+    depends_on:
+      ehr-fhir-server-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  care-loop-fhir-server-db:
+    image: postgres:16-alpine
+    container_name: care-loop-fhir-server-db
+    environment:
+      POSTGRES_DB: fhirdb
+      POSTGRES_USER: fhir
+      POSTGRES_PASSWORD: fhir
+    volumes:
+      - care-loop-fhir-server-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fhir -d fhirdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  care-loop-fhir-server:
+    build:
+      context: "https://github.com/wso2/fhir-server.git#v0.5.0"
+    image: care-loop/fhir-server:v0.5.0
+    container_name: care-loop-fhir-server
+    ports:
+      - "9091:9090"
+    environment:
+      DATABASE_URL: "postgres://fhir:fhir@care-loop-fhir-server-db:5432/fhirdb?sslmode=disable"
+      FHIR_CREATE_TABLES: "true"
+      SERVER_PORT: "9090"
+      BASE_URL: "http://localhost:9090/fhir/r4"
+    depends_on:
+      care-loop-fhir-server-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  care-loop-fhir-server-readonly-proxy:
+    image: nginx:1.27-alpine
+    container_name: care-loop-fhir-server-readonly-proxy
+    volumes:
+      - ./care-loop-fhir-server-readonly-proxy/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - care-loop-fhir-server
+    restart: unless-stopped
+
+  fhir-sync:
+    build:
+      context: ./scripts/sync
+    image: care-loop/fhir-sync:latest
+    container_name: fhir-sync
+    environment:
+      EHR_FHIR_SERVER_URL: "http://ehr-fhir-server:9090/fhir/r4"
+      CARE_LOOP_FHIR_SERVER_URL: "http://care-loop-fhir-server:9090/fhir/r4"
+      SYNC_INTERVAL_SECONDS: "3600"
+    depends_on:
+      - ehr-fhir-server
+      - care-loop-fhir-server
+    restart: unless-stopped
+
+  fhir-mcp-server:
+    build:
+      context: "https://github.com/wso2/fhir-mcp-server.git#0.10.0"
+    image: care-loop/fhir-mcp-server:0.10.0
+    container_name: fhir-mcp-server
+    ports:
+      - "8001:8000"
+    environment:
+      FHIR_MCP_HOST: 0.0.0.0
+      FHIR_MCP_PORT: 8000
+      FHIR_SERVER_BASE_URL: "http://care-loop-fhir-server-readonly-proxy:8080/fhir/r4"
+      FHIR_SERVER_DISABLE_AUTHORIZATION: "True"
+    depends_on:
+      - care-loop-fhir-server-readonly-proxy
+    restart: unless-stopped
+
+  care-loop-knowledge-service:
+    build:
+      context: ./care-loop-knowledge-service
+    image: care-loop-knowledge-service:latest
+    container_name: care-loop-knowledge-service
+    ports:
+      - "8006:8000"
+    environment:
+      KNOWLEDGE_HOST: 0.0.0.0
+      KNOWLEDGE_PORT: "8000"
+      # OpenAI embeddings are still supported, but Anthropic does not provide an embeddings API. Use local embeddings for a keyless Anthropic stack, or set this to "openai" with OPENAI_API_KEY.
+      KNOWLEDGE_EMBEDDING_PROVIDER: "${KNOWLEDGE_EMBEDDING_PROVIDER:-local}"
+      KNOWLEDGE_OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+    healthcheck:
+      test:
+        - "CMD"
+        - "python"
+        - "-c"
+        - "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    develop:
+      watch:
+        - path: ./care-loop-knowledge-service/pyproject.toml
+          action: rebuild
+        - path: ./care-loop-knowledge-service/uv.lock
+          action: rebuild
+        - path: ./care-loop-knowledge-service/src
+          action: rebuild
+
+  pubmed-mcp-server:
+    image: ghcr.io/cyanheads/pubmed-mcp-server:latest
+    container_name: pubmed-mcp-server
+    ports:
+      - "8007:3010"
+    environment:
+      MCP_TRANSPORT_TYPE: http
+      MCP_HTTP_PORT: "3010"
+      MCP_HTTP_HOST: "0.0.0.0"
+      MCP_HTTP_ENDPOINT_PATH: /mcp
+      MCP_AUTH_MODE: none
+      # Optional: raises the NCBI E-utilities rate limit from 3 to 10 req/s when set.
+      NCBI_API_KEY: "${NCBI_API_KEY:-}"
+    restart: unless-stopped
+
+  front-desk-dashboard:
+    build:
+      context: ./front-desk-dashboard
+    image: front-desk-dashboard:latest
+    container_name: front-desk-dashboard
+    ports:
+      - "3002:3002"
+    environment:
+      NODE_ENV: production
+      EHR_FHIR_SERVER_URL: "http://ehr-fhir-server:9090/fhir/r4"
+      CARE_LOOP_FHIR_SERVER_URL: "http://care-loop-fhir-server-readonly-proxy:8080/fhir/r4"
+    depends_on:
+      - ehr-fhir-server
+      - care-loop-fhir-server-readonly-proxy
+    healthcheck:
+      test:
+        - "CMD"
+        - "bun"
+        - "-e"
+        - "fetch('http://localhost:3002/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    develop:
+      watch:
+        - path: ./front-desk-dashboard/package.json
+          action: rebuild
+        - path: ./front-desk-dashboard/bun.lock
+          action: rebuild
+        - path: ./front-desk-dashboard/next.config.ts
+          action: rebuild
+        - path: ./front-desk-dashboard/src
+          action: rebuild
+
+  # WSO2 Agent Manager (AMP v0.18.0): docker-in-docker k3d cluster, state in amp-docker. Ports: API 9000, console 13000, gateway + otel ingest 22893.
+  # Required: all LLM traffic routes through this gateway (no direct-provider fallback), so care-loop-ai-service depends on amp-init and `make up` brings AMP up. Its healthcheck has a 45-minute start_period, and it is a docker-in-docker k3d cluster, so the first boot is slow and memory-hungry.
+  amp:
+    build:
+      context: ./scripts/amp
+    image: care-loop/amp:v0.18.0
+    container_name: amp
+    privileged: true
+    ports:
+      - "9000:9000"
+      - "13000:3000"
+      - "22893:22893"
+    volumes:
+      - amp-docker:/var/lib/docker
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "[ -f /var/run/amp-ready ] && curl -s -m 5 -o /dev/null http://localhost:9000/"
+      interval: 30s
+      timeout: 10s
+      retries: 30
+      start_period: 45m
+    restart: unless-stopped
+
+  # One-shot idempotent registration (provider, catalog, agent, gateway key into amp-shared); needs only curl + jq, so it runs on alpine not the AMP image.
+  amp-init:
+    image: alpine:3.20
+    container_name: amp-init
+    entrypoint: ["sh", "-c", "apk add -q --no-cache curl jq && exec sh /scripts/register.sh"]
+    environment:
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+      ANTHROPIC_API_KEY: "${ANTHROPIC_API_KEY:-}"
+    volumes:
+      - ./scripts/amp/register.sh:/scripts/register.sh:ro
+      - amp-shared:/amp-shared
+    depends_on:
+      amp:
+        condition: service_healthy
+    restart: "no"
+
+  # Bridges Ballerina OTLP/gRPC spans to AMP's OTLP/HTTP otel ingest, using the identity-scoped config amp-init generates in amp-shared.
+  otel-collector:
+    image: otel/opentelemetry-collector:0.128.0
+    container_name: otel-collector
+    command: ["--config=/amp-shared/otelcol-config.yaml"]
+    volumes:
+      - amp-shared:/amp-shared:ro
+    depends_on:
+      amp-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  # Expose Thunder (login) and the observability API to the host for the browser console at :13000 (also add "127.0.0.1 thunder.amp.localhost" to /etc/hosts for the OAuth redirect).
+  amp-thunder-fwd:
+    image: alpine/socat
+    container_name: amp-thunder-fwd
+    command: ["TCP-LISTEN:8080,fork,reuseaddr", "TCP:amp:8080"]
+    ports:
+      - "8080:8080"
+    depends_on:
+      amp:
+        condition: service_healthy
+    restart: unless-stopped
+
+  amp-obs-fwd:
+    image: alpine/socat
+    container_name: amp-obs-fwd
+    command: ["TCP-LISTEN:9098,fork,reuseaddr", "TCP:amp:9098"]
+    ports:
+      - "9098:9098"
+    depends_on:
+      amp:
+        condition: service_healthy
+    restart: unless-stopped
+
+  care-loop-ai-service:
+    build:
+      context: .
+      dockerfile: care-loop-ai-service/Dockerfile
+    image: care-loop-ai-service:latest
+    container_name: care-loop-ai-service
+    ports:
+      - "8003:8003"
+    volumes:
+      # AMP-only: Config.compose.toml points every LLM URL at the AMP gateway, and docker-entrypoint.sh injects the minted gateway keys from amp-shared (refusing to boot without one).
+      - ./care-loop-ai-service/Config.compose.toml:/home/ballerina/Config.toml:ro
+      - amp-shared:/amp-shared:ro
+    depends_on:
+      amp-init:
+        condition: service_completed_successfully
+      fhir-mcp-server:
+        condition: service_started
+      care-loop-knowledge-service:
+        condition: service_started
+      pubmed-mcp-server:
+        condition: service_started
+    restart: unless-stopped
+
+  care-loop-collector-service:
+    build:
+      context: .
+      dockerfile: care-loop-collector-service/Dockerfile
+    image: care-loop-collector-service:latest
+    container_name: care-loop-collector-service
+    ports:
+      - "8004:8004"
+    volumes:
+      - ./care-loop-collector-service/Config.toml:/home/ballerina/Config.toml:ro
+    depends_on:
+      - care-loop-ai-service
+      - care-loop-fhir-server
+      - whatsapp-simulator
+    restart: unless-stopped
+
+  care-loop-analysis-service:
+    build:
+      context: .
+      dockerfile: care-loop-analysis-service/Dockerfile
+    image: care-loop-analysis-service:latest
+    container_name: care-loop-analysis-service
+    ports:
+      - "8005:8005"
+    volumes:
+      - ./care-loop-analysis-service/Config.toml:/home/ballerina/Config.toml:ro
+    depends_on:
+      - care-loop-heart-risk-service
+      - care-loop-fhir-server
+      - ehr-fhir-server
+      - care-loop-ai-service
+      - care-loop-collector-service
+    restart: unless-stopped
+
+  care-loop-dashboard:
+    build:
+      context: ./care-loop-dashboard
+    image: care-loop-dashboard:latest
+    container_name: care-loop-dashboard
+    ports:
+      - "3003:3003"
+    environment:
+      NODE_ENV: production
+      CARE_LOOP_FHIR_SERVER_URL: "http://care-loop-fhir-server:9090/fhir/r4"
+      EHR_FHIR_SERVER_URL: "http://ehr-fhir-server:9090/fhir/r4"
+    volumes:
+      - care-loop-dashboard-data:/app/data
+    depends_on:
+      - care-loop-fhir-server
+      - ehr-fhir-server
+    healthcheck:
+      test:
+        - "CMD"
+        - "bun"
+        - "-e"
+        - "fetch('http://localhost:3003/').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+    develop:
+      watch:
+        - path: ./care-loop-dashboard/package.json
+          action: rebuild
+        - path: ./care-loop-dashboard/bun.lock
+          action: rebuild
+        - path: ./care-loop-dashboard/next.config.ts
+          action: rebuild
+        - path: ./care-loop-dashboard/src
+          action: rebuild
+
+volumes:
+  healthkit-data:
+  ehr-fhir-server-db:
+  care-loop-fhir-server-db:
+  amp-docker:
+  amp-shared:
+  care-loop-dashboard-data:
