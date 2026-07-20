@@ -55,7 +55,7 @@ The page reports whether a `HEALTHKIT_VITALS_TARGET_URL` is configured, so with 
 
 ## Run with Docker
 
-From the `hl7-ai-competition` root (docker stack):
+From the `use-cases/care-loop` root (docker stack):
 
 ```sh
 make up        # build and start the apple-healthkit-simulator on :8000

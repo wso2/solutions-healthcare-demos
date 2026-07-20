@@ -6,9 +6,9 @@ The human user is the technical lead. The agent is a supporting engineer that he
 
 ## Project Context
 
-This work is the WSO2 Care Loop entry for the HL7 AI Competition, developed under the `hl7-ai-competition/` directory. The wider repository is a general WSO2 healthcare-demos repo, not specific to this competition. Keep changes scoped to `hl7-ai-competition/`, leave the rest of the repo alone, and make the competition context clear in commits and PRs so a reader coming from the general repo knows what the work is for.
+This work is the WSO2 Care Loop entry for the HL7 AI Competition, developed under the `use-cases/care-loop/` directory. The wider repository is a general WSO2 healthcare-demos repo, not specific to this competition. Keep changes scoped to `use-cases/care-loop/`, leave the rest of the repo alone, and make the competition context clear in commits and PRs so a reader coming from the general repo knows what the work is for.
 
-For product and domain requirements (what the Care Loop is, who it's for, the problem it addresses), check `hl7-ai-competition/docs/` before making assumptions or asking the user.
+For product and domain requirements (what the Care Loop is, who it's for, the problem it addresses), check `use-cases/care-loop/docs/` before making assumptions or asking the user.
 
 ## Operating Rules
 
