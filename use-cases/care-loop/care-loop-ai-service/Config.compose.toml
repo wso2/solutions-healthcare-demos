@@ -1,0 +1,23 @@
+# Compose config for the AMP-only stack. Every LLM URL points at the AMP AI gateway; openAiApiKey/anthropicApiKey are injected from the amp-shared gateway keys by docker-entrypoint.sh, never set here.
+fhirMcpUrl = "http://fhir-mcp-server:8000/mcp/"
+knowledgeMcpUrl = "http://care-loop-knowledge-service:8000/mcp"
+pubmedMcpUrl = "http://pubmed-mcp-server:3010/mcp"
+listenPort = 8003
+
+modelProvider = "openai"
+openAiServiceUrl = "http://amp:22893/careloop-openai"
+nanoModel = "gpt-4.1-nano"
+fullModel = "gpt-4.1"
+anthropicServiceUrl = "http://amp:22893/careloop-anthropic"
+
+dashboardEventsUrl = "http://care-loop-dashboard:3003"
+
+[ballerina.observe]
+tracingEnabled = true
+tracingProvider = "jaeger"
+
+[ballerinax.jaeger]
+agentHostname = "otel-collector"
+agentPort = 4317
+samplerType = "const"
+samplerParam = 1.0

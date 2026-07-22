@@ -1,0 +1,11 @@
+.git
+.gitignore
+.ruff_cache
+.pytest_cache
+.venv
+**/__pycache__
+*.pyc
+.env
+training
+notebooks
+models/*.joblib
