@@ -1,0 +1,32 @@
+{
+  "$schema": "https://raw.githubusercontent.com/jetify-com/devbox/0.14.2/.schema/devbox.schema.json",
+  "packages": [
+    "nodejs@22",
+    "bun@latest",
+    "kubectl@latest",
+    "kubernetes-helm@latest",
+    "k3d@latest",
+    "jq@latest",
+    "gettext@latest"
+  ],
+  "shell": {
+    "init_hook": [
+      "export PATH=\"$PATH:$PWD/.devbox/bin\"",
+      "command -v occ >/dev/null || echo 'occ not found \u2014 run: devbox run install-occ'"
+    ],
+    "scripts": {
+      "install-occ": [
+        "mkdir -p .devbox/bin",
+        "OCC_VERSION=v1.2.2; ARCH=$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/'); OS=$(uname -s | tr '[:upper:]' '[:lower:]')",
+        "curl -fsSL \"https://github.com/openchoreo/openchoreo/releases/download/${OCC_VERSION}/occ_${OCC_VERSION}_${OS}_${ARCH}.tar.gz\" | tar -xz -C .devbox/bin occ"
+      ],
+      "dev": [
+        "bun install",
+        "bun run dev"
+      ],
+      "test": [
+        "NODE_ENV=test bun run test"
+      ]
+    }
+  }
+}
