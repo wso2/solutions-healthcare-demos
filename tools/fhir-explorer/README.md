@@ -1,7 +1,9 @@
 # FHIR Explorer
 
-FHIR Explorer is a Next.js application for browsing FHIR R4 servers and asking
-read-only questions about their data through the FHIR MCP server.
+FHIR Explorer is a feature-rich FHIR R4 client for inspecting server capabilities,
+searching and reading resources, creating and modifying data, and invoking FHIR
+operations. FHIR Chat also lets users explore server capabilities and query data
+in natural language through the FHIR MCP server.
 
 ![FHIR Explorer](../../assets/fhir-explorer.png)
 
