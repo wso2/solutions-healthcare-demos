@@ -1,9 +1,25 @@
+// Copyright (c) 2024 - 2025, WSO2 LLC. (http://www.wso2.com).
+//
+// WSO2 LLC. licenses this file to you under the Apache License,
+// Version 2.0 (the "License"); you may not use this file except
+// in compliance with the License.
+// You may obtain a copy of the License at
+//
+// http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+
 import React, { useState, useEffect, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import "../assets/styles/appointment.css";
 import MessageBox from "../components/message_box";
 import appointmentImage from "../assets/images/appointment-booking.png";
-import urlConfig from "../config/urlConfigs";
+import { baseUrl, paths } from "../config/urlConfigs";
 import { ExpandedContext } from "../utils/expanded_context";
 import { useDispatch } from "react-redux";
 import { resetCdsResponse, updateCdsResponse } from "../redux/cdsResponseSlice";
@@ -76,8 +92,7 @@ function App() {
     setAppointmentCreated(false); // Clear any appointment state
 
     setLoading(true); // Show spinner while loading doctors
-    //const url = `/fhir8081/r4/Practitioner?family=${lastName}&given=${firstName}`;
-    const url = `${urlConfig.baseUrl}/${urlConfig.paths.practitioner}?family=${lastName}&given=${firstName}`;
+    const url = `${baseUrl}${paths.practitioner}?family=${lastName}&given=${firstName}`;
     dispatch(resetCdsRequest());
     dispatch(updateRequest({ Method: "GET", URL: url }));
     dispatch(resetCdsResponse());
@@ -123,7 +138,7 @@ function App() {
       const endDate = appointmentDate;
       const practitionerId = selectedDoctor.id;
 
-      const url = `${urlConfig.baseUrl}/${urlConfig.paths.slot}?startDate=${startDate}&endDate=${endDate}&practitioner=${practitionerId}`;
+      const url = `${baseUrl}${paths.slot}?startDate=${startDate}&endDate=${endDate}&practitioner=${practitionerId}`;
       dispatch(resetCdsRequest());
       dispatch(updateRequest({ Method: "GET", URL: url }));
       dispatch(resetCdsResponse());
@@ -162,7 +177,7 @@ function App() {
     for (const slot of slots) {
       if (!newLocations[slot.locationReference]) {
         try {
-          const locationUrl = `${urlConfig.baseUrl}/${urlConfig.paths.location}/${slot.locationReference}`;
+          const locationUrl = `${baseUrl}${paths.location}/${slot.locationReference}`;
           const res = await fetch(locationUrl);
           const data = await res.json();
           newLocations[slot.locationReference] = data.name;
@@ -249,7 +264,7 @@ function App() {
     };
 
     try {
-      const appointmentUrl = `${urlConfig.baseUrl}/${urlConfig.paths.appointment}`;
+      const appointmentUrl = `${baseUrl}${paths.appointment}`;
       dispatch(resetCdsRequest());
       dispatch(
         updateRequest({
