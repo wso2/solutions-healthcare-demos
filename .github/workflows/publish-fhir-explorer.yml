@@ -1,0 +1,54 @@
+name: Publish FHIR Explorer image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - tools/fhir-explorer/**
+      - .github/workflows/publish-fhir-explorer.yml
+  workflow_dispatch:
+
+concurrency:
+  group: publish-fhir-explorer
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/fhir-explorer
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=long
+            type=raw,value=latest
+
+      - name: Build and publish image
+        uses: docker/build-push-action@v6
+        with:
+          context: tools/fhir-explorer
+          file: tools/fhir-explorer/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
