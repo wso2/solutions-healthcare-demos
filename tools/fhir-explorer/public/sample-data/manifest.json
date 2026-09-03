@@ -1,0 +1,69 @@
+{
+  "generatedAt": "2026-05-26",
+  "generator": "Synthea (synthetichealth/synthea)",
+  "fhirVersion": "4.0.1",
+  "bundleType": "transaction",
+  "patientCount": 6,
+  "notes": "POST each bundle to the FHIR server's base URL as a transaction. Infrastructure bundles (practitioners, hospitals) must load before patient bundles because patient resources reference them.",
+  "bundles": [
+    "infra-hospitals.json",
+    "infra-practitioners.json",
+    "patient-01.json",
+    "patient-02.json",
+    "patient-03.json",
+    "patient-04.json",
+    "patient-05.json",
+    "patient-06.json"
+  ],
+  "details": [
+    {
+      "file": "infra-hospitals.json",
+      "kind": "infrastructure",
+      "label": "Hospitals",
+      "resources": 36
+    },
+    {
+      "file": "infra-practitioners.json",
+      "kind": "infrastructure",
+      "label": "Practitioners",
+      "resources": 35
+    },
+    {
+      "file": "patient-01.json",
+      "kind": "patient",
+      "label": "Erwin Crona",
+      "resources": 114
+    },
+    {
+      "file": "patient-02.json",
+      "kind": "patient",
+      "label": "Earl Maggio",
+      "resources": 279
+    },
+    {
+      "file": "patient-03.json",
+      "kind": "patient",
+      "label": "Erasmo Harvey",
+      "resources": 291
+    },
+    {
+      "file": "patient-04.json",
+      "kind": "patient",
+      "label": "Shizuko Durgan",
+      "resources": 302
+    },
+    {
+      "file": "patient-05.json",
+      "kind": "patient",
+      "label": "Ricardo Armas",
+      "resources": 326
+    },
+    {
+      "file": "patient-06.json",
+      "kind": "patient",
+      "label": "Georgeanna Sharyl",
+      "resources": 379
+    }
+  ],
+  "totalResources": 1762
+}

@@ -1,0 +1,9 @@
+FROM python:3.13-slim
+
+ENV PYTHONUNBUFFERED=1
+
+RUN pip install --no-cache-dir fhir-mcp-server==0.10.0
+
+EXPOSE 8000
+
+CMD ["fhir-mcp-server", "--transport", "streamable-http", "--log-level", "INFO"]
