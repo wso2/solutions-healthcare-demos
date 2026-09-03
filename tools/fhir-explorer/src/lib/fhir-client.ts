@@ -16,56 +16,13 @@
 
 import { recordRequest } from "./request-history";
 
-// Local docker FHIR server; the BaseUrlBar can override this via localStorage,
-// and absolute http(s) URLs are routed through the /api/fhir proxy (no CORS).
 export const DEFAULT_BASE_URL = "http://localhost:9090/fhir/r4";
-
-const STORAGE_KEY = "fhir-explorer:baseUrl";
 
 const HTTP_SCHEME = /^https?:\/\//i;
 // Anything that looks like "<scheme>:" at the very start (e.g. javascript:, data:, file:).
 const ANY_SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 // Absolute http(s) targets are routed through the Next.js proxy route to avoid CORS.
 const FHIR_PROXY_PATH = "/api/fhir";
-
-/** Accepts only same-origin relative paths or absolute http(s) URLs, blocking javascript:, data:, file: and protocol-relative values. */
-export function isValidBaseUrl(url: string): boolean {
-  const trimmed = url.trim();
-  if (!trimmed) return false;
-  if (trimmed.startsWith("//")) return false; // protocol-relative
-  if (trimmed.startsWith("/")) return true; // same-origin relative path
-  if (!HTTP_SCHEME.test(trimmed)) return false;
-  try {
-    const u = new URL(trimmed);
-    return u.protocol === "http:" || u.protocol === "https:";
-  } catch {
-    return false;
-  }
-}
-
-export function getBaseUrl(): string {
-  return getStoredBaseUrl() ?? DEFAULT_BASE_URL;
-}
-
-/** The user's persisted base URL, or null when none is stored (or invalid). */
-export function getStoredBaseUrl(): string | null {
-  if (typeof window === "undefined") return null;
-  const stored = localStorage.getItem(STORAGE_KEY);
-  return stored && isValidBaseUrl(stored) ? stored : null;
-}
-
-/** Persists a base URL after validating it. Returns false (and stores nothing) if invalid. */
-export function setBaseUrl(url: string): boolean {
-  if (typeof window === "undefined") return false;
-  const cleaned = url.trim().replace(/\/$/, "");
-  if (!isValidBaseUrl(cleaned)) return false;
-  try {
-    localStorage.setItem(STORAGE_KEY, cleaned);
-  } catch {
-    return false; // storage full or disabled — nothing was persisted
-  }
-  return true;
-}
 
 /** Encode one FHIR path segment so user input can't break out of it ("../", "?query", "#fragment"); normal ids/types are unaffected. */
 export function encodeFhirPathSegment(segment: string): string {
@@ -88,7 +45,7 @@ export async function fhirFetch(
   init: RequestInit = {},
   baseOverride?: string,
 ): Promise<FhirResponse> {
-  const base = (baseOverride ?? getBaseUrl()).replace(/\/$/, "");
+  const base = (baseOverride ?? DEFAULT_BASE_URL).replace(/\/$/, "");
   const isAbsolute = HTTP_SCHEME.test(path);
   // Absolute URLs come from server-supplied Bundle "link" URLs; allow only http(s) so a malicious server can't make us dereference javascript:/data:/file:.
   if (isAbsolute) {
@@ -107,10 +64,9 @@ export async function fhirFetch(
     headers.set("Content-Type", "application/fhir+json");
   }
 
-  const requestUrl =
-    isValidBaseUrl(url) && HTTP_SCHEME.test(url)
-      ? `${FHIR_PROXY_PATH}?url=${encodeURIComponent(url)}`
-      : url;
+  const requestUrl = HTTP_SCHEME.test(url)
+    ? `${FHIR_PROXY_PATH}?url=${encodeURIComponent(url)}`
+    : url;
 
   const start = performance.now();
   let res: Response;

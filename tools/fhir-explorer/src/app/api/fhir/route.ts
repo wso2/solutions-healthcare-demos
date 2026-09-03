@@ -14,9 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { resolveFhirTarget } from "@/lib/server/fhir-target";
-import { applyTenantToFhirUrl, tenantIdFromRequest } from "@/lib/server/tenant";
-
 export const runtime = "nodejs";
 
 const BODYLESS_METHODS = new Set(["GET", "HEAD"]);
@@ -34,7 +31,6 @@ const REQUEST_HEADERS_TO_REMOVE = [
   "x-forwarded-port",
   "x-forwarded-proto",
   "x-real-ip",
-  "x-client-fingerprint",
 ];
 const RESPONSE_HEADERS_TO_REMOVE = [
   "connection",
@@ -65,14 +61,27 @@ function forwardedResponseHeaders(response: Response): Headers {
 const MAX_REDIRECTS = 3;
 
 /**
- * Follows redirects manually so every hop goes back through the SSRF guard —
- * with `redirect: "follow"` an allowlisted host could bounce the request to an
- * internal address. Authorization is dropped when a redirect crosses origins.
+ * Only forwards paths under the configured FHIR base URL. The browser cannot
+ * choose a server, so this route cannot be used as an SSRF proxy.
  */
-async function fetchWithValidatedRedirects(
+function configuredFhirTarget(requestedUrl: string): string {
+  const fhirServerBaseUrl = process.env.FHIR_SERVER_BASE_URL?.trim().replace(/\/+$/, "");
+  if (!fhirServerBaseUrl)
+    throw new Error("Set FHIR_SERVER_BASE_URL to the configured FHIR server.");
+
+  const configured = new URL(fhirServerBaseUrl);
+  const requested = new URL(requestedUrl);
+  const prefix = configured.pathname;
+  if (requested.pathname !== prefix && !requested.pathname.startsWith(`${prefix}/`)) {
+    throw new Error("The request is outside the configured FHIR server path.");
+  }
+
+  return new URL(`${requested.pathname}${requested.search}`, configured.origin).toString();
+}
+
+async function fetchWithConfiguredRedirects(
   targetUrl: string,
   init: { method: string; headers: Headers; body?: ArrayBuffer; signal: AbortSignal },
-  tenantId: string | null,
 ): Promise<Response> {
   let url = targetUrl;
   const headers = new Headers(init.headers);
@@ -83,23 +92,17 @@ async function fetchWithValidatedRedirects(
     if (response.status < 300 || response.status >= 400 || !location) return response;
     if (hop >= MAX_REDIRECTS) throw new Error("Too many redirects from the FHIR server.");
 
-    const next = applyTenantToFhirUrl(
-      await resolveFhirTarget(new URL(location, url).toString()),
-      tenantId,
-    );
-    if (new URL(next).origin !== new URL(url).origin) headers.delete("authorization");
-    url = next;
+    url = configuredFhirTarget(new URL(location, url).toString());
   }
 }
 
 async function proxyFhirRequest(request: Request): Promise<Response> {
   const requestedUrl = new URL(request.url).searchParams.get("url");
 
-  const tenantId = tenantIdFromRequest(request);
-
   let targetUrl: string;
   try {
-    targetUrl = applyTenantToFhirUrl(await resolveFhirTarget(requestedUrl), tenantId);
+    if (!requestedUrl) throw new Error("A FHIR URL is required.");
+    targetUrl = configuredFhirTarget(requestedUrl);
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : "Invalid FHIR URL." },
@@ -109,16 +112,12 @@ async function proxyFhirRequest(request: Request): Promise<Response> {
 
   try {
     const body = BODYLESS_METHODS.has(request.method) ? undefined : await request.arrayBuffer();
-    const response = await fetchWithValidatedRedirects(
-      targetUrl,
-      {
-        method: request.method,
-        headers: forwardedRequestHeaders(request),
-        body,
-        signal: request.signal,
-      },
-      tenantId,
-    );
+    const response = await fetchWithConfiguredRedirects(targetUrl, {
+      method: request.method,
+      headers: forwardedRequestHeaders(request),
+      body,
+      signal: request.signal,
+    });
 
     return new Response(response.body, {
       status: response.status,
@@ -128,7 +127,7 @@ async function proxyFhirRequest(request: Request): Promise<Response> {
   } catch (error) {
     console.error("FHIR proxy request failed:", error instanceof Error ? error.message : error);
     return Response.json(
-      { error: "Could not connect to the selected FHIR server." },
+      { error: "Could not connect to the configured FHIR server." },
       { status: 502 },
     );
   }

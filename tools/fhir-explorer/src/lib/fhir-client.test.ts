@@ -14,15 +14,8 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import {
-  fhirFetch,
-  getBaseUrl,
-  setBaseUrl,
-  isValidBaseUrl,
-  encodeFhirPathSegment,
-  DEFAULT_BASE_URL,
-} from "./fhir-client";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { fhirFetch, encodeFhirPathSegment } from "./fhir-client";
 
 /**
  * Characterization tests for the FHIR HTTP client. These pin down the URL- and
@@ -123,50 +116,6 @@ describe("fhirFetch response shape", () => {
     expect(res.ok).toBe(false);
     expect(res.body).toBe("not json");
     expect(res.raw).toBe("not json");
-  });
-});
-
-describe("base URL persistence", () => {
-  beforeEach(() => localStorage.clear());
-
-  it("falls back to DEFAULT_BASE_URL when nothing is stored", () => {
-    expect(getBaseUrl()).toBe(DEFAULT_BASE_URL);
-  });
-
-  it("round-trips a stored base URL and strips its trailing slash", () => {
-    setBaseUrl("https://example.org/fhir/r4/");
-    expect(getBaseUrl()).toBe("https://example.org/fhir/r4");
-  });
-});
-
-describe("isValidBaseUrl", () => {
-  it("accepts same-origin relative paths and http(s) URLs", () => {
-    expect(isValidBaseUrl("/fhir/r4")).toBe(true);
-    expect(isValidBaseUrl("https://example.org/fhir/r4")).toBe(true);
-    expect(isValidBaseUrl("http://localhost:9090/fhir/r4")).toBe(true);
-  });
-
-  it("rejects dangerous schemes, protocol-relative, and empty values", () => {
-    expect(isValidBaseUrl("javascript:alert(1)")).toBe(false);
-    expect(isValidBaseUrl("data:text/html,<script>1</script>")).toBe(false);
-    expect(isValidBaseUrl("file:///etc/passwd")).toBe(false);
-    expect(isValidBaseUrl("ftp://example.org")).toBe(false);
-    expect(isValidBaseUrl("//evil.example")).toBe(false);
-    expect(isValidBaseUrl("")).toBe(false);
-  });
-});
-
-describe("setBaseUrl validation", () => {
-  beforeEach(() => localStorage.clear());
-
-  it("stores nothing and returns false for an invalid URL", () => {
-    expect(setBaseUrl("javascript:alert(1)")).toBe(false);
-    expect(getBaseUrl()).toBe(DEFAULT_BASE_URL);
-  });
-
-  it("stores and returns true for a valid URL", () => {
-    expect(setBaseUrl("https://example.org/fhir/r4")).toBe(true);
-    expect(getBaseUrl()).toBe("https://example.org/fhir/r4");
   });
 });
 

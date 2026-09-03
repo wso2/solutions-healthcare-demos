@@ -14,61 +14,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import { createMCPClient, type MCPClient } from "@ai-sdk/mcp";
-import { Experimental_StdioMCPTransport } from "@ai-sdk/mcp/mcp-stdio";
+import { createMCPClient } from "@ai-sdk/mcp";
 import type { ToolSet } from "ai";
 
 const READ_ONLY_TOOL_NAMES = ["get_capabilities", "search", "read"] as const;
-const DEFAULT_IDLE_TTL_MS = 5 * 60 * 1000;
-// Each distinct base URL spawns an MCP subprocess; cap them so attacker-varied
-// URLs can't exhaust process/memory limits.
-const MAX_CLIENTS = 8;
-
-interface CachedMcpClient {
-  client: MCPClient;
-  tools: ToolSet;
-  activeRequests: number;
-  idleTimer?: NodeJS.Timeout;
-  lastUsedAt: number;
-}
 
 const globalMcpCache = globalThis as typeof globalThis & {
-  __fhirMcpClients?: Map<string, Promise<CachedMcpClient>>;
+  __fhirMcpTools?: Promise<ToolSet>;
 };
 
-const clients =
-  globalMcpCache.__fhirMcpClients ??
-  (globalMcpCache.__fhirMcpClients = new Map<string, Promise<CachedMcpClient>>());
+async function connectToFhirMcp(): Promise<ToolSet> {
+  const url = process.env.FHIR_MCP_URL?.trim();
+  if (!url) throw new Error("Set FHIR_MCP_URL to the standalone FHIR MCP endpoint.");
 
-function idleTtlMs(): number {
-  const configured = Number(process.env.FHIR_MCP_IDLE_TTL_MS);
-  return Number.isFinite(configured) && configured > 0 ? configured : DEFAULT_IDLE_TTL_MS;
-}
-
-function commandConfig() {
-  const command = process.env.FHIR_MCP_COMMAND?.trim() || "uvx";
-  const args = process.env.FHIR_MCP_ARGS?.trim()
-    ? process.env.FHIR_MCP_ARGS.trim().split(/\s+/)
-    : ["--from", "fhir-mcp-server==0.10.0", "fhir-mcp-server", "--transport", "stdio"];
-
-  return { command, args };
-}
-
-async function createCachedClient(baseUrl: string): Promise<CachedMcpClient> {
-  const { command, args } = commandConfig();
-  const transport = new Experimental_StdioMCPTransport({
-    command,
-    args,
-    env: {
-      FHIR_SERVER_BASE_URL: baseUrl,
-      // Defaults to disabled for the open local dev server; set the env var to
-      // "False" (plus the fhir-mcp-server auth env vars) for a secured server.
-      FHIR_SERVER_DISABLE_AUTHORIZATION: process.env.FHIR_SERVER_DISABLE_AUTHORIZATION ?? "True",
-      FHIR_MCP_REQUEST_TIMEOUT: process.env.FHIR_MCP_REQUEST_TIMEOUT ?? "30",
-    },
-  });
-
-  const client = await createMCPClient({ transport });
+  const client = await createMCPClient({ transport: { type: "http", url } });
 
   try {
     const availableTools = await client.tools();
@@ -82,75 +41,20 @@ async function createCachedClient(baseUrl: string): Promise<CachedMcpClient> {
       tools[name] = tool;
     }
 
-    return { client, tools, activeRequests: 0, lastUsedAt: Date.now() };
+    return tools;
   } catch (error) {
     await client.close();
     throw error;
   }
 }
 
-/** Evicts the least-recently-used idle client to make room for a new one. */
-async function evictIdleClient(): Promise<boolean> {
-  let lruKey: string | undefined;
-  let lru: CachedMcpClient | undefined;
-
-  for (const [key, pending] of clients) {
-    const cached = await pending.catch(() => null);
-    if (!cached || cached.activeRequests > 0 || clients.get(key) !== pending) continue;
-    if (!lru || cached.lastUsedAt < lru.lastUsedAt) {
-      lruKey = key;
-      lru = cached;
-    }
+export async function getReadOnlyFhirMcpTools(): Promise<ToolSet> {
+  const tools = globalMcpCache.__fhirMcpTools ?? connectToFhirMcp();
+  globalMcpCache.__fhirMcpTools = tools;
+  try {
+    return await tools;
+  } catch (error) {
+    if (globalMcpCache.__fhirMcpTools === tools) delete globalMcpCache.__fhirMcpTools;
+    throw error;
   }
-
-  if (!lruKey || !lru) return false;
-  clients.delete(lruKey);
-  if (lru.idleTimer) clearTimeout(lru.idleTimer);
-  void lru.client.close();
-  return true;
-}
-
-export async function acquireReadOnlyFhirMcpClient(baseUrl: string): Promise<{
-  client: MCPClient;
-  tools: ToolSet;
-  release: () => void;
-}> {
-  let pendingClient = clients.get(baseUrl);
-  if (!pendingClient) {
-    if (clients.size >= MAX_CLIENTS && !(await evictIdleClient())) {
-      throw new Error("Too many FHIR servers in use right now. Try again shortly.");
-    }
-    pendingClient = createCachedClient(baseUrl);
-    clients.set(baseUrl, pendingClient);
-    pendingClient.catch(() => clients.delete(baseUrl));
-  }
-
-  const cached = await pendingClient;
-  cached.lastUsedAt = Date.now();
-  if (cached.idleTimer) {
-    clearTimeout(cached.idleTimer);
-    cached.idleTimer = undefined;
-  }
-  cached.activeRequests += 1;
-
-  let released = false;
-  return {
-    client: cached.client,
-    tools: cached.tools,
-    release: () => {
-      if (released) return;
-      released = true;
-      cached.activeRequests = Math.max(0, cached.activeRequests - 1);
-      if (cached.activeRequests > 0) return;
-
-      cached.idleTimer = setTimeout(() => {
-        if (cached.activeRequests > 0) return;
-        if (clients.get(baseUrl) === pendingClient) {
-          clients.delete(baseUrl);
-        }
-        void cached.client.close();
-      }, idleTtlMs());
-      cached.idleTimer.unref();
-    },
-  };
 }

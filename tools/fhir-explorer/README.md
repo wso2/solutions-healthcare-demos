@@ -1,9 +1,9 @@
 # FHIR Explorer
 
-FHIR Explorer is a feature-rich FHIR R4 client for inspecting server capabilities,
-searching and reading resources, creating and modifying data, and invoking FHIR
-operations. FHIR Chat also lets users explore server capabilities and query data
-in natural language through the FHIR MCP server.
+FHIR Explorer is a feature-rich client for the WSO2 FHIR Server. It supports
+inspecting capabilities, searching and reading resources, creating and modifying
+data, and invoking FHIR operations. FHIR Chat queries the same server through one
+standalone WSO2 FHIR MCP Server.
 
 ![FHIR Explorer](../../assets/fhir-explorer.png)
 
@@ -11,46 +11,55 @@ in natural language through the FHIR MCP server.
 
 - Node.js 22 or later
 - pnpm 11 or later
-- A reachable FHIR R4 server
 - An OpenAI-compatible API key for the assistant
 
 ## Setup
 
 ```bash
-pnpm install
-cp .env.example .env.local
+cp .env.example .env
 ```
 
-Set `OPENAI_API_KEY` in `.env.local`. Set `OPENAI_BASE_URL` when using an
-OpenAI-compatible gateway instead of the default OpenAI endpoint.
+Set `OPENAI_API_KEY` in `.env`. Set `OPENAI_BASE_URL` when using an OpenAI-compatible
+gateway instead of the default OpenAI endpoint.
 
-Start the development server:
+Start the complete stack:
 
 ```bash
-pnpm dev
+docker compose up --build
 ```
 
-Open `http://localhost:3000` in a browser.
+Open `http://localhost:3000` in a browser. The WSO2 FHIR Server is available at
+`http://localhost:9090/fhir/r4` and the MCP endpoint at `http://localhost:8000/mcp/`.
+Set `FHIR_EXPLORER_HOST_PORT` or `FHIR_MCP_HOST_PORT` before starting Compose to use
+different host ports.
 
-## Configure A FHIR Server
+To stop the stack while retaining FHIR data:
 
-Enter the FHIR server's base URL in the application. For local development,
-`http://localhost:9090` and `http://127.0.0.1:9090` are allowed by default.
-
-To allow additional origins, set a comma-separated list in `.env.local`:
-
-```dotenv
-FHIR_ALLOWED_ORIGINS=https://fhir.example.com,https://fhir-test.example.com
+```bash
+docker compose down
 ```
 
-To preconfigure the server selected for new browser sessions, set:
+To remove the persisted PostgreSQL and implementation-guide data as well:
 
-```dotenv
-FHIR_DEFAULT_BASE_URL=https://fhir.example.com
+```bash
+docker compose down -v
 ```
 
-The server validates user-supplied URLs and rejects private or internal network
-addresses unless their origins are explicitly allowlisted.
+## Local UI development
+
+Start the backing services first:
+
+```bash
+docker compose up postgres fhir-server fhir-mcp
+```
+
+Then run the UI outside Docker with the Compose service endpoints supplied as
+environment variables:
+
+```bash
+pnpm install
+FHIR_SERVER_BASE_URL=http://localhost:9090/fhir/r4 FHIR_MCP_URL=http://localhost:8000/mcp/ pnpm dev
+```
 
 ## Commands
 

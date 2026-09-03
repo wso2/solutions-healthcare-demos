@@ -18,7 +18,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
-import { BaseUrlBar, useBaseUrl } from "@/components/BaseUrlBar";
+import { BaseUrlBar } from "@/components/BaseUrlBar";
 import { CapabilityPanel } from "@/components/panels/CapabilityPanel";
 import { FhirChat } from "@/components/FhirChat";
 import { InstancePanel } from "@/components/panels/InstancePanel";
@@ -40,13 +40,13 @@ export function FhirExplorer() {
 }
 
 function ExplorerContent() {
-  const [baseUrl, setBaseUrl] = useBaseUrl();
+  const baseUrl = "http://localhost:9090/fhir/r4";
   const [tab, setTab] = useState("search");
 
   return (
     <ExplorerBusProvider tab={tab} setTab={setTab}>
       <div className="min-h-screen bg-background">
-        <BaseUrlBar baseUrl={baseUrl} onChange={setBaseUrl} />
+        <BaseUrlBar baseUrl={baseUrl} />
         <main className="mx-auto max-w-7xl px-4 py-6">
           <Tabs value={tab} onValueChange={setTab}>
             <TabsList className="h-auto w-full justify-start gap-1 rounded-none border-b bg-transparent p-0">
@@ -93,7 +93,7 @@ function ExplorerContent() {
             origin.
           </p>
         </main>
-        <FhirChat baseUrl={baseUrl} />
+        <FhirChat />
       </div>
     </ExplorerBusProvider>
   );

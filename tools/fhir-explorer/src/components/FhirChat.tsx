@@ -27,6 +27,7 @@ import { EmptyChat } from "@/components/fhir-chat/EmptyChat";
 import { Button } from "@/components/ui/button";
 import { ChatRateLimitError, parseChatLimit } from "@/lib/chat-rate-limit";
 import type { FhirChatMessage } from "@/lib/fhir-chat-types";
+import { DEFAULT_BASE_URL } from "@/lib/fhir-client";
 import { cn } from "@/lib/utils";
 
 const STARTER_QUESTIONS = [
@@ -36,18 +37,13 @@ const STARTER_QUESTIONS = [
   "Show the five most recently updated Observations.",
 ];
 
-interface FhirChatProps {
-  baseUrl: string;
-}
-
-export function FhirChat({ baseUrl }: FhirChatProps) {
+export function FhirChat() {
   const [open, setOpen] = useState(false);
   const [input, setInput] = useState("");
   const transport = useMemo(
     () =>
       new DefaultChatTransport({
         api: "/api/chat",
-        body: () => ({ baseUrl }),
         // The transport otherwise swallows the HTTP status; surface the
         // per-minute 429 as a typed error carrying its Retry-After.
         fetch: async (input, init) => {
@@ -58,7 +54,7 @@ export function FhirChat({ baseUrl }: FhirChatProps) {
           return response;
         },
       }),
-    [baseUrl],
+    [],
   );
   const { messages, sendMessage, setMessages, status, stop, error, clearError } =
     useChat<FhirChatMessage>({ transport });
@@ -126,7 +122,7 @@ export function FhirChat({ baseUrl }: FhirChatProps) {
         )}
       >
         <ChatHeader
-          baseUrl={baseUrl}
+          baseUrl={DEFAULT_BASE_URL}
           hasMessages={hasConversation}
           onClear={() => setMessages([])}
           onClose={() => setOpen(false)}

@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: fhirdb
+      POSTGRES_USER: fhir
+      POSTGRES_PASSWORD: fhir
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fhir -d fhirdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - postgres-data:/var/lib/postgresql
+
+  fhir-server:
+    image: ghcr.io/wso2/fhir-server:latest
+    environment:
+      BASE_URL: http://localhost:9090/fhir/r4
+      DATABASE_URL: postgres://fhir:fhir@postgres:5432/fhirdb?sslmode=disable&pool_max_conns=20
+      FHIR_CREATE_TABLES: "true"
+      IG_CACHE_DIR: /data/fhir-ig-cache
+      SERVER_PORT: "9090"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "9090:9090"
+    volumes:
+      - fhir-ig-cache:/data/fhir-ig-cache
+
+  fhir-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.fhir-mcp
+    environment:
+      FHIR_MCP_HOST: 0.0.0.0
+      FHIR_MCP_PORT: "8000"
+      FHIR_SERVER_BASE_URL: http://fhir-server:9090/fhir/r4
+      FHIR_SERVER_DISABLE_AUTHORIZATION: "True"
+    depends_on:
+      fhir-server:
+        condition: service_started
+    ports:
+      - "${FHIR_MCP_HOST_PORT:-8000}:8000"
+
+  explorer:
+    build: .
+    environment:
+      FHIR_MCP_URL: http://fhir-mcp:8000/mcp/
+      FHIR_SERVER_BASE_URL: http://fhir-server:9090/fhir/r4
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?Set OPENAI_API_KEY in your environment or .env file}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5-nano}
+    depends_on:
+      fhir-mcp:
+        condition: service_started
+    ports:
+      - "${FHIR_EXPLORER_HOST_PORT:-3000}:3000"
+
+volumes:
+  fhir-ig-cache:
+  postgres-data:
