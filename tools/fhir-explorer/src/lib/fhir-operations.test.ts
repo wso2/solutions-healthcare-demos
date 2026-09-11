@@ -17,6 +17,8 @@
 import { describe, it, expect } from "vitest";
 import {
   CURATED_BY_NAME,
+  VALIDATE_SAMPLE_BODY,
+  allowedMethods,
   buildOperationQuery,
   buildParametersResource,
   isPrimitiveType,
@@ -59,6 +61,41 @@ describe("mustUsePost", () => {
   it("is true when any supplied input is a complex/resource type", () => {
     expect(mustUsePost(everything, [{ name: "resource", type: "Resource" }])).toBe(true);
     expect(mustUsePost(everything, [{ name: "x", type: "Coding" }])).toBe(true);
+  });
+});
+
+describe("allowedMethods", () => {
+  const validate = CURATED_BY_NAME.get("validate")!;
+  const meta = CURATED_BY_NAME.get("meta")!;
+  const everything = CURATED_BY_NAME.get("everything")!;
+  const metaAdd = CURATED_BY_NAME.get("meta-add")!;
+
+  it("honours an explicit method restriction", () => {
+    expect(allowedMethods(validate)).toEqual(["POST"]);
+    expect(allowedMethods(meta)).toEqual(["GET"]);
+  });
+
+  it("defaults to GET+POST, or POST-only when it must be posted", () => {
+    expect(allowedMethods(everything, [{ name: "_count", type: "integer" }])).toEqual([
+      "GET",
+      "POST",
+    ]);
+    expect(allowedMethods(metaAdd)).toEqual(["POST"]);
+  });
+});
+
+describe("curated catalogue", () => {
+  it("drops the bulk export and patient match operations", () => {
+    expect(CURATED_BY_NAME.has("export")).toBe(false);
+    expect(CURATED_BY_NAME.has("match")).toBe(false);
+  });
+
+  it("ships a Patient default body for $validate", () => {
+    expect(CURATED_BY_NAME.get("validate")!.defaultBody).toBe(VALIDATE_SAMPLE_BODY);
+    expect(JSON.parse(VALIDATE_SAMPLE_BODY)).toMatchObject({
+      resourceType: "Patient",
+      gender: "female",
+    });
   });
 });
 

@@ -150,7 +150,7 @@ function OperationItem({
       <div className="flex w-full items-center gap-2">
         <span className="font-mono text-sm">${op.name}</span>
         <Badge variant="outline" className="text-[10px] font-normal">
-          {op.affectsState ? "POST" : "GET"}
+          {op.methods?.length === 1 ? op.methods[0] : op.affectsState ? "POST" : "GET"}
         </Badge>
       </div>
       {op.documentation && (

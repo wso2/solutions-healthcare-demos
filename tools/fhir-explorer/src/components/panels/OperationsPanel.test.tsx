@@ -15,10 +15,11 @@
 // under the License.
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { screen, fireEvent } from "@testing-library/react";
+import { screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "@/test/utils";
 import { OperationsPanel } from "./OperationsPanel";
+import { VALIDATE_SAMPLE_BODY } from "@/lib/fhir-operations";
 import * as client from "@/lib/fhir-client";
 
 vi.mock("@/lib/fhir-client", async (importOriginal) => {
@@ -73,7 +74,7 @@ describe("OperationsPanel", () => {
     expect(client.fhirFetch).toHaveBeenCalledWith("/Patient/123/$everything?_count=10", {}, BASE);
   });
 
-  it("switches to POST and sends a Parameters body when a resource input is provided", async () => {
+  it("forces POST for $validate and sends the default Patient body", async () => {
     const user = userEvent.setup();
     renderWithProviders(<OperationsPanel baseUrl={BASE} />);
 
@@ -82,35 +83,48 @@ describe("OperationsPanel", () => {
     await user.type(screen.getByPlaceholderText(/search operations/i), "validate");
     await user.click(screen.getByRole("option", { name: /resource is valid/i }));
 
-    // Pick the `resource` parameter in the row's name combobox.
-    await user.click(screen.getByRole("combobox", { name: /parameter name/i }));
-    await user.type(screen.getByPlaceholderText(/search parameters/i), "resource");
-    await user.click(screen.getByRole("option", { name: /resource to validate/i }));
-
-    // Brace-laden JSON is awkward to type via userEvent, so set it directly.
-    const resourceInput = screen.getByRole("textbox", { name: /parameter value/i });
-    fireEvent.change(resourceInput, { target: { value: '{"resourceType":"Patient","id":"x"}' } });
+    expect(screen.getByRole("radio", { name: "POST" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "GET" })).toBeDisabled();
 
     await user.click(screen.getByRole("button", { name: /invoke/i }));
 
-    expect(screen.getByRole("radio", { name: "GET" })).toBeDisabled();
-    expect(screen.getByRole("radio", { name: "POST" })).toBeChecked();
     expect(client.fhirFetch).toHaveBeenCalledWith(
       "/Patient/$validate",
       {
         method: "POST",
         headers: { "Content-Type": "application/fhir+json" },
-        body: JSON.stringify(
-          {
-            resourceType: "Parameters",
-            parameter: [{ name: "resource", resource: { resourceType: "Patient", id: "x" } }],
-          },
-          null,
-          2,
-        ),
+        body: VALIDATE_SAMPLE_BODY,
       },
       BASE,
     );
+  });
+
+  it("disables POST for $meta (GET-only)", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<OperationsPanel baseUrl={BASE} />);
+
+    await user.click(screen.getByRole("radio", { name: /^Type/ }));
+    await user.click(screen.getByRole("combobox", { name: /operation/i }));
+    await user.type(screen.getByPlaceholderText(/search operations/i), "meta");
+    await user.click(screen.getByRole("option", { name: /tags, security labels/i }));
+
+    expect(screen.getByRole("radio", { name: "GET" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "POST" })).toBeDisabled();
+  });
+
+  it("does not list $export or $match", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<OperationsPanel baseUrl={BASE} />);
+
+    await user.click(screen.getByRole("radio", { name: /^Type/ }));
+    await user.click(screen.getByRole("combobox", { name: /operation/i }));
+    const search = screen.getByPlaceholderText(/search operations/i);
+
+    await user.type(search, "export");
+    expect(screen.queryByRole("option", { name: /\$export/i })).not.toBeInTheDocument();
+    await user.clear(search);
+    await user.type(search, "match");
+    expect(screen.queryByRole("option", { name: /\$match/i })).not.toBeInTheDocument();
   });
 
   it("offers only type and instance scopes", () => {

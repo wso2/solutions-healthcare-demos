@@ -38,6 +38,9 @@ export interface OperationParam {
   documentation?: string;
 }
 
+/** HTTP methods an operation can be invoked with. */
+export type HttpMethod = "GET" | "POST";
+
 export interface OperationDef {
   /** Operation code without the leading "$" (e.g. "everything"). */
   name: string;
@@ -51,6 +54,10 @@ export interface OperationDef {
    * means it applies to all resource types (e.g. $validate, $meta).
    */
   resourceTypes: readonly string[];
+  /** HTTP methods the operation accepts, when the spec restricts it. */
+  methods?: readonly HttpMethod[];
+  /** Default request body (JSON) for POST invocations. */
+  defaultBody?: string;
   parameters: readonly OperationParam[];
   documentation?: string;
 }
@@ -88,6 +95,19 @@ export function isPrimitiveType(type?: string): boolean {
  * A pragmatic catalogue of the most-used FHIR R4 operations. Not exhaustive —
  * the server's CapabilityStatement augments it with anything else it supports.
  */
+/** Sample Patient body used as the default $validate POST payload. */
+export const VALIDATE_SAMPLE_BODY = `{
+  "resourceType": "Patient",
+  "name": [
+    {
+      "family": "Smith",
+      "given": ["Alice"]
+    }
+  ],
+  "gender": "female",
+  "birthDate": "1990-05-15"
+}`;
+
 export const CURATED_OPERATIONS: readonly OperationDef[] = [
   {
     name: "everything",
@@ -122,6 +142,8 @@ export const CURATED_OPERATIONS: readonly OperationDef[] = [
     type: true,
     instance: true,
     resourceTypes: [],
+    methods: ["POST"],
+    defaultBody: VALIDATE_SAMPLE_BODY,
     documentation: "Check whether a resource is valid (optionally against a profile).",
     parameters: [
       {
@@ -152,6 +174,7 @@ export const CURATED_OPERATIONS: readonly OperationDef[] = [
     type: true,
     instance: true,
     resourceTypes: [],
+    methods: ["GET"],
     documentation: "Retrieve the meta (tags, security labels, profiles) in scope.",
     parameters: [],
   },
@@ -319,60 +342,6 @@ export const CURATED_OPERATIONS: readonly OperationDef[] = [
     ],
   },
   {
-    name: "match",
-    affectsState: false,
-    system: false,
-    type: true,
-    instance: false,
-    resourceTypes: ["Patient"],
-    documentation: "Find candidate patient records that match the supplied demographics.",
-    parameters: [
-      {
-        name: "resource",
-        use: "in",
-        type: "Resource",
-        min: 1,
-        documentation: "A Patient resource to match (JSON)",
-      },
-      {
-        name: "onlyCertainMatches",
-        use: "in",
-        type: "boolean",
-        documentation: "Only return high-confidence matches",
-      },
-      { name: "count", use: "in", type: "integer", documentation: "Max matches to return" },
-    ],
-  },
-  {
-    name: "export",
-    affectsState: false,
-    system: true,
-    type: true,
-    instance: true,
-    resourceTypes: ["Patient", "Group"],
-    documentation: "Bulk Data export (async). Returns a polling location.",
-    parameters: [
-      {
-        name: "_outputFormat",
-        use: "in",
-        type: "string",
-        documentation: "Output format, e.g. application/fhir+ndjson",
-      },
-      {
-        name: "_since",
-        use: "in",
-        type: "instant",
-        documentation: "Only resources changed after this time",
-      },
-      {
-        name: "_type",
-        use: "in",
-        type: "string",
-        documentation: "Comma-separated resource types to export",
-      },
-    ],
-  },
-  {
     name: "snapshot",
     affectsState: false,
     system: false,
@@ -436,6 +405,15 @@ export function mustUsePost(
 ): boolean {
   if (op?.affectsState) return true;
   return filled.some((p) => p.type && !isPrimitiveType(p.type));
+}
+
+/** HTTP methods an operation may be invoked with, honouring an explicit restriction. */
+export function allowedMethods(
+  op: OperationDef | undefined,
+  filled: ReadonlyArray<{ name: string; type?: string }> = [],
+): readonly HttpMethod[] {
+  if (op?.methods?.length) return op.methods;
+  return mustUsePost(op, filled) ? ["POST"] : ["GET", "POST"];
 }
 
 /** Treat a type name as a resource (goes in Parameters.resource, not value[x]). */

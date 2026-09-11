@@ -33,10 +33,10 @@ import { RowSection, RemoveRowButton } from "../RowSection";
 import { Play } from "lucide-react";
 import { useOperations } from "@/hooks/use-operations";
 import {
+  allowedMethods,
   buildOperationQuery,
   buildParametersResource,
   CURATED_BY_NAME,
-  mustUsePost,
   operationValueHint,
   type OperationScope,
 } from "@/lib/fhir-operations";
@@ -83,8 +83,10 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
     [params, byParamName],
   );
 
-  const defaultPost = mustUsePost(op, filled);
-  const method = defaultPost ? "POST" : (methodOverride ?? "GET");
+  const methods = allowedMethods(op, filled);
+  const canGet = methods.includes("GET");
+  const canPost = methods.includes("POST");
+  const method: "GET" | "POST" = !canGet ? "POST" : !canPost ? "GET" : (methodOverride ?? "GET");
 
   const path = useMemo(() => {
     const seg = `$${encodeFhirPathSegment(opName)}`;
@@ -95,8 +97,8 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
   }, [scope, resourceType, id, opName]);
 
   const generatedBody = useMemo(
-    () => JSON.stringify(buildParametersResource(filled), null, 2),
-    [filled],
+    () => op?.defaultBody ?? JSON.stringify(buildParametersResource(filled), null, 2),
+    [op, filled],
   );
   const query = useMemo(
     () => buildOperationQuery(filled.map((r) => ({ name: r.name, value: r.value }))),
@@ -179,7 +181,7 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
               type="radio"
               name="op-method"
               checked={method === "GET"}
-              disabled={defaultPost}
+              disabled={!canGet}
               onChange={() => setMethodOverride("GET")}
             />
             GET
@@ -189,15 +191,21 @@ export function OperationsPanel({ baseUrl }: { baseUrl: string }) {
               type="radio"
               name="op-method"
               checked={method === "POST"}
+              disabled={!canPost}
               onChange={() => setMethodOverride("POST")}
             />
             POST
           </label>
         </div>
-        {defaultPost && (
+        {!canGet && (
           <span className="text-xs text-destructive">
-            This operation needs POST (changes state or has a complex parameter).
+            {op?.methods
+              ? "This operation only supports POST."
+              : "This operation needs POST (changes state or has a complex parameter)."}
           </span>
+        )}
+        {!canPost && (
+          <span className="text-xs text-destructive">This operation only supports GET.</span>
         )}
       </Field>
 
