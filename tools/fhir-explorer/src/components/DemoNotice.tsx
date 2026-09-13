@@ -22,21 +22,6 @@ export const HEALTHCARE_URL = "https://wso2.com/solutions/healthcare/";
 export const FHIR_SERVER_URL = "https://github.com/wso2/fhir-server";
 export const CONTACT_URL = "https://wso2.com/contact/?ref=Healthcare";
 
-const FACTS = [
-  {
-    term: "Synthetic data only",
-    body: "The server is reset weekly and reloaded with a fixed set of synthetic test data, so anything you create here will be removed without notice.",
-  },
-  {
-    term: "Rate limited",
-    body: "Capacity is limited, so requests may take a few moments. Limits protect the server from abuse; if your requests are throttled, wait a moment before retrying.",
-  },
-  {
-    term: "Evaluation only",
-    body: "Provided to evaluate the WSO2 FHIR server. Availability is not guaranteed and nothing here should be treated as durable.",
-  },
-] as const;
-
 export function TextLink({ href, children }: { href: string; children: ReactNode }) {
   return (
     <a
@@ -76,16 +61,14 @@ export function DemoWarning() {
   );
 }
 
-export function DemoFacts() {
+export function DemoDetails() {
   return (
-    <dl className="divide-y border-y">
-      {FACTS.map((fact) => (
-        <div key={fact.term} className="grid gap-1 py-4 sm:grid-cols-[11rem_1fr] sm:gap-6">
-          <dt className="text-sm font-medium text-foreground">{fact.term}</dt>
-          <dd className="text-sm leading-relaxed text-muted-foreground">{fact.body}</dd>
-        </div>
-      ))}
-    </dl>
+    <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+      The server is reset weekly and reloaded with a fixed set of synthetic test data, so anything
+      you create here will be removed without notice. Capacity is limited, so requests may take a
+      few moments. Rate limits are enforced to protect the server from abuse and to keep it
+      responsive for everyone; if your requests are throttled, wait a moment before retrying.
+    </p>
   );
 }
 
@@ -105,23 +88,13 @@ export function DemoCta() {
   );
 }
 
-export function DemoLinks() {
-  return (
-    <p className="flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-muted-foreground">
-      <TextLink href={HEALTHCARE_URL}>Open Healthcare</TextLink>
-      <TextLink href={FHIR_SERVER_URL}>WSO2 FHIR Server</TextLink>
-    </p>
-  );
-}
-
 export function DemoNotice() {
   return (
     <div className="space-y-8">
       <DemoIntro />
       <DemoWarning />
-      <DemoFacts />
+      <DemoDetails />
       <DemoCta />
-      <DemoLinks />
     </div>
   );
 }

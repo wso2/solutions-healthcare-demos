@@ -38,9 +38,7 @@ export default function AboutPage() {
       .catch(() => undefined);
   }, []);
 
-  const software = details?.software?.name
-    ? `${details.software.name} ${details.software.version ?? ""}`.trim()
-    : "—";
+  const software = [details?.software?.name, details?.software?.version].filter(Boolean).join(" ");
 
   return (
     <div className="min-h-screen bg-background">
@@ -64,8 +62,8 @@ export default function AboutPage() {
         <section className="overflow-hidden rounded-xl border bg-card">
           <h2 className="border-b px-5 py-3 text-sm font-medium">Server</h2>
           <dl className="divide-y text-sm">
-            <Row label="Software">{software}</Row>
-            <Row label="FHIR version">{details?.fhirVersion ?? "—"}</Row>
+            {software && <Row label="Software">{software}</Row>}
+            {details?.fhirVersion && <Row label="FHIR version">{details.fhirVersion}</Row>}
             <Row label="FHIR Base">
               <span className="font-mono text-xs">{DEFAULT_BASE_URL}</span>
             </Row>
