@@ -42,6 +42,14 @@ export function BaseUrlBar() {
               </div>
             </div>
           </div>
+          <Link
+            href="/about"
+            title="This is a demo server. Read the notice."
+            className="inline-flex items-center gap-1.5 rounded-full border border-destructive/30 bg-destructive/5 px-3 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10"
+          >
+            <span className="size-1.5 rounded-full bg-destructive" />
+            Demo server · not for production
+          </Link>
           <div className="ml-auto flex items-center gap-2">
             <Link
               href="/about"
