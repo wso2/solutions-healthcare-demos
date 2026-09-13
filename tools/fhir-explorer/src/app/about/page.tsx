@@ -16,30 +16,12 @@
 
 "use client";
 
-import type { ReactNode } from "react";
-import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import { DemoNotice } from "@/components/DemoNotice";
-import { DEFAULT_BASE_URL, fhirFetch } from "@/lib/fhir-client";
-
-interface ServerDetails {
-  software?: { name?: string; version?: string };
-  fhirVersion?: string;
-}
 
 export default function AboutPage() {
-  const [details, setDetails] = useState<ServerDetails | null>(null);
-
-  useEffect(() => {
-    fhirFetch("/metadata", {}, DEFAULT_BASE_URL)
-      .then((res) => setDetails((res.body ?? {}) as ServerDetails))
-      .catch(() => undefined);
-  }, []);
-
-  const software = [details?.software?.name, details?.software?.version].filter(Boolean).join(" ");
-
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
@@ -56,29 +38,9 @@ export default function AboutPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl space-y-6 px-4 py-8">
+      <main className="mx-auto max-w-4xl px-4 py-8">
         <DemoNotice />
-
-        <section className="overflow-hidden rounded-xl border bg-card">
-          <h2 className="border-b px-5 py-3 text-sm font-medium">Server</h2>
-          <dl className="divide-y text-sm">
-            {software && <Row label="Software">{software}</Row>}
-            {details?.fhirVersion && <Row label="FHIR version">{details.fhirVersion}</Row>}
-            <Row label="FHIR Base">
-              <span className="font-mono text-xs">{DEFAULT_BASE_URL}</span>
-            </Row>
-          </dl>
-        </section>
       </main>
-    </div>
-  );
-}
-
-function Row({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex flex-col gap-1 px-5 py-3 sm:flex-row sm:items-center">
-      <dt className="w-40 shrink-0 text-muted-foreground">{label}</dt>
-      <dd className="min-w-0 break-words">{children}</dd>
     </div>
   );
 }
