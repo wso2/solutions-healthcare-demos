@@ -27,7 +27,16 @@ export function BaseUrlBar() {
           <div className="flex items-center gap-3 pr-1">
             <Image src="/icons/fhir-server.svg" alt="" width={36} height={36} priority />
             <div>
-              <span className="text-xl font-semibold">FHIR Explorer</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xl font-semibold">FHIR Explorer</span>
+                <Link
+                  href="/about"
+                  title="Demo server — not for production. Do not enter real patient data."
+                  className="rounded border border-amber-500/40 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700 transition-colors hover:bg-amber-500/10 dark:text-amber-400"
+                >
+                  Demo
+                </Link>
+              </div>
               <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                 <span>Powered by</span>
                 <a
