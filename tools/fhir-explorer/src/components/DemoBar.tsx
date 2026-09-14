@@ -14,8 +14,6 @@
 // specific language governing permissions and limitations
 // under the License.
 
-import Link from "next/link";
-
 export function DemoBar() {
   return (
     <div className="border-b bg-card">
@@ -27,12 +25,6 @@ export function DemoBar() {
         <p className="min-w-0 truncate text-xs text-muted-foreground">
           Public demo server — do not enter real patient data.
         </p>
-        <Link
-          href="/about"
-          className="ml-auto shrink-0 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-        >
-          About this demo
-        </Link>
       </div>
     </div>
   );

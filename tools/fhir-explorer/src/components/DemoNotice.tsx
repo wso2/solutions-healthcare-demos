@@ -40,7 +40,7 @@ export function DemoIntro() {
     <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
       You are accessing the <TextLink href={HEALTHCARE_URL}>WSO2 Open Healthcare</TextLink> FHIR
       Explorer demo site, connected to a public demo{" "}
-      <TextLink href={FHIR_SERVER_URL}>WSO2 FHIR server</TextLink> (R4). This server is provided for
+      <TextLink href={FHIR_SERVER_URL}>WSO2 FHIR server</TextLink> (R4). This site is provided for
       evaluation and testing of the WSO2 FHIR server.
     </p>
   );

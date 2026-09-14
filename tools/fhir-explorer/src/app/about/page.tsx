@@ -27,7 +27,7 @@ export default function AboutPage() {
       <header className="border-b bg-card">
         <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3">
           <Image src="/icons/fhir-server.svg" alt="" width={32} height={32} priority />
-          <span className="text-lg font-semibold">About this demo</span>
+          <span className="text-lg font-semibold">About</span>
           <Link
             href="/"
             className="ml-auto inline-flex items-center gap-1 text-sm text-muted-foreground transition-colors hover:text-foreground"

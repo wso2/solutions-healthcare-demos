@@ -19,6 +19,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { BaseUrlBar } from "@/components/BaseUrlBar";
+import { DemoBar } from "@/components/DemoBar";
 import { CapabilityPanel } from "@/components/panels/CapabilityPanel";
 import { FhirChat } from "@/components/FhirChat";
 import { InstancePanel } from "@/components/panels/InstancePanel";
@@ -46,6 +47,7 @@ function ExplorerContent() {
   return (
     <ExplorerBusProvider tab={tab} setTab={setTab}>
       <div className="min-h-screen bg-background">
+        <DemoBar />
         <BaseUrlBar />
         <main className="mx-auto max-w-7xl px-4 py-6">
           <Tabs value={tab} onValueChange={setTab}>

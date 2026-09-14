@@ -16,7 +16,6 @@
 
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { DemoBar } from "@/components/DemoBar";
 import "@/styles.css";
 
 // The CSP nonce is per-request, so pages must render dynamically for Next to
@@ -35,10 +34,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {
   return (
     <html lang="en">
-      <body>
-        <DemoBar />
-        {children}
-      </body>
+      <body>{children}</body>
     </html>
   );
 }
