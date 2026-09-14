@@ -18,18 +18,20 @@ import Link from "next/link";
 
 export function DemoBar() {
   return (
-    <div className="border-b border-white/10 bg-zinc-900 text-zinc-300">
-      <div className="mx-auto flex max-w-7xl items-center gap-2.5 px-4 py-1.5 text-[11px]">
-        <span className="size-1.5 shrink-0 rounded-full bg-amber-400" />
-        <p className="min-w-0 truncate">
-          <span className="font-medium text-zinc-100">Demo server</span> — not for production. Do
-          not enter real patient data.
+    <div className="border-b bg-card">
+      <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-2">
+        <span className="shrink-0 text-[11px] font-semibold uppercase tracking-[0.14em] text-foreground">
+          Not for production
+        </span>
+        <span aria-hidden className="h-3.5 w-px shrink-0 bg-border" />
+        <p className="min-w-0 truncate text-xs text-muted-foreground">
+          Public demo server — do not enter real patient data.
         </p>
         <Link
           href="/about"
-          className="ml-auto shrink-0 font-medium text-zinc-100 underline underline-offset-2 hover:text-white hover:no-underline"
+          className="ml-auto shrink-0 text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
-          Learn more
+          About this demo
         </Link>
       </div>
     </div>
