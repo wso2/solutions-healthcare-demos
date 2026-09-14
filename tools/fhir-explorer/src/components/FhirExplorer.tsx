@@ -69,7 +69,7 @@ function ExplorerContent() {
                 </TabsTrigger>
               ))}
             </TabsList>
-            <div className="mt-6 -mx-4 rounded-lg border bg-card p-4 shadow-sm">
+            <div className="mt-6 rounded-lg border bg-card p-5 shadow-sm">
               <TabsContent value="capability" className="m-0">
                 <CapabilityPanel baseUrl={baseUrl} />
               </TabsContent>
