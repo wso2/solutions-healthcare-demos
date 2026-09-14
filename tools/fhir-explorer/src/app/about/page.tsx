@@ -25,7 +25,7 @@ export default function AboutPage() {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b bg-card">
-        <div className="mx-auto flex max-w-4xl items-center gap-3 px-4 py-3">
+        <div className="mx-auto flex max-w-3xl items-center gap-3 px-4 py-3">
           <Image src="/icons/fhir-server.svg" alt="" width={32} height={32} priority />
           <span className="text-lg font-semibold">About</span>
           <Link
@@ -38,7 +38,7 @@ export default function AboutPage() {
         </div>
       </header>
 
-      <main className="mx-auto max-w-4xl px-4 py-8">
+      <main className="mx-auto max-w-3xl px-4 py-8">
         <DemoNotice />
       </main>
     </div>
