@@ -63,7 +63,7 @@ function ExplorerContent() {
                 <TabsTrigger
                   key={value}
                   value={value}
-                  className="rounded-none border-b-2 border-transparent px-4 py-2 text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                  className="rounded-none border-b-2 border-transparent px-4 py-2 text-muted-foreground shadow-none transition-colors first:pl-0 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
                 >
                   {label}
                 </TabsTrigger>
