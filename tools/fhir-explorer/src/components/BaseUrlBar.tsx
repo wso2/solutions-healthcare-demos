@@ -39,15 +39,6 @@ export function BaseUrlBar() {
                   WSO2 FHIR Server
                   <ExternalLink className="size-3" />
                 </a>
-                <span aria-hidden className="px-0.5">
-                  ·
-                </span>
-                <Link
-                  href="/about"
-                  className="font-medium text-amber-700 hover:text-amber-800 hover:underline dark:text-amber-400"
-                >
-                  Not for production
-                </Link>
               </div>
             </div>
           </div>

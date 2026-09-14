@@ -15,19 +15,19 @@
 // under the License.
 
 import Link from "next/link";
-import { TriangleAlert } from "lucide-react";
 
 export function DemoBar() {
   return (
-    <div className="border-b border-amber-500/20 bg-amber-50/60 dark:border-amber-400/20 dark:bg-amber-950/25">
-      <div className="mx-auto flex max-w-7xl items-center gap-2 px-4 py-1.5 text-[11px] text-amber-800 dark:text-amber-200">
-        <TriangleAlert className="size-3.5 shrink-0" />
+    <div className="border-b border-white/10 bg-zinc-900 text-zinc-300">
+      <div className="mx-auto flex max-w-7xl items-center gap-2.5 px-4 py-1.5 text-[11px]">
+        <span className="size-1.5 shrink-0 rounded-full bg-amber-400" />
         <p className="min-w-0 truncate">
-          Demo server, not for production — do not enter real patient data.
+          <span className="font-medium text-zinc-100">Demo server</span> — not for production. Do
+          not enter real patient data.
         </p>
         <Link
           href="/about"
-          className="ml-auto shrink-0 font-medium underline underline-offset-2 hover:no-underline"
+          className="ml-auto shrink-0 font-medium text-zinc-100 underline underline-offset-2 hover:text-white hover:no-underline"
         >
           Learn more
         </Link>
