@@ -1,4 +1,4 @@
-// Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+// Copyright (c) 2024 - 2025, WSO2 LLC. (http://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -15,14 +15,29 @@
 // under the License.
 
 import { configureStore } from "@reduxjs/toolkit";
+import { persistStore, persistReducer } from "redux-persist";
+import storage from "redux-persist/lib/storage";
 import patientReducer from "./patientSlice";
 import cdsRequestSlice from "./cdsRequestSlice";
 import cdsResponseSlice from "./cdsResponseSlice";
+import medicationFormDataReducer from "./medicationFormDataSlice";
 
-export default configureStore({
+const persistConfig = {
+  key: "root",
+  storage,
+};
+
+const persistedReducer = persistReducer(persistConfig, medicationFormDataReducer);
+
+const store = configureStore({
   reducer: {
     patient: patientReducer,
     cdsRequest: cdsRequestSlice,
     cdsResponse: cdsResponseSlice,
+    medicationFormData: persistedReducer,
   },
 });
+
+const persistor = persistStore(store);
+
+export { store, persistor };
