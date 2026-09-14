@@ -19,6 +19,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useState } from "react";
 import { BaseUrlBar } from "@/components/BaseUrlBar";
+import { DemoBar } from "@/components/DemoBar";
 import { CapabilityPanel } from "@/components/panels/CapabilityPanel";
 import { FhirChat } from "@/components/FhirChat";
 import { InstancePanel } from "@/components/panels/InstancePanel";
@@ -46,6 +47,7 @@ function ExplorerContent() {
   return (
     <ExplorerBusProvider tab={tab} setTab={setTab}>
       <div className="min-h-screen bg-background">
+        <DemoBar />
         <BaseUrlBar />
         <main className="mx-auto max-w-7xl px-4 py-6">
           <Tabs value={tab} onValueChange={setTab}>
@@ -61,7 +63,7 @@ function ExplorerContent() {
                 <TabsTrigger
                   key={value}
                   value={value}
-                  className="rounded-none border-b-2 border-transparent px-4 py-2 text-muted-foreground shadow-none transition-colors hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+                  className="rounded-none border-b-2 border-transparent px-4 py-2 text-muted-foreground shadow-none transition-colors first:pl-0 hover:text-foreground data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
                 >
                   {label}
                 </TabsTrigger>

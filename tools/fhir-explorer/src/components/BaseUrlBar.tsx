@@ -15,7 +15,8 @@
 // under the License.
 
 import Image from "next/image";
-import { ExternalLink, Github } from "lucide-react";
+import Link from "next/link";
+import { ExternalLink, Github, Info } from "lucide-react";
 import { RequestHistoryMenu } from "./RequestHistoryMenu";
 
 export function BaseUrlBar() {
@@ -27,7 +28,7 @@ export function BaseUrlBar() {
             <Image src="/icons/fhir-server.svg" alt="" width={36} height={36} priority />
             <div>
               <span className="text-xl font-semibold">FHIR Explorer</span>
-              <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-1 text-[11px] text-muted-foreground">
                 <span>Powered by</span>
                 <a
                   href="https://github.com/wso2/fhir-mcp-server"
@@ -42,6 +43,13 @@ export function BaseUrlBar() {
             </div>
           </div>
           <div className="ml-auto flex items-center gap-2">
+            <Link
+              href="/about"
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Info className="size-4" />
+              About
+            </Link>
             <a
               href="https://github.com/wso2/fhir-server"
               target="_blank"
