@@ -42,7 +42,7 @@ export function FhirExplorer() {
 
 function ExplorerContent() {
   const baseUrl = "http://localhost:9090/fhir/r4";
-  const [tab, setTab] = useState("search");
+  const [tab, setTab] = useState("capability");
 
   return (
     <ExplorerBusProvider tab={tab} setTab={setTab}>

@@ -31,7 +31,7 @@ export function BaseUrlBar() {
               <div className="flex flex-wrap items-center gap-1 text-[11px] text-muted-foreground">
                 <span>Powered by</span>
                 <a
-                  href="https://github.com/wso2/fhir-mcp-server"
+                  href="https://github.com/wso2/fhir-server"
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex items-center gap-1 font-medium text-foreground/75 hover:text-primary hover:underline"
