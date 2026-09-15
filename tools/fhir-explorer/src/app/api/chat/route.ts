@@ -32,7 +32,7 @@ export const runtime = "nodejs";
 export const maxDuration = 60;
 
 // Per-IP cap, defense in depth behind nginx's tighter 6/min per-user chat limit
-// (openchoreo/nginx/workload.yaml). Each request spends up to 6 LLM tool-loop steps.
+// (openchoreo/nginx/workload.yaml). Each request spends up to 10 LLM tool-loop steps.
 const RATE_LIMIT = 10;
 const RATE_WINDOW_MS = 60_000;
 
@@ -87,7 +87,7 @@ export async function POST(request: Request) {
       // .chat pins /chat/completions — the path the gateway provider allowlists.
       model: openAiFor().chat(process.env.OPENAI_MODEL?.trim() || "gpt-5-nano"),
       tools,
-      stopWhen: stepCountIs(6),
+      stopWhen: stepCountIs(10),
       // Hardened, read-only scope: one layer behind the gateway guardrails and MCP.
       instructions: [
         "You are the read-only assistant embedded in a FHIR R4 Explorer.",
@@ -100,6 +100,10 @@ export async function POST(request: Request) {
         "Call get_capabilities before searching or reading a resource type.",
         "Do not call get_capabilities for several resource types merely to produce examples or answer a broad question.",
         "If a broad question would require checking many resource types, explain that capabilities are checked per resource type and ask the user which type to inspect.",
+        "You have a hard budget of ten tool-loop steps for this request, and the final step must be the written answer, never another tool call.",
+        "Reserve that final step: stop calling tools as soon as you have enough data, and never spend the last step on a search.",
+        "Make each call count. Prefer one complete search over several narrow ones by passing the search parameters you need in a single call, such as _count and _sort, and by using response_filter_fhirpaths so each response carries only the fields you need.",
+        "Never end a request without a written answer. If a tool keeps failing, returns nothing useful, or you are close to the step limit, answer with what you have and state plainly what is still missing.",
         "Write every answer as concise GitHub-flavored Markdown.",
         "Use short headings, lists, tables, and inline code when they improve clarity; never wrap the entire answer in a code fence.",
         "Never include links or URLs in an answer.",
