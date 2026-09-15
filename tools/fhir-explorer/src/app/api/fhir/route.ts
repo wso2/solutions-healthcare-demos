@@ -14,7 +14,20 @@
 // specific language governing permissions and limitations
 // under the License.
 
+import {
+  isCapabilityStatementPath,
+  readMetadataCache,
+  writeMetadataCache,
+  type CachedMetadata,
+} from "@/lib/server/metadata-cache";
+
 export const runtime = "nodejs";
+
+// Edge caches may reuse the anonymous CapabilityStatement; browsers revalidate on
+// every load so the Reload-free UI still reflects the next origin refresh.
+const CAPABILITY_CACHE_CONTROL =
+  "public, max-age=0, must-revalidate, s-maxage=900, stale-while-revalidate=300";
+const PRIVATE_CACHE_CONTROL = "private, no-store";
 
 const BODYLESS_METHODS = new Set(["GET", "HEAD"]);
 const REQUEST_HEADERS_TO_REMOVE = [
@@ -96,6 +109,35 @@ async function fetchWithConfiguredRedirects(
   }
 }
 
+function cachedMetadataResponse(entry: CachedMetadata): Response {
+  const headers = new Headers(entry.headers);
+  headers.set("Cache-Control", CAPABILITY_CACHE_CONTROL);
+
+  return new Response(entry.body, {
+    status: entry.status,
+    statusText: entry.statusText,
+    headers,
+  });
+}
+
+async function cacheMetadataResponse(key: string, response: Response): Promise<Response> {
+  const body = await response.text();
+  const headers = forwardedResponseHeaders(response);
+  writeMetadataCache(key, {
+    status: response.status,
+    statusText: response.statusText,
+    headers: [...headers.entries()],
+    body,
+  });
+
+  headers.set("Cache-Control", CAPABILITY_CACHE_CONTROL);
+  return new Response(body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  });
+}
+
 async function proxyFhirRequest(request: Request): Promise<Response> {
   const requestedUrl = new URL(request.url).searchParams.get("url");
 
@@ -110,6 +152,17 @@ async function proxyFhirRequest(request: Request): Promise<Response> {
     );
   }
 
+  // Only anonymous capability reads are cached: an Authorization header may
+  // scope the response to one caller, which a shared cache must not reuse.
+  const capabilityRequest =
+    request.method === "GET" && isCapabilityStatementPath(new URL(targetUrl).pathname);
+  const cacheable = capabilityRequest && !request.headers.has("authorization");
+
+  if (cacheable) {
+    const cached = readMetadataCache(targetUrl);
+    if (cached) return cachedMetadataResponse(cached);
+  }
+
   try {
     const body = BODYLESS_METHODS.has(request.method) ? undefined : await request.arrayBuffer();
     const response = await fetchWithConfiguredRedirects(targetUrl, {
@@ -119,10 +172,14 @@ async function proxyFhirRequest(request: Request): Promise<Response> {
       signal: request.signal,
     });
 
+    if (cacheable && response.ok) return await cacheMetadataResponse(targetUrl, response);
+
+    const headers = forwardedResponseHeaders(response);
+    if (capabilityRequest) headers.set("Cache-Control", PRIVATE_CACHE_CONTROL);
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
-      headers: forwardedResponseHeaders(response),
+      headers,
     });
   } catch (error) {
     console.error("FHIR proxy request failed:", error instanceof Error ? error.message : error);

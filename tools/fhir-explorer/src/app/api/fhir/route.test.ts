@@ -16,6 +16,8 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { clearMetadataCache } from "@/lib/server/metadata-cache";
+
 import { GET, POST } from "./route";
 
 const TARGET_URL = "http://localhost:9090/fhir/r4/Patient";
@@ -26,6 +28,7 @@ afterEach(() => {
 
 beforeEach(() => {
   vi.stubEnv("FHIR_SERVER_BASE_URL", "http://fhir-server:9090/fhir/r4");
+  clearMetadataCache();
 });
 
 describe("FHIR proxy", () => {
@@ -115,5 +118,74 @@ describe("FHIR proxy", () => {
     expect(upstreamFetch.mock.calls[0][0]).toBe(
       "http://fhir-server:9090/fhir/r4/ValueSet?url=https://codes.example/",
     );
+  });
+
+  const METADATA_URL = "http://localhost:9090/fhir/r4/metadata";
+
+  function metadataRequest(init?: RequestInit) {
+    return new Request(`http://localhost/api/fhir?url=${encodeURIComponent(METADATA_URL)}`, init);
+  }
+
+  function capabilityFetch() {
+    return vi.fn(
+      async () =>
+        new Response('{"resourceType":"CapabilityStatement"}', {
+          headers: { "Content-Type": "application/fhir+json" },
+        }),
+    );
+  }
+
+  it("serves a repeated capability request from the in-memory cache", async () => {
+    const upstreamFetch = capabilityFetch();
+    vi.stubGlobal("fetch", upstreamFetch);
+
+    const first = await GET(metadataRequest());
+    const second = await GET(metadataRequest());
+
+    expect(upstreamFetch).toHaveBeenCalledTimes(1);
+    expect(first.headers.get("cache-control")).toContain("s-maxage=900");
+    expect(second.headers.get("cache-control")).toContain("s-maxage=900");
+    expect(await second.text()).toBe('{"resourceType":"CapabilityStatement"}');
+  });
+
+  it("never caches capability requests that carry authorization", async () => {
+    const upstreamFetch = capabilityFetch();
+    vi.stubGlobal("fetch", upstreamFetch);
+
+    const first = await GET(metadataRequest({ headers: { Authorization: "Bearer test-token" } }));
+    const second = await GET(metadataRequest({ headers: { Authorization: "Bearer test-token" } }));
+
+    expect(upstreamFetch).toHaveBeenCalledTimes(2);
+    expect(first.headers.get("cache-control")).toBe("private, no-store");
+    expect(second.headers.get("cache-control")).toBe("private, no-store");
+  });
+
+  it("does not cache non-capability reads", async () => {
+    const upstreamFetch = vi.fn(async (..._args: Parameters<typeof fetch>) => new Response("{}"));
+    vi.stubGlobal("fetch", upstreamFetch);
+    const request = () =>
+      new Request(`http://localhost/api/fhir?url=${encodeURIComponent(TARGET_URL)}`);
+
+    const first = await GET(request());
+    await GET(request());
+
+    expect(upstreamFetch).toHaveBeenCalledTimes(2);
+    expect(first.headers.get("cache-control")).toBeNull();
+  });
+
+  it("refetches the capability after the cache TTL lapses", async () => {
+    vi.useFakeTimers();
+    try {
+      const upstreamFetch = capabilityFetch();
+      vi.stubGlobal("fetch", upstreamFetch);
+
+      await GET(metadataRequest());
+      vi.advanceTimersByTime(15 * 60 * 1000 + 1);
+      await GET(metadataRequest());
+
+      expect(upstreamFetch).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

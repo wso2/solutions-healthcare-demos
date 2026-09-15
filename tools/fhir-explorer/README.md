@@ -70,6 +70,27 @@ pnpm install
 FHIR_SERVER_BASE_URL=http://localhost:9090/fhir/r4 FHIR_MCP_URL=http://localhost:8000/mcp/ pnpm dev
 ```
 
+## Caching
+
+The Capability tab reads the server's CapabilityStatement (`GET /metadata`).
+Anonymous capability requests are cached in the Explorer's Node process for 15
+minutes and answered with `Cache-Control: public, max-age=0, must-revalidate,
+s-maxage=900, stale-while-revalidate=300`. Requests that carry an `Authorization`
+header are never cached and answer `Cache-Control: private, no-store`. Every other
+FHIR request bypasses the cache.
+
+The in-process cache is per replica. Cloudflare does not cache JSON by default, so
+the `Cache-Control` header only takes effect at the edge once a Cache Rule marks
+the capability request as eligible. Create a Cache Rule with the expression:
+
+```
+(http.request.uri.path eq "/api/fhir") and (http.request.uri.query contains "metadata")
+```
+
+Set Cache eligibility to Eligible for cache and leave the edge TTL origin-controlled
+so the `s-maxage` above is honored. Do not widen the rule to all of `/api/fhir`: it
+would cache clinical reads and searches across callers.
+
 ## Commands
 
 ```bash

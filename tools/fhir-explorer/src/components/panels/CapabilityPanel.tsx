@@ -18,7 +18,6 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fhirFetch } from "@/lib/fhir-client";
 import type { CapabilityResourceLike, CapabilityStatementLike } from "@/lib/fhir-types";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ResponseView } from "../ResponseView";
 import { Badge } from "@/components/ui/badge";
@@ -67,11 +66,7 @@ export function CapabilityPanel({ baseUrl }: { baseUrl: string }) {
   const [page, setPage] = useState(1);
   const [filter, setFilter] = useState("");
 
-  const {
-    data: res,
-    isFetching: loading,
-    refetch,
-  } = useQuery({
+  const { data: res, isFetching: loading } = useQuery({
     queryKey: ["metadata-response", baseUrl],
     queryFn: () => fhirFetch("/metadata", {}, baseUrl),
     enabled: !!baseUrl,
@@ -96,19 +91,14 @@ export function CapabilityPanel({ baseUrl }: { baseUrl: string }) {
             </>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <TabsList className="h-8">
-            <TabsTrigger value="overview" className="text-xs">
-              Overview
-            </TabsTrigger>
-            <TabsTrigger value="raw" className="text-xs">
-              Raw JSON
-            </TabsTrigger>
-          </TabsList>
-          <Button size="sm" variant="outline" onClick={() => refetch()} disabled={loading}>
-            {loading ? "Loading…" : "Reload"}
-          </Button>
-        </div>
+        <TabsList className="h-8">
+          <TabsTrigger value="overview" className="text-xs">
+            Overview
+          </TabsTrigger>
+          <TabsTrigger value="raw" className="text-xs">
+            Raw JSON
+          </TabsTrigger>
+        </TabsList>
       </div>
 
       <TabsContent value="overview" className="m-0 space-y-4">
