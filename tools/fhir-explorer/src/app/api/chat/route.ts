@@ -31,8 +31,9 @@ import { clientKey, isRateLimited } from "@/lib/server/rate-limit";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-// Per-IP cap, defense in depth behind nginx's tighter 6/min per-user chat limit
-// (openchoreo/nginx/workload.yaml). Each request spends up to 10 LLM tool-loop steps.
+// Per-IP cap. The edge nginx limits /api/chat to 6r/s per user and 12r/s per IP
+// (iac/sandbox/fhir-explorer/nginx/workload.yaml), so this 10/min cap is the
+// tighter of the two. Each request spends up to 10 LLM tool-loop steps.
 const RATE_LIMIT = 10;
 const RATE_WINDOW_MS = 60_000;
 

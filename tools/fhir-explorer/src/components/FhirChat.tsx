@@ -25,6 +25,7 @@ import { currentActivity, followUpSuggestions } from "@/components/fhir-chat/cha
 import { ChatHeader } from "@/components/fhir-chat/ChatHeader";
 import { EmptyChat } from "@/components/fhir-chat/EmptyChat";
 import { Button } from "@/components/ui/button";
+import { withoutToolParts } from "@/lib/chat-history";
 import { ChatRateLimitError, parseChatLimit } from "@/lib/chat-rate-limit";
 import type { FhirChatMessage } from "@/lib/fhir-chat-types";
 import { cn } from "@/lib/utils";
@@ -41,8 +42,14 @@ export function FhirChat() {
   const [input, setInput] = useState("");
   const transport = useMemo(
     () =>
-      new DefaultChatTransport({
+      new DefaultChatTransport<FhirChatMessage>({
         api: "/api/chat",
+        // Prior tool calls and their outputs stay in the UI but are kept out of
+        // the request; replaying them every turn inflates the prompt until it
+        // exceeds the model's input window.
+        prepareSendMessagesRequest: ({ id, messages, trigger, messageId }) => ({
+          body: { id, messages: withoutToolParts(messages), trigger, messageId },
+        }),
         // The transport otherwise swallows the HTTP status; surface the
         // per-minute 429 as a typed error carrying its Retry-After.
         fetch: async (input, init) => {
