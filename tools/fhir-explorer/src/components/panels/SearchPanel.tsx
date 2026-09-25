@@ -50,6 +50,15 @@ function pageNumbers(current: number, total: number): Array<number | "…"> {
   return [1, "…", current - 1, current, current + 1, "…", total];
 }
 
+/** Address page N by swapping `_page` on the self link, which carries the full query (the WSO2 server accepts any page). */
+function pageUrl(bundle: BundleLike | undefined, target: number): string | undefined {
+  const self = bundle?.link?.find((link) => link.relation === "self")?.url;
+  if (!self) return undefined;
+  return /([?&]_page=)\d+/.test(self)
+    ? self.replace(/([?&]_page=)\d+/, `$1${target}`)
+    : `${self}${self.includes("?") ? "&" : "?"}_page=${target}`;
+}
+
 export function SearchPanel({ baseUrl }: { baseUrl: string }) {
   const [resourceType, setResourceType] = useState("Patient");
   const [params, setParams] = useState<Array<{ k: string; v: string }>>([
@@ -114,17 +123,23 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
     }
   }
 
-  function changePage(nextPage: number) {
-    const relation = nextPage > page ? "next" : "previous";
-    followLink(relation, nextPage);
+  function goToPage(target: number) {
+    const next = Math.max(1, Math.min(target, totalPages));
+    if (next === safePage) return;
+    if (hasServerPagination) {
+      const url = pageUrl(bundle, next);
+      if (!url) return;
+      void send(url);
+    }
+    setOpenRows(new Set());
+    setPage(next);
   }
 
-  function followLink(relation: string, nextPage = page) {
-    const link = bundle?.link?.find((candidate) => candidate.relation === relation);
-    if (!link) return;
-    void send(link.url);
+  function reload() {
+    const self = bundle?.link?.find((link) => link.relation === "self")?.url;
+    if (!self) return;
+    void send(self);
     setOpenRows(new Set());
-    setPage(Math.max(1, nextPage));
   }
 
   const bundle = res?.body as BundleLike | undefined;
@@ -137,8 +152,6 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
   const pageEntries = hasServerPagination
     ? entries
     : entries.slice((safePage - 1) * pageSize, safePage * pageSize);
-  const previousPage = bundle?.link?.some((link) => link.relation === "previous") ?? false;
-  const nextPage = bundle?.link?.some((link) => link.relation === "next") ?? false;
   const selfLink = bundle?.link?.some((link) => link.relation === "self") ?? false;
   const firstLink = bundle?.link?.some((link) => link.relation === "first") ?? false;
   const lastLink = bundle?.link?.some((link) => link.relation === "last") ?? false;
@@ -280,7 +293,7 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
               title="Reload current page"
               onClick={(event) => {
                 event.preventDefault();
-                followLink("self");
+                reload();
               }}
             >
               <RefreshCw className="h-4 w-4" />
@@ -297,7 +310,7 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
               className={safePage === 1 ? "pointer-events-none opacity-50" : ""}
               onClick={(event) => {
                 event.preventDefault();
-                if (safePage > 1) followLink("first", 1);
+                goToPage(1);
               }}
             >
               <ChevronsLeft className="h-4 w-4" />
@@ -308,17 +321,11 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
         <PaginationItem>
           <PaginationPrevious
             href="#"
-            aria-disabled={safePage === 1 || (hasServerPagination && !previousPage)}
-            className={
-              safePage === 1 || (hasServerPagination && !previousPage)
-                ? "pointer-events-none opacity-50"
-                : ""
-            }
+            aria-disabled={safePage === 1}
+            className={safePage === 1 ? "pointer-events-none opacity-50" : ""}
             onClick={(event) => {
               event.preventDefault();
-              if (safePage > 1 && (!hasServerPagination || previousPage)) {
-                changePage(safePage - 1);
-              }
+              goToPage(safePage - 1);
             }}
           />
         </PaginationItem>
@@ -335,7 +342,7 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
                 className="h-9 w-9 shrink-0 p-0"
                 onClick={(event) => {
                   event.preventDefault();
-                  if (!hasServerPagination || candidate <= safePage + 1) changePage(candidate);
+                  goToPage(candidate);
                 }}
               >
                 {candidate}
@@ -346,17 +353,11 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
         <PaginationItem>
           <PaginationNext
             href="#"
-            aria-disabled={safePage === totalPages || (hasServerPagination && !nextPage)}
-            className={
-              safePage === totalPages || (hasServerPagination && !nextPage)
-                ? "pointer-events-none opacity-50"
-                : ""
-            }
+            aria-disabled={safePage === totalPages}
+            className={safePage === totalPages ? "pointer-events-none opacity-50" : ""}
             onClick={(event) => {
               event.preventDefault();
-              if (safePage < totalPages && (!hasServerPagination || nextPage)) {
-                changePage(safePage + 1);
-              }
+              goToPage(safePage + 1);
             }}
           />
         </PaginationItem>
@@ -369,7 +370,7 @@ export function SearchPanel({ baseUrl }: { baseUrl: string }) {
               className={safePage === totalPages ? "pointer-events-none opacity-50" : ""}
               onClick={(event) => {
                 event.preventDefault();
-                if (safePage < totalPages) followLink("last", totalPages);
+                goToPage(totalPages);
               }}
             >
               <ChevronsRight className="h-4 w-4" />
