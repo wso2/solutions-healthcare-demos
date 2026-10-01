@@ -1,0 +1,43 @@
+[project]
+name = "care-loop-knowledge-service"
+version = "0.1.0"
+description = "FastMCP RAG server exposing an HFrEF clinical-guideline and patient-education knowledge base as MCP tools for the Care Loop agents."
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "mcp[cli]>=1.28,<2",
+    "chromadb>=0.5",
+    "openai>=1.50",
+    "tiktoken>=0.8",
+    "pydantic-settings>=2.5",
+    "loguru>=0.7",
+    "starlette>=0.40",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.8",
+    "pytest>=8.3",
+]
+# Heavy fetch/parse stack used only by scripts/ingest.py, kept out of the serving image.
+ingest = [
+    "pymupdf>=1.24",
+    "trafilatura>=1.12",
+    "beautifulsoup4>=4.12",
+    "httpx>=0.27",
+]
+# Offline embedding fallback for `make ingest EMBED=local`; documented alternative to OpenAI.
+embed-local = [
+    "fastembed>=0.4",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/app"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

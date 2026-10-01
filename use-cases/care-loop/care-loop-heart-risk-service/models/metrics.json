@@ -1,0 +1,82 @@
+{
+  "selected_model": "xgboost",
+  "features": [
+    "Age",
+    "MaxHR",
+    "Sex"
+  ],
+  "cv_roc_auc": {
+    "logistic_regression": 0.7690774607305771,
+    "random_forest": 0.7826477898293616,
+    "extra_trees": 0.7752795412958013,
+    "gradient_boosting": 0.7797014969372693,
+    "hist_gradient_boosting": 0.7764853594663893,
+    "svm_rbf": 0.7654819615795225,
+    "knn": 0.7742964142151134,
+    "xgboost": 0.7845273245273245,
+    "lightgbm": 0.777670183876146,
+    "catboost": 0.7803855875129587
+  },
+  "best_params": {
+    "logistic_regression": {
+      "model__C": 10.0,
+      "model__class_weight": "balanced"
+    },
+    "random_forest": {
+      "model__max_depth": 4,
+      "model__min_samples_leaf": 5,
+      "model__n_estimators": 400
+    },
+    "extra_trees": {
+      "model__max_depth": 6,
+      "model__min_samples_leaf": 1,
+      "model__n_estimators": 400
+    },
+    "gradient_boosting": {
+      "model__learning_rate": 0.03,
+      "model__max_depth": 2,
+      "model__n_estimators": 150
+    },
+    "hist_gradient_boosting": {
+      "model__learning_rate": 0.03,
+      "model__max_depth": 3,
+      "model__max_iter": 200
+    },
+    "svm_rbf": {
+      "model__C": 0.1,
+      "model__gamma": "auto"
+    },
+    "knn": {
+      "model__n_neighbors": 31,
+      "model__weights": "uniform"
+    },
+    "xgboost": {
+      "model__learning_rate": 0.03,
+      "model__max_depth": 2,
+      "model__n_estimators": 200,
+      "model__subsample": 0.8
+    },
+    "lightgbm": {
+      "model__learning_rate": 0.03,
+      "model__max_depth": 2,
+      "model__n_estimators": 200,
+      "model__subsample": 0.8
+    },
+    "catboost": {
+      "model__depth": 3,
+      "model__iterations": 200,
+      "model__learning_rate": 0.03
+    }
+  },
+  "test_metrics": {
+    "roc_auc": 0.8045791487326637,
+    "accuracy": 0.7608695652173914,
+    "precision": 0.8020833333333334,
+    "recall": 0.7549019607843137,
+    "f1": 0.7777777777777778
+  },
+  "n_train": 734,
+  "n_test": 184,
+  "onnx_exported_model": "xgboost",
+  "onnx_sklearn_parity_max_abs_diff": 0.14153262972831726
+}

@@ -1,0 +1,54 @@
+# Copyright (c) 2026, WSO2 LLC. (http://www.wso2.com).
+#
+# WSO2 LLC. licenses this file to you under the Apache License,
+# Version 2.0 (the "License"); you may not use this file except
+# in compliance with the License.
+# You may obtain a copy of the License at
+#
+# http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied. See the License for the
+# specific language governing permissions and limitations
+# under the License.
+
+from datetime import datetime
+
+from sqlalchemy import JSON
+from sqlmodel import Field
+
+from app.models.base import RecordIdentity, SampleSource
+
+
+class WorkoutBase(SampleSource):
+    patient_id: int | None = Field(default=None, foreign_key="patient.id", index=True)
+    workout_activity_type: str = Field(
+        index=True,
+        description="HealthKit workout activity type, e.g. 'HKWorkoutActivityTypeRunning'.",
+    )
+    start_date: datetime = Field(index=True)
+    end_date: datetime = Field(index=True)
+    duration: float = Field(description="Workout duration in seconds.")
+    total_energy_burned: float | None = Field(default=None, description="Active energy burned.")
+    total_energy_unit: str | None = Field(default=None, description="Unit for total energy, e.g. 'kcal'.")
+    total_distance: float | None = Field(default=None, description="Total distance covered.")
+    total_distance_unit: str | None = Field(default=None, description="Unit for total distance, e.g. 'm'.")
+    events: list = Field(
+        default_factory=list,
+        sa_type=JSON,
+        description="Workout events such as pause, resume, lap, and segment markers.",
+    )
+
+
+class Workout(WorkoutBase, RecordIdentity, table=True):
+    __tablename__ = "workout"
+
+
+class WorkoutCreate(WorkoutBase):
+    pass
+
+
+class WorkoutRead(WorkoutBase, RecordIdentity):
+    pass
