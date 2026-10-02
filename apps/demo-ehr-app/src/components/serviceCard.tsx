@@ -1,4 +1,4 @@
-// Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+// Copyright (c) 2024-2025, WSO2 LLC. (http://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -29,19 +29,23 @@ export default function MultiActionAreaCard({
   path,
 }: ServiceCardProps) {
   return (
-    <Card sx={{ maxWidth: "30vw", borderRadius: 5 }}>
+    <Card
+      sx={{ maxWidth: "30vw", borderRadius: 2, backgroundColor: "#F8FAFC" }}
+    >
       <Link to={path} style={{ textDecoration: "none", color: "black" }}>
-        <CardActionArea sx={{ display: "flex" }}>
+        <CardActionArea sx={{ display: "flex", justifyContent: "flex-start" }}>
           <CardMedia
             component="img"
-            height="140"
             image={serviceImagePath}
             alt="service image"
             sx={{
               objectFit: "contain",
-              width: "30%",
-              height: "80%",
-              marginLeft: "1vw",
+              width: "100px",
+              height: "100px",
+              margin: "1vw",
+              padding: "0.3vw",
+              backgroundColor: "white",
+              borderRadius: 2,
             }}
           />
           <CardContent>

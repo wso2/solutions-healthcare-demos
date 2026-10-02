@@ -1,4 +1,4 @@
-// Copyright (c) 2024, WSO2 LLC. (http://www.wso2.com).
+// Copyright (c) 2024 - 2025, WSO2 LLC. (http://www.wso2.com).
 //
 // WSO2 LLC. licenses this file to you under the Apache License,
 // Version 2.0 (the "License"); you may not use this file except
@@ -21,6 +21,7 @@ import PractionerDashBoard from "./pages/practitioner_dashboard.tsx";
 import AppointmentBookPage from "./pages/appointment_book_page.tsx";
 import AppointmentReceipt from "./components/appointment_receipt.tsx";
 import DrugOrderPage from "./pages/drug_order_page.tsx";
+import DrugOrderPageV2 from "./pages/drug_order_page_v2.tsx";
 import { DrugDetailsPage } from "./pages/drug_details_page.tsx";
 import DeviceOrderPage from "./pages/device_order_page.tsx";
 import { DeviceDetailsPage } from "./pages/device_details_page.tsx";
@@ -28,7 +29,8 @@ import { PatientViewPage } from "./pages/patient_view.tsx";
 import { CoverageCardDisplayPage } from "./pages/coverage_card_display_page.tsx";
 import { Layout } from "./components/layout.tsx";
 import { Provider } from "react-redux";
-import store from "./redux/store.ts";
+import { PersistGate } from 'redux-persist/integration/react';
+import { store, persistor } from "./redux/store.ts";
 import "./index.css";
 import { BrowserRouter } from "react-router-dom";
 import { Routes, Route } from "react-router-dom";
@@ -36,9 +38,13 @@ import { LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import MedicalImaging from "./pages/MedicalImaging.tsx";
 import PriorAuth from "./pages/PriorAuth.tsx";
+import DrugPiorAuthPage from "./pages/drug_prior_auth.tsx";
+import DeviceOrderPageV2 from "./pages/device_order_page_v2.tsx";
+import DrugClaimPage from "./pages/drug_claim_page.tsx";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <Provider store={store}>
+    <PersistGate loading={null} persistor={persistor}>
     <ExpandedContextProvider>
       <LocalizationProvider dateAdapter={AdapterDayjs}>
         <BrowserRouter>
@@ -68,6 +74,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                 element={<CoverageCardDisplayPage />}
               />
               <Route path="drug-order" element={<DrugOrderPage />} />
+              <Route path="drug-order-v2" element={<DrugOrderPageV2 />} />
+              <Route path="drug-order-v2/prior-auth/*" element={<DrugPiorAuthPage />} />
+              <Route path="drug-order-v2/claim-submit/*" element={<DrugClaimPage />} />
               <Route
                 path="drug-order/:drugName"
                 element={<DrugDetailsPage />}
@@ -81,6 +90,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
                 element={<CoverageCardDisplayPage />}
               />
               <Route path="device-order" element={<DeviceOrderPage />} />
+              <Route path="device-order-v2" element={<DeviceOrderPageV2 />} />
               <Route
                 path="device-order/:deviceName"
                 element={<DeviceDetailsPage />}
@@ -101,5 +111,6 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
         </BrowserRouter>
       </LocalizationProvider>
     </ExpandedContextProvider>
+    </PersistGate>
   </Provider>
 );
