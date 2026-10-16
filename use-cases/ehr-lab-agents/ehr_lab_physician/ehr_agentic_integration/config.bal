@@ -24,6 +24,7 @@ configurable string webhookHmacSecret = "demo-quest-secret";
 configurable string workflowLabResultTimeout = "PT72H";
 configurable string copilotProposalTtl = "PT15M";
 configurable string idempotencyTtl = "PT24H";
+configurable decimal labResultPollingIntervalSeconds = 30;
 
 // ── Security ──
 configurable boolean securityEnabled = false;
@@ -31,8 +32,8 @@ configurable string securityJwksUrl = "";
 configurable string securityDefaultPractitioner = "Practitioner/593923";
 
 // ── AI ──
-configurable string aiProvider = "";
-configurable string aiModel = "";
+configurable string aiProvider = "https://openrouter.ai/api/v1";
+configurable string aiModel = "openai/gpt-4o-mini";
 configurable string aiApiKey = "";
 configurable string aiMode = "rule-based";
 

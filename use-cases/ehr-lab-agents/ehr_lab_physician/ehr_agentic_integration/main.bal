@@ -3,6 +3,11 @@ import ballerina/log;
 import ballerinax/health.fhir.r4 as r4;
 import ballerinax/health.fhir.r4.international401;
 
+# Starts the background lab-result polling job before any request is served.
+public function main() returns error? {
+    check startLabResultPollingJob(labResultPollingIntervalSeconds);
+}
+
 # Longevity Care Workflow API - FHIR R4 facade over Cerner (EHR) and Quest (Diagnostics).
 # Phase 1: Patient search / read / $summary (rule-based narratives).
 service /longevity/fhir/r4 on new http:Listener(listenerPort) {
