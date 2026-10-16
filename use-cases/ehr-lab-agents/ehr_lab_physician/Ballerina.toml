@@ -1,0 +1,3 @@
+[workspace]
+title = "ehr-lab-physician"
+packages = ["ehr_agentic_integration"]

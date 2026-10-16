@@ -1,0 +1,9 @@
+[package]
+org = "wso2healthcare"
+name = "ehr_agentic_integration"
+version = "0.1.0"
+distribution = "2201.14.1"
+title = "ehr-agentic-integration"
+
+[build-options]
+sticky = true
