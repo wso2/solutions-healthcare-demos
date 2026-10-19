@@ -1,11 +1,12 @@
-import { useEffect, type CSSProperties } from 'react'
+import { useEffect, type CSSProperties, type ReactNode } from 'react'
 import {
-  ArrowRight, ArrowUpRight, Database, FileSignature, FlaskConical, HeartPulse, Microscope, Sparkles, Stethoscope, UserRound, type LucideIcon,
+  ArrowRight, ArrowUpRight, Cable, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Database, FileSignature, FlaskConical,
+  HeartPulse, Microscope, Plug, ShieldCheck, Sparkles, Stethoscope, UserRound, Workflow, type LucideIcon,
 } from 'lucide-react'
 import { BrandMark, HealthIndicator, ThemeToggle } from '../components/AppShell'
 
-// Landing page: the flow, the systems it connects, and the three apps. Each app opens in its own tab so
-// the presenter can keep the physician, patient and lab side by side.
+// Landing page: what was built (the architecture, for business and technical readers alike), the flow, and the
+// three apps. Each app opens in its own tab so the presenter can keep the physician, patient and lab side by side.
 
 type Actor = { label: string; icon: LucideIcon; color: string }
 
@@ -25,7 +26,7 @@ const LAB: AppLink = { href: '/lab', label: 'Lab console' }
 const STEPS: { title: string; text: string; actors: Actor[]; icon: LucideIcon; open: AppLink[] }[] = [
   {
     title: 'Pull the record',
-    text: 'The patient’s history arrives from Oracle Health or athenahealth over FHIR: problems, medications, labs, notes and vitals.',
+    text: 'The patient’s history arrives from the EHR over FHIR: problems, medications, labs, notes and vitals.',
     actors: [ACTORS.ehr],
     icon: Database,
     open: [PHYSICIAN],
@@ -39,7 +40,7 @@ const STEPS: { title: string; text: string; actors: Actor[]; icon: LucideIcon; o
   },
   {
     title: 'Lab visit & results',
-    text: 'The patient is notified and visits the lab. Results flow back by webhook and are filed in the EHR.',
+    text: 'The patient is notified and visits the lab. The lab sends its results back as FHIR resources, and they are filed in the EHR.',
     actors: [ACTORS.patient, ACTORS.lab],
     icon: FlaskConical,
     open: [PATIENT, LAB],
@@ -101,6 +102,7 @@ export function Home() {
 
       <main className="mx-auto max-w-6xl space-y-16 px-4 pb-20 pt-6 sm:px-6 sm:pt-10">
         <Hero />
+        <Architecture />
         <Flow />
         <Apps />
         <p className="text-center text-xs text-ink-muted">Demo environment · synthetic patient data · AI output is always reviewed by a physician before release</p>
@@ -125,11 +127,158 @@ function Hero() {
   )
 }
 
-function SectionTitle({ eyebrow, title, text }: { eyebrow?: string; title: string; text?: string }) {
+// ── Architecture: a business-level version of the README's flowchart ──
+// People on the left, the WSO2 integration in the middle, the systems of record on the right. One accent colour
+// marks what the demo is about: the AI agents and the Ballerina FHIR connectors; everything else stays neutral.
+// It is HTML, not an image, so it reads at phone width (columns stack, connectors turn vertical) and in dark mode.
+
+const PEOPLE: { icon: LucideIcon; who: string; app: string; does: string }[] = [
+  { icon: Stethoscope, who: 'Physician', app: 'Physician workspace', does: 'Reviews the record, orders labs, releases results' },
+  { icon: HeartPulse, who: 'Patient', app: 'Patient app', does: 'Gets lab instructions and reads the report' },
+  { icon: Microscope, who: 'Lab team', app: 'Lab console', does: 'Collects the specimen, releases results' },
+]
+
+const SYSTEMS: { icon: LucideIcon; name: string; detail: string; does: string }[] = [
+  { icon: Database, name: 'EHR', detail: 'FHIR R4 server', does: 'Patient history, orders of record, results and notes' },
+  { icon: FlaskConical, name: 'Reference lab', detail: 'FHIR R4 server', does: 'Orders, specimens and results' },
+]
+
+const AGENTS: { name: string; does: string }[] = [
+  { name: 'Diagnostic Copilot', does: 'Reviews the patient’s record' },
+  { name: 'Results Analyst', does: 'Reads new results against years of history' },
+  { name: 'Care Plan Writer', does: 'Drafts the care plan and the patient report' },
+]
+
+const CONNECTORS: { name: string; does: string }[] = [
+  { name: 'EHR', does: 'Reads the record; writes the visit, order, results and signed note' },
+  { name: 'Lab', does: 'Sends the order; receives specimens and results as FHIR messages' },
+]
+
+function Architecture() {
+  return (
+    <section aria-labelledby="architecture-title">
+      <SectionTitle eyebrow="What we built" title="AI agents and FHIR, in one integration" id="architecture-title"
+        text="The apps talk only to the integration. Ballerina FHIR connectors keep the EHR and the lab in step; AI agents read the data and draft the analysis, and the physician decides." />
+      <div className="grid gap-3 lg:grid-cols-[minmax(0,0.85fr)_76px_minmax(0,2.15fr)_76px_minmax(0,0.85fr)]">
+        <ArchColumn title="People">
+          {PEOPLE.map((p) => <ArchCard key={p.who} icon={p.icon} title={p.who} tag={p.app} text={p.does} />)}
+        </ArchColumn>
+        <ArchLink label="Tasks & approvals" />
+        <IntegrationLayer />
+        <ArchLink label="FHIR R4" />
+        <ArchColumn title="Systems of record">
+          {SYSTEMS.map((s) => <ArchCard key={s.name} icon={s.icon} title={s.name} tag={s.detail} text={s.does} />)}
+        </ArchColumn>
+      </div>
+    </section>
+  )
+}
+
+function ArchColumn({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="eyebrow text-center text-ink-muted">{title}</p>
+      {/* Natural-height cards, centred against the taller integration. */}
+      <div className="flex flex-col gap-3 lg:flex-1 lg:justify-center">{children}</div>
+    </div>
+  )
+}
+
+function ArchCard({ icon: Icon, title, tag, text }: { icon: LucideIcon; title: string; tag: string; text: string }) {
+  return (
+    <div className="card flex gap-3 p-4">
+      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sunken text-ink-soft"><Icon size={18} /></span>
+      <div className="min-w-0">
+        <p className="font-semibold leading-tight text-ink">{title}</p>
+        <p className="text-[11px] text-ink-muted">{tag}</p>
+        <p className="mt-1 text-[13px] leading-snug text-ink-soft">{text}</p>
+      </div>
+    </div>
+  )
+}
+
+// A two-way connector: horizontal between the columns on wide screens, vertical when they stack.
+function ArchLink({ label }: { label: string }) {
+  return (
+    <div className="flex items-center justify-center py-1 lg:py-0" aria-hidden>
+      <div className="flex flex-col items-center lg:hidden">
+        <ChevronUp size={14} className="-mb-1 text-brand" />
+        <span className="flow-line-v h-4 w-0.5" />
+        <span className="my-1 rounded-full border border-line bg-surface px-2.5 py-0.5 text-[11px] font-medium text-ink-soft">{label}</span>
+        <span className="flow-line-v h-4 w-0.5" />
+        <ChevronDown size={14} className="-mt-1 text-brand" />
+      </div>
+      <div className="hidden w-full flex-col items-center gap-1.5 lg:flex">
+        <span className="text-center text-[11px] font-medium leading-tight text-ink-soft">{label}</span>
+        <div className="flex w-full items-center">
+          <ChevronLeft size={14} className="-mr-1 shrink-0 text-brand" />
+          <span className="flow-line h-0.5 flex-1" />
+          <ChevronRight size={14} className="-ml-1 shrink-0 text-brand" />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Highlight({ icon: Icon, title, subtitle, children }: { icon: LucideIcon; title: string; subtitle: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-col rounded-xl border border-brand/30 bg-brand-soft/50 p-4">
+      <p className="flex items-center gap-2 font-semibold text-ink"><Icon size={17} className="text-brand" /> {title}</p>
+      <p className="mt-0.5 text-[12px] text-ink-muted">{subtitle}</p>
+      {children}
+    </div>
+  )
+}
+
+function IntegrationLayer() {
+  return (
+    <div className="flex flex-col gap-3">
+      <p className="eyebrow text-center text-ink-muted">Integration</p>
+      <div className="card flex flex-1 flex-col gap-3 p-4 ring-1 ring-brand/20 sm:p-5">
+        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+          <p className="text-lg font-semibold tracking-tight text-ink">WSO2 integration</p>
+          <p className="text-[12px] text-ink-muted">Ballerina · WSO2 Integrator</p>
+        </div>
+        <p className="flex items-start gap-2 rounded-lg bg-sunken px-3 py-2 text-[13px] leading-snug text-ink-soft">
+          <Workflow size={15} className="mt-0.5 shrink-0 text-ink-muted" />
+          <span><span className="font-medium text-ink">Durable care workflow</span> — tracks every step, waits days for the patient and the lab, retries, then asks a person.</span>
+        </p>
+        <div className="grid flex-1 gap-3 md:grid-cols-[1.15fr_1fr]">
+          <Highlight icon={Sparkles} title="AI agents" subtitle="They draft; the physician decides">
+            <ul className="mt-3 space-y-2">
+              {AGENTS.map((a) => (
+                <li key={a.name} className="text-[13px] leading-snug">
+                  <span className="font-medium text-ink">{a.name}</span>
+                  <span className="text-ink-soft"> — {a.does}</span>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-auto space-y-1.5 pt-4"><div className="space-y-1.5 border-t border-brand/20 pt-3 text-[12px] leading-snug text-ink-soft">
+              <p className="flex items-start gap-1.5"><Plug size={13} className="mt-0.5 shrink-0 text-ink-muted" /> Tools: FHIR MCP servers for the EHR and the lab, PubMed for evidence</p>
+              <p className="flex items-start gap-1.5"><ShieldCheck size={13} className="mt-0.5 shrink-0 text-ink-muted" /> Governed by WSO2 Agent Manager: identity, AI gateway, traces</p>
+            </div></div>
+          </Highlight>
+          <Highlight icon={Cable} title="Ballerina FHIR connectors" subtitle="Typed FHIR R4 resources, one connector per system">
+            <ul className="mt-3 flex flex-1 flex-col gap-2">
+              {CONNECTORS.map((c) => (
+                <li key={c.name} className="flex flex-1 flex-col justify-center rounded-lg border border-brand/20 bg-surface px-3 py-2">
+                  <span className="flex items-center gap-1.5 text-[13px] font-semibold text-ink">{c.name} <ChevronRight size={13} className="text-brand" /></span>
+                  <span className="text-[12px] leading-snug text-ink-soft">{c.does}</span>
+                </li>
+              ))}
+            </ul>
+          </Highlight>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function SectionTitle({ eyebrow, title, text, id }: { eyebrow?: string; title: string; text?: string; id?: string }) {
   return (
     <div className="mx-auto mb-8 max-w-2xl text-center">
       {eyebrow && <p className="eyebrow mb-2 text-brand-ink">{eyebrow}</p>}
-      <h2 className="text-2xl font-semibold tracking-tight text-ink">{title}</h2>
+      <h2 id={id} className="text-2xl font-semibold tracking-tight text-ink">{title}</h2>
       {text && <p className="mt-2 text-sm leading-relaxed text-ink-soft">{text}</p>}
     </div>
   )

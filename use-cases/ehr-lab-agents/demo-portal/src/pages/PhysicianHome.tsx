@@ -23,7 +23,7 @@ const BOARD_TABS: { key: string; label: string; match: (a: AssessmentListItem) =
 export function PhysicianHome() {
   const [params, setParams] = useSearchParams()
   const [system, setSystem] = useState<SystemInfo>()
-  const ehr = params.get('ehr') ?? 'cerner'
+  const ehr = params.get('ehr') ?? system?.ehrs[0]?.id ?? 'ehr'
   const [query, setQuery] = useState('')
   const [patients, setPatients] = useState<PatientCard[]>()
   const [searching, setSearching] = useState(false)
@@ -66,10 +66,12 @@ export function PhysicianHome() {
   return (
     <div className="grid gap-5 xl:grid-cols-[420px_minmax(0,1fr)]">
       <Card className="self-start">
-        <CardHeader title="Find a patient" subtitle="Search the EHR the patient's record lives in" icon={<Users size={16} />} />
+        <CardHeader title="Find a patient" subtitle="Search the EHR by name or MRN" icon={<Users size={16} />} />
         <div className="space-y-3 px-5 py-4">
+          {/* A picker only when more than one EHR is configured; the demo runs one. */}
+          {(system?.ehrs.length ?? 0) > 1 && (
           <div className="grid grid-cols-2 gap-1 rounded-lg border border-line bg-sunken p-1" role="tablist" aria-label="EHR">
-            {(system?.ehrs ?? [{ id: 'cerner', name: 'Oracle Health (Cerner)', reachable: true }, { id: 'athena', name: 'athenahealth', reachable: true }]).map((e) => (
+            {system!.ehrs.map((e) => (
               <button
                 key={e.id}
                 type="button"
@@ -83,9 +85,10 @@ export function PhysicianHome() {
               </button>
             ))}
           </div>
+          )}
           {ehrInfo && (
             <p className="flex items-center gap-1.5 text-[11px] text-ink-muted">
-              <Database size={12} /> FHIR R4 · {ehrInfo.reachable ? 'connected' : 'unreachable'} · {ehrInfo.summaryOperation ? 'supports $summary' : 'no $summary — composed searches'}
+              <Database size={12} /> {ehrInfo.name} · FHIR R4 · {ehrInfo.reachable ? 'connected' : 'unreachable'} · {ehrInfo.summaryOperation ? 'supports $summary' : 'no $summary — composed searches'}
             </p>
           )}
           <form className="relative" onSubmit={(e) => { e.preventDefault(); void search(query) }}>

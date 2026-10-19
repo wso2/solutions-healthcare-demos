@@ -19,7 +19,7 @@ const TABS = [
 ] as const
 
 export function PatientPage() {
-  const { ehr = 'cerner', patientId = '' } = useParams()
+  const { ehr = 'ehr', patientId = '' } = useParams()
   const [params, setParams] = useSearchParams()
   const tab = params.get('tab') ?? 'summary'
   const navigate = useNavigate()

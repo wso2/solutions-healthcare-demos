@@ -3,7 +3,7 @@
 A longevity physician's journey that connects EHR history with lab biomarkers to catch risk early, built on
 WSO2 integration technology:
 
-- **Ballerina** services, with the official FHIR connector talking to two EHRs (standing in for **Oracle Health / Cerner** and **athenahealth**) and a reference lab (standing in for **Quest Diagnostics**)
+- **Ballerina** services, with the official FHIR connector talking to the clinic's **EHR** and a reference lab (standing in for **Quest Diagnostics**), each its own FHIR R4 server; the lab simulator sends its specimens and results to the integration as **FHIR R4 messages**, which the integration reads as typed FHIR resources
 - one durable **Temporal workflow** per assessment (`ballerina/workflow`), whose waits on people are real **human tasks**
 - **three Claude agents**, with read-only EHR access through the **WSO2 FHIR MCP server** and literature search through a **PubMed MCP server** (Ballerina, NCBI E-utilities)
 - a **React portal**: a home page with the flow, and three apps that each open in their own tab — physician workspace (patient summary, EHR explorer, lab order, AI results analysis and release), patient app, and lab console (with the presenter's failure switches)
@@ -16,8 +16,7 @@ the **Longevity Record**, the JSON that the physician and patient dashboards rea
 ```mermaid
 flowchart LR
   subgraph SOR["Systems of record"]
-    CER[("Cerner · FHIR R4<br/>wso2/fhir-server :8081")]
-    ATH[("Athena · FHIR R4<br/>wso2/fhir-server :8083")]
+    EHR[("EHR · FHIR R4<br/>wso2/fhir-server :8081")]
     LAB[("Lab · FHIR R4<br/>wso2/fhir-server :8082")]
   end
   TOX["Toxiproxy :8474<br/>outage switches"]
@@ -25,7 +24,7 @@ flowchart LR
     WF[["Temporal workflow<br/>human tasks + activities"]]
     AG["Agents<br/>Copilot · Analysis · Care Plan"]
   end
-  MCP["FHIR MCP servers<br/>:8010 Cerner · :8011 Athena"]
+  MCP["FHIR MCP servers<br/>:8010 EHR · :8011 Lab"]
   SIM["Lab simulator :9093"]
   PG[("Postgres<br/>agent memory · read model")]
   UI["Demo portal :5173"]
@@ -39,8 +38,7 @@ flowchart LR
 
   UI -->|physician, patient and lab actions| WF
   WF -->|FHIR reads and writes| TOX
-  TOX --> CER
-  TOX --> ATH
+  TOX --> EHR
   WF --> LAB
   WF --> AG
   AG -->|search / read| MCP
@@ -51,9 +49,10 @@ flowchart LR
   AG -->|OTLP| TR
   TR -->|key per agent| OBS
   MCP --> TOX
+  MCP --> LAB
   AG <--> PG
   SIM -->|specimens, results| LAB
-  SIM -->|webhook, via Toxiproxy| WF
+  SIM -->|FHIR messages, via Toxiproxy| WF
   WF -->|longevity record| PG
   PG --> UI
 ```
@@ -82,7 +81,7 @@ cp secrets.example.toml secrets.toml        # then put your anthropicApiKey in i
 | http://localhost:8233 | Temporal UI: every assessment as a durable workflow |
 | http://console.amp.localhost:8080 | WSO2 Agent Manager console (admin / admin) → project *Longevity Clinic* |
 | http://localhost:9090/api/system | Integration API |
-| http://localhost:8081/fhir/r4 · :8083 · :8082 | Cerner, Athena and lab FHIR servers |
+| http://localhost:8081/fhir/r4 · :8082 | EHR and lab FHIR servers |
 | http://localhost:8474/proxies | Toxiproxy (what the outage switches change) |
 | http://localhost:4318 | Trace router: traces forwarded per agent |
 
@@ -91,45 +90,46 @@ cp secrets.example.toml secrets.toml        # then put your anthropicApiKey in i
 | `./scripts/up.sh [--restore\|--clean]` | Start. `--restore` reloads the saved demo state, `--clean` only the seed patients |
 | `./scripts/snapshot.sh` | Save the current state as the seed (`seed/snapshot/`, checked for API keys) |
 | `./scripts/reset.sh` | Clean slate: seed patients only, no assessments |
-| `./scripts/smoke-test.sh [ehr] [patientId]` | One full assessment through the API (default Athena, Sofia Alvarez; real model calls) |
+| `./scripts/smoke-test.sh [ehr] [patientId]` | One full assessment through the API (default Sofia Alvarez; real model calls) |
 | `./scripts/colima-up.sh` | Start the VM (profile `agent-manager`, 6 CPU / 14 GB, vz + rosetta) |
 
 ## The journey
 
 | # | Step | Who | Workflow |
 |---|---|---|---|
-| 1 | Pick the EHR, open the patient: **International Patient Summary** (allergy banner, problems, medications incl. patient-reported, vitals with trends, results, immunizations, procedures, social and family history, rule-based flags, care gaps), past assessments, **EHR explorer** | Physician | — |
+| 1 | Find the patient in the EHR and open them: **International Patient Summary** (allergy banner, problems, medications incl. patient-reported, vitals with trends, results, immunizations, procedures, social and family history, rule-based flags, care gaps), past assessments, **EHR explorer** | Physician | — |
 | 2 | Start the assessment: record pulled from the patient's EHR, visit opened there | Integration | activities |
 | 3 | Explore the record (data types, date range, text, abnormal only), order labs from the lab catalog (the AI evaluation is hidden in the portal: `SHOW_AI_EVALUATION` in `EvaluationPanel.tsx`) | Physician | ⏸ **human task** (physician) |
 | 4 | Order of record in the EHR, patient matched in the lab by MRN, order to the lab, **patient notified** (FHIR `Communication`) | Integration | activities |
 | 5 | Patient sees "visit the lab" with preparation instructions; lab console → **Collect specimen** | Patient → Lab | ⏸ **human task** (patient; completed by the lab) |
-| 6 | Lab processes; lab console → **Release results** (webhook; fallback poller) | Lab | ⏸ system event |
+| 6 | Lab processes; lab console → **Release results**: the lab sends a FHIR message with the DiagnosticReport and its Observations (fallback poller reads them from the lab's FHIR server) | Lab | ⏸ system event |
 | 7 | Results filed in the EHR → **Results Analysis** → **Care Plan** → draft note in the EHR (preliminary) — unattended | Agents | activities |
 | 8 | Physician reviews and **releases**: note final, visit closed, report published, patient sees it | Physician | ⏸ **human task** (physician) |
 
 ## Demo script (about 15 minutes)
 
-1. **Physician → Athena → Sofia Alvarez.** The patient summary is built live from athenahealth over FHIR (12 searches in parallel, the EHR has no `$summary`); *View IPS bundle* shows the FHIR document. Point at the red allergy banner (aspirin, angioedema) and the first flag: *NSAID in use despite aspirin allergy* — a deterministic rule, because her ibuprofen is a patient-reported medication.
+1. **Physician → Sofia Alvarez.** The patient summary is built live from the EHR over FHIR (12 searches in parallel, the EHR has no `$summary`); *View IPS bundle* shows the FHIR document. Point at the red allergy banner (aspirin, angioedema) and the first flag: *NSAID in use despite aspirin allergy* — a deterministic rule, because her ibuprofen is a patient-reported medication.
 2. **EHR explorer.** Lab results + medications + notes, last 3 years → the FHIR queries are listed. Read a note ("taking ibuprofen 400 mg two to three times daily").
 3. **Start the assessment and order labs.** The assessment starts (Temporal workflow); review the record beside the order form and pick the tests from the lab catalog (e.g. kidney function, metabolic panel, advanced lipids, liver panel).
 4. **Temporal UI.** The workflow is suspended on a *human task* for the physician.
-5. **Order labs.** Order of record in athenahealth, order to Quest, patient notified. The workflow now waits on the **patient** — open the **patient app** (home page → Patient app, in its own tab): "Action needed: visit Quest Diagnostics", fasting instructions, order number.
+5. **Order labs.** Order of record in the EHR, order to Quest, patient notified. The workflow now waits on the **patient** — open the **patient app** (home page → Patient app, in its own tab): "Action needed: visit Quest Diagnostics", fasting instructions, order number.
 6. **Simulate a crash** (lab console → Simulate failures → Crash). The integration restarts in seconds; the workflow is still waiting on the patient.
 7. **Lab console → Collect specimen** → waiting on the **lab**. Optionally turn on *Lab webhook down* (lab console) first: the fallback poller completes the task ~20 s later.
-8. **Release results.** Results filed in the EHR, then both agents run unattended. The analysis — headline, risk counts, then tabs for overview, risk flags, lab results, care plan, chart note and patient report — confirms early CKD with cystatin C, insulin resistance (HOMA-IR) and a metabolic liver pattern.
-9. **Review & release.** The draft note becomes final in athenahealth, the visit closes, the patient app shows the report.
-10. **EHR outage** (any assessment, before an EHR write): turn on *athenahealth outage* in the lab console, act (e.g. order labs). The step retries; leave it cut and the assessment pauses with **Retry / Stop** — turn the outage off and click **Retry**: it completes. Turn it off within ~45 s instead and the retry succeeds on its own.
+8. **Release results.** The lab sends its report and observations as a FHIR message; they are filed in the EHR, then both agents run unattended. The analysis — headline, risk counts, then tabs for overview, risk flags, lab results, care plan, chart note and patient report — confirms early CKD with cystatin C, insulin resistance (HOMA-IR) and a metabolic liver pattern.
+9. **Review & release.** The draft note becomes final in the EHR, the visit closes, the patient app shows the report.
+10. **EHR outage** (any assessment, before an EHR write): turn on the *EHR outage* in the lab console, act (e.g. order labs). The step retries; leave it cut and the assessment pauses with **Retry / Stop** — turn the outage off and click **Retry**: it completes. Turn it off within ~45 s instead and the retry succeeds on its own.
 
 11. **Agent Manager** (console only; the portal no longer shows governance). The console: the Copilot's traces (LLM calls, FHIR and PubMed tool calls, tokens), its monitor's scores, the `anthropic` provider with the PHI guardrail. Full script: [docs/agent-manager.md](docs/agent-manager.md#6-a-ten-minute-demo).
 
-Other personas: **Daniel Reyes** (Cerner) — silent cardiometabolic drift, father's MI at 54, ApoB/Lp(a)/HOMA-IR story; **Priya Nair** (Cerner) — ferritin and hemoglobin falling under treated hypothyroidism, iron deficiency treated in 2019; **Marcus Bell** (Athena) — healthy control.
+Other personas: **Daniel Reyes** — silent cardiometabolic drift, father's MI at 54, ApoB/Lp(a)/HOMA-IR story; **Priya Nair** — ferritin and hemoglobin falling under treated hypothyroidism, iron deficiency treated in 2019; **Marcus Bell** — healthy control.
 
 ## How it is built, and why
 
 | Decision | Why |
 |---|---|
-| **Two EHRs + a lab, each its own FHIR server** | The pitch is "we are the layer between every EHR and the lab". Cerner and Athena hold different patients; every write for an assessment goes back to the patient's own EHR. |
-| **Generic `health.clients.fhir` connector, one per EHR** (`ehrSystems` config) | Same pattern as pa-policy-analyzer. Adding an EHR or pointing at a real tenant is configuration: base URL, client credentials, MRN system, MCP URL. |
+| **The EHR and the lab, each its own FHIR server** | The pitch is "we are the layer between the EHR and the lab". Each holds its own patient ids; the patient is matched in the lab by MRN, and every write for an assessment goes back to the EHR. |
+| **Generic `health.clients.fhir` connector** (`ehrSystems` config, one EHR) | Same pattern as pa-policy-analyzer. Pointing at a real tenant — or adding another EHR — is configuration: base URL, client credentials, MRN system, MCP URL. |
+| **The lab speaks FHIR, and the integration reads it typed** (`lab_messages.bal`, `lab_client.bal`) | The lab simulator notifies the integration with FHIR R4 message Bundles (a MessageHeader, then the Specimen or the DiagnosticReport and its Observations). The integration reads them, and everything it builds for the lab, as `health.fhir.r4.international401` resources, so a malformed resource is refused at the door. |
 | **One Temporal workflow per assessment** (`workflow.bal`) | The journey spans minutes (physician) to days (patient, lab). Temporal persists each step, so a waiting assessment survives restarts — the crash switch proves it. |
 | **Waits on people are human tasks** (`awaitHumanTask`) | Physician order, patient lab visit and physician release each have an audience (role) and an audit trail of who completed them; the lab's "results ready" is a system event, so it stays a data event. |
 | **Retry, then ask a person** (`RetryBeforeReview`) | A system of record down for seconds is retried automatically; down for longer, a review is raised so operations can retry or stop — the assessment does not fail. |
@@ -183,11 +183,11 @@ memory, longevity records) and Temporal's history — so finished assessments op
 images that wrote it are pinned by digest in `docker-compose.yml`.
 
 
-`seed/cerner/` and `seed/athena/` are committed transaction bundles (one per patient, plus each clinic's
-directory), loaded by `seed/seed.sh`. They come from `seed/synthea/generate.sh`:
+`seed/ehr/` holds the EHR's committed transaction bundles (one per patient, plus the clinic's directory),
+loaded by `seed/seed.sh`. They come from `seed/synthea/generate.sh`:
 
-1. Synthea v4.0.0 (pinned, fixed seeds) generates 40 adults per EHR (Boston and Worcester, MA).
-2. `transform.py` keeps the clinical record (8 years), drops billing, provenance and sensitive social-screening data, resolves Synthea's conditional references, rounds values to clinical precision, adds reference ranges, and picks the personas plus six other patients per EHR.
+1. Synthea v4.0.0 (pinned, fixed seeds) generates 40 adults in each of two runs (Boston and Worcester, MA), for a varied population.
+2. `transform.py` keeps the clinical record (8 years), drops billing, provenance and sensitive social-screening data, resolves Synthea's conditional references, rounds values to clinical precision, adds reference ranges, and picks the personas plus six other patients from each run — 16 patients in one EHR, sharing one MRN system.
 3. `storyline.py` overlays each persona: identity, anchor visits with the trending labs and vitals, problems, medications (incl. history), allergies, family history and visit notes. Older Synthea results for the same tests are re-valued to lead into the story.
 
 All patients are synthetic. Provider organizations and practitioners come from Synthea's public provider data.
@@ -202,11 +202,11 @@ ehr-lab-agents/
 ├── config/                     container configuration (no secrets)
 ├── infra/                      Postgres, Toxiproxy, trace router, MCP gatekeeper, judge adapter
 ├── secrets.example.toml        copy to secrets.toml (gitignored)
-├── seed/                       snapshot/ (saved state) · cerner/, athena/, lab-seed.json, seed.sh
+├── seed/                       snapshot/ (saved state) · ehr/, lab-seed.json, seed.sh
 │   └── synthea/                generate.sh · transform.py · storyline.py
 ├── ehr_lab_physician/          Ballerina workspace
 │   ├── ehr_agentic_integration/   workflow, activities, agents, explorer, IPS, workflow view, API
-│   ├── lab_simulator/             the reference lab's back office
+│   ├── lab_simulator/             the reference lab's back office; notifies the integration with FHIR messages
 │   └── pubmed_mcp/                PubMed MCP server (literature search tool)
 ├── demo-portal/                React + Vite + Tailwind
 └── scripts/                    up · snapshot · reset · smoke-test · colima-up · amp-install · amp-setup ·
