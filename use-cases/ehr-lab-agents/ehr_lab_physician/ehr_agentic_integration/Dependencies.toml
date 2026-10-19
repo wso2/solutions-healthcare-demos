@@ -86,7 +86,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "data.csv"
-version = "1.0.1"
+version = "0.8.2"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"},
 	{org = "ballerina", name = "log"}
@@ -144,7 +144,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "ftp"
-version = "2.22.0"
+version = "2.20.3"
 dependencies = [
 	{org = "ballerina", name = "crypto"},
 	{org = "ballerina", name = "data.csv"},
@@ -579,6 +579,22 @@ modules = [
 
 [[package]]
 org = "ballerinax"
+name = "ai.openrouter"
+version = "1.0.3"
+dependencies = [
+	{org = "ballerina", name = "ai"},
+	{org = "ballerina", name = "constraint"},
+	{org = "ballerina", name = "http"},
+	{org = "ballerina", name = "jballerina.java"},
+	{org = "ballerina", name = "lang.array"},
+	{org = "ballerinax", name = "openrouter"}
+]
+modules = [
+	{org = "ballerinax", packageName = "ai.openrouter", moduleName = "ai.openrouter"}
+]
+
+[[package]]
+org = "ballerinax"
 name = "cdc"
 version = "1.4.0"
 dependencies = [
@@ -662,6 +678,19 @@ modules = [
 
 [[package]]
 org = "ballerinax"
+name = "openrouter"
+version = "1.1.0"
+dependencies = [
+	{org = "ballerina", name = "constraint"},
+	{org = "ballerina", name = "data.jsondata"},
+	{org = "ballerina", name = "http"},
+	{org = "ballerina", name = "log"},
+	{org = "ballerina", name = "url"},
+	{org = "ballerinai", name = "observe"}
+]
+
+[[package]]
+org = "ballerinax"
 name = "postgresql"
 version = "1.19.1"
 dependencies = [
@@ -709,6 +738,7 @@ dependencies = [
 	{org = "ballerinai", name = "observe"},
 	{org = "ballerinax", name = "ai.anthropic"},
 	{org = "ballerinax", name = "ai.memory.postgresql"},
+	{org = "ballerinax", name = "ai.openrouter"},
 	{org = "ballerinax", name = "health.clients.fhir"},
 	{org = "ballerinax", name = "health.fhir.r4"},
 	{org = "ballerinax", name = "health.fhir.r4.international401"},

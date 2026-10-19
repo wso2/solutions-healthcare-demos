@@ -3,8 +3,12 @@ secrets.toml
 # Credentials WSO2 Agent Manager issued to the agents (scripts/amp-setup.sh)
 .amp/
 
-# Ballerina lock files are regenerated on every build (see scripts/bal.sh for why)
+# Ballerina lock files. The integration's and the lab simulator's are committed: they pin ballerina/ftp 2.20.3
+# (with sticky = true), because health.clients.fhir 3.0.6 needs data.csv 0.8.2 and the ftp bundled with
+# 2201.14.1 needs data.csv 1.x; without the pin every rebuild after the first fails as "incompatible versions".
 Dependencies.toml
+!ehr_lab_physician/ehr_agentic_integration/Dependencies.toml
+!ehr_lab_physician/lab_simulator/Dependencies.toml
 
 # Ballerina build output
 target/

@@ -218,7 +218,7 @@ ehr-lab-agents/
 ```bash
 # Ballerina 2201.14.1 (or ./scripts/bal.sh <cmd> to use the Docker image instead)
 cd ehr_lab_physician/ehr_agentic_integration
-rm -f Dependencies.toml && bal test          # unit tests need the compose stack running
+bal test                                     # unit tests need the compose stack running
 
 # Portal with hot reload against the running stack (stop the portal container first)
 docker compose stop portal
@@ -228,7 +228,10 @@ cd demo-portal && npm install && npm run dev
 ./seed/synthea/generate.sh && ./scripts/reset.sh
 ```
 
-Lock files are regenerated on every build (`data.csv` version conflict between `health.clients.fhir` and `ftp`).
+The integration's and the lab simulator's `Dependencies.toml` are committed and `sticky`. They pin
+`ballerina/ftp` to 2.20.3: `health.clients.fhir` 3.0.6 needs `data.csv` 0.8.2, and the `ftp` bundled with
+2201.14.1 needs `data.csv` 1.x. Without the pin, every rebuild after the first fails with "Incompatible
+versions: ballerina/data.csv". Don't delete these files.
 
 ### Pointing at a real EHR
 

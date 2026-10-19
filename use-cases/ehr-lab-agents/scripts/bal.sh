@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Runs the Ballerina CLI from the pinned Docker image, for machines without a local Ballerina 2201.14.1.
-# With a local install, use `bal` directly (remove Dependencies.toml first — see below).
+# With a local install, use `bal` directly.
 #   ./scripts/bal.sh build                      # from inside a package directory
 #   ./scripts/bal.sh test
 # Dependencies are cached in the `ehr-lab-agents-bal-cache` volume between runs.
@@ -16,11 +16,6 @@ if ! docker volume inspect ehr-lab-agents-bal-cache >/dev/null 2>&1; then
 fi
 docker run --rm -u 0 -v ehr-lab-agents-bal-cache:/cache "$BAL_IMAGE" \
   sh -c '[ "$(stat -c %u /cache)" = 100 ] || chown -R 100:1000 /cache'
-
-# Resolve dependencies fresh on every run. ballerinax/health.clients.fhir 3.0.6 was built against
-# ballerina/data.csv 0.8.2 while the ballerina/ftp bundled with 2201.14.1 needs data.csv 1.x; a fresh
-# resolution succeeds, but re-reading the Dependencies.toml it wrote fails as "incompatible versions".
-rm -f Dependencies.toml
 
 exec docker run --rm \
   -v "$ROOT":/home/ballerina/demo \

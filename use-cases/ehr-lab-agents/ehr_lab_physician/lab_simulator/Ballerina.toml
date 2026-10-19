@@ -6,4 +6,5 @@ distribution = "2201.14.1"
 title = "Reference Lab Simulator"
 
 [build-options]
+sticky = true
 observabilityIncluded = true
