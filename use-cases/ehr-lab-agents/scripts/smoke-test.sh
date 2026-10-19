@@ -18,7 +18,7 @@ wait_for() {
   # wait_for <id> <python expression over the assessment d> <label>
   local id="$1" expr="$2" label="$3" result
   for _ in $(seq 1 300); do
-    result=$(curl -s "$API/assessments/$id" | json "'FAILED: ' + str(d['error']) if d['stage'] == 'FAILED' else ('yes' if ($expr) else 'no')")
+    result=$(curl -s "$API/assessments/$id" | json "'FAILED: ' + str(d['error']) if d['stage'] == 'FAILED' else ('FAILED: ' + d['data']['copilot']['messages'][-1]['text'][:300] if ${COPILOT_WAIT:-False} and d['data'].get('copilot', {}).get('status') == 'failed' else ('yes' if ($expr) else 'no'))")
     if [[ "$result" == "yes" ]]; then echo "  ✓ $label"; return 0; fi
     if [[ "$result" == FAILED* ]]; then echo "  ✗ $result"; exit 1; fi
     sleep 2
@@ -38,11 +38,22 @@ echo "2. Explorer → Copilot evaluation of the selected records"
 curl -s "$API/ehrs/$EHR/patients/$PATIENT/records?kinds=lab,medication,medication-reported,note,allergy,problem&from=$SINCE" > /tmp/smoke-records.json
 python3 -c "import json; r=json.load(open('/tmp/smoke-records.json')); print('  %d records from %d FHIR queries' % (len(r['rows']), len(r['queries'])))"
 python3 -c "import json; r=json.load(open('/tmp/smoke-records.json')); print(json.dumps({'records': r['rows'], 'dateFrom': '$SINCE', 'question': 'What stands out in the last three years, and what should we measure?'}))" > /tmp/smoke-evaluation.json
-post "$API/assessments/$ID/evaluations" "@/tmp/smoke-evaluation.json" >/dev/null
-wait_for "$ID" "d['data'].get('copilot', {}).get('status') == 'idle' and 'evaluation' in d['data']" "Copilot evaluation ready"
+# REUSE_EVALUATION=1: keep an evaluation the open assessment already has (no new Copilot run).
+if [[ "${REUSE_EVALUATION:-}" == 1 ]] && curl -s "$API/assessments/$ID" | json "'yes' if 'evaluation' in d['data'] else 'no'" | grep -qx yes; then
+  echo "  (reusing the assessment's existing Copilot evaluation)"
+else
+  post "$API/assessments/$ID/evaluations" "@/tmp/smoke-evaluation.json" >/dev/null
+fi
+# A failed Copilot run leaves the stage unchanged (the physician may ask again), so this wait also stops on it.
+COPILOT_WAIT=True wait_for "$ID" "d['data'].get('copilot', {}).get('status') == 'idle' and 'evaluation' in d['data']" "Copilot evaluation ready"
 curl -s "$API/assessments/$ID" | json '"  reply: " + d["data"]["evaluation"]["reply"][:300]'
 TESTS=$(curl -s "$API/assessments/$ID" | json 'json.dumps([t["testCode"] for t in d["data"]["evaluation"]["recommendedTests"] if t["priority"] != "optional"])')
 echo "  proposed: $TESTS"
+if [[ "$TESTS" == "[]" ]]; then
+  # The journey needs an order to go on; a Copilot that proposes nothing orderable is a finding in itself.
+  TESTS='["KIDNEY","METAB","LIPID-ADV","LIVER"]'
+  echo "  ! nothing orderable proposed — ordering the default panel $TESTS to continue"
+fi
 
 echo "3. Physician orders → order of record in the EHR, order to the lab, patient notified"
 post "$API/assessments/$ID/lab-order" "{\"approvedTests\":$TESTS,\"note\":\"Fasting draw.\",\"clinicalContext\":\"Evaluate the trends the Copilot found.\"}" >/dev/null

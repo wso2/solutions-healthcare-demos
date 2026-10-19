@@ -329,7 +329,8 @@ OpenTelemetry jars (1.14) clash with the runtime's (1.65), which is another reas
 
 A **monitor** runs a set of **evaluators** over an agent's traces: continuously (`type: future`, every N
 minutes) or once over a past window (`type: past`). LLM-judge evaluators use a model through an AMP LLM
-provider (`llmProvider: {providerName: "claude-judge"}`, `model: "claude-sonnet-4-6"` as a bare name).
+provider (`llmProvider: {providerName: "openrouter-judge"}` with `model: "openai/gpt-6-luna"`, or
+`claude-judge` with `claude-sonnet-4-6`).
 Results appear on the monitor dashboard and in a **Score** column on each trace.
 
 **The judge's provider.** In AMP 1.0.0 none of the direct routes works for a Claude judge:
@@ -340,7 +341,19 @@ Results appear on the monitor dashboard and in a **Score** column on each trace.
 - **The gateway's `openai-to-anthropic-transformer`:** in gateway 1.2.1 it translates the request but not
   the reply.
 
-`amp-evaluations.sh` therefore creates `claude-judge` with three parts:
+**Judge profiles.** `amp/monitors.json` names the judge (`"judge"`), and `amp-evaluations.sh` creates that
+profile's provider and points every monitor at it (`--judge claude` overrides it for one run):
+- **`openrouter` (the default):** GPT-6 Luna (`openai/gpt-6-luna`, $0.10 / $0.50 per M tokens) through the
+  `openrouter-judge` provider: OpenAI template, upstream OpenRouter. It accepts the judge's `response_format` as
+  sent, so it needs no adapter. GPT-6 Luna reasons before it answers, so the profile raises the judges' output
+  cap (`maxTokens: 8192`; the default 1024 ran out on large traces). A review of one full assessment's traces cost
+  about $0.05.
+- **Reviews per model:** `--since <time> --until <time> --label <name>` reviews one window as `<agent>-review-<name>`,
+  kept beside other labelled reviews; `./scripts/amp-scores.sh <name>…` prints them side by side. A new review's
+  first run can miss its judge proxy (401, judges skipped; `ISSUES_TO_REPORT.md` D17): `--rerun <name>` repeats it.
+- **`claude`:** Claude Sonnet 4.6 through `claude-judge`, which needs the workarounds below.
+
+`amp-evaluations.sh` creates `claude-judge` with three parts:
 - **Template:** OpenAI, so the judge uses its working OpenAI client.
 - **Upstream:** Anthropic's OpenAI-compatible API.
 - **Policy:** `interceptor-service`, calling `infra/judge-adapter` (about 40 lines of Python), which removes
