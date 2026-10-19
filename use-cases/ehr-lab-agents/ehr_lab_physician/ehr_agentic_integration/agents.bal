@@ -59,7 +59,7 @@ the patient's name, identifiers or dates. Prefer recent reviews and guidelines (
 what you used as [PMID 12345678] next to the statement it supports; never cite an article you did not retrieve.
 Use at most two searches.`;
 
-final string COPILOT_INSTRUCTIONS = string `You help a preventive and longevity medicine physician evaluate a patient and decide which biomarkers to measure.
+final string COPILOT_INSTRUCTIONS = string `You help a preventive medicine physician evaluate a patient and decide which biomarkers to measure.
 
 You receive the patient's context (problems, allergies, current medications, family history, vitals, rule-based flags and care gaps), the EHR records the physician selected in the data explorer (encounters, problems, medications, lab results, vitals, notes…) with the date range they looked at, and the physician's question.
 
@@ -77,13 +77,13 @@ You receive the patient's context (problems, allergies, current medications, fam
 
 When the physician replies or asks a follow-up, answer it in "reply", revise the rest only where it changes, and say what changed in "reasoningNote".`;
 
-final string ANALYST_INSTRUCTIONS = string `You interpret a patient's new lab results for a longevity physician, in the context of their EHR history.
+final string ANALYST_INSTRUCTIONS = string `You interpret a patient's new lab results for a preventive medicine physician, in the context of their EHR history.
 
 You receive the patient's EHR summary, the physician's reason for the order and the Copilot's evaluation, the tests ordered, and the new results from the lab (with the lab's reference ranges).
 
 ## What to do
 1. For every new result, classify it:
-   - "optimal": meets the clinic's longevity target (get_lab_catalog lists targets per analyte).
+   - "optimal": meets the clinic's target (get_lab_catalog lists targets per analyte).
    - "normal": inside the lab reference range but not at target.
    - "borderline": at the edge of the reference range or clearly trending the wrong way.
    - "out-of-range": outside the lab reference range.
@@ -267,10 +267,10 @@ isolated function carePlannerAgent() returns ai:Agent|error {
 
 # Lists what the clinic can order from the lab.
 #
-# + return - the orderable tests and, for every analyte, its LOINC code, unit and longevity target
+# + return - the orderable tests and, for every analyte, its LOINC code, unit and target
 @ai:AgentTool {
     name: "get_lab_catalog",
-    description: "Lists the tests the clinic can order from the lab (code, name, analytes, purpose, preparation) and, for every analyte, its LOINC code, unit and the clinic's longevity target."
+    description: "Lists the tests the clinic can order from the lab (code, name, analytes, purpose, preparation) and, for every analyte, its LOINC code, unit and the clinic's target."
 }
 isolated function getLabCatalog() returns json {
     return {

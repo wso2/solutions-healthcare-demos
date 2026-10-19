@@ -150,7 +150,7 @@ isolated function releaseOrder(string serviceRequestId) returns ReleaseResult|Al
             resourceType: "DiagnosticReport",
             status: "final",
             category: [{coding: [{system: "http://terminology.hl7.org/CodeSystem/v2-0074", code: "LAB", display: "Laboratory"}]}],
-            code: {text: "Longevity biomarker panel"},
+            code: {text: "Biomarker panel"},
             subject: {reference: patientRef},
             basedOn: [{reference: string `ServiceRequest/${serviceRequestId}`}],
             specimen: [{reference: string `Specimen/${specimenId}`}],

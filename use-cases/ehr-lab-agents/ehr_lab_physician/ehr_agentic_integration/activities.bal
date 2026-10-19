@@ -45,7 +45,7 @@ isolated function openEhrEncounter(string assessmentId, string ehr, string patie
     check setEncounter(assessmentId, encounterId);
     check setStage(assessmentId, AWAITING_PHYSICIAN);
     addEvent(assessmentId, EHR, string `${ehrName(ehr)}: Encounter/${encounterId} opened`,
-            "In-progress ambulatory visit — longevity risk assessment");
+            "In-progress ambulatory visit — preventive health risk assessment");
     addEvent(assessmentId, WORKFLOW, "Waiting on the physician", "Human task: evaluate the record and order labs");
     return encounterId;
 }
@@ -216,7 +216,7 @@ isolated function publishLongevityRecord(string assessmentId, PatientSummary sum
             physicianRelease, practitionerId, noteId);
     check upsertLongevityRecord(patientSummary.patient.ehr, patientSummary.patient.id, assessmentId, longevityRecord);
     check putData(assessmentId, "longevityRecord", {published: true, patientId: patientSummary.patient.id}, COMPLETED);
-    addEvent(assessmentId, WORKFLOW, "Longevity record published",
+    addEvent(assessmentId, WORKFLOW, "Health record published",
             "Physician dashboard and patient app now read the updated record");
 }
 

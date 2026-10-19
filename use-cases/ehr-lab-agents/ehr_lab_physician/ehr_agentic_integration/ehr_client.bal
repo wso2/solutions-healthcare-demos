@@ -344,7 +344,7 @@ const string LAB_RESULT_ID_SYSTEM = "urn:demo:lab:result-id";
 # Identifier system the integration stamps on what it writes for an assessment.
 const string ASSESSMENT_ID_SYSTEM = "urn:demo:longevity:assessment";
 
-# Opens an in-progress ambulatory Encounter for the longevity visit. Identified by the assessment id,
+# Opens an in-progress ambulatory Encounter for the assessment visit. Identified by the assessment id,
 # so a retry reuses the Encounter it already opened.
 #
 # + assessmentId - the assessment id, stored as the Encounter's identifier
@@ -362,11 +362,11 @@ isolated function createEhrEncounter(string assessmentId, string ehr, string pat
         status: "in-progress",
         'class: {system: "http://terminology.hl7.org/CodeSystem/v3-ActCode", code: "AMB", display: "ambulatory"},
         'type: [{coding: [{system: "http://snomed.info/sct", code: "185349003", display: "Encounter for check up (procedure)"}],
-            text: "Longevity assessment"}],
+            text: "Preventive health assessment"}],
         subject: {reference: string `Patient/${patientId}`},
         participant: [{individual: {reference: string `Practitioner/${practitionerId}`}}],
         period: {'start: nowIso()},
-        reasonCode: [{text: "Longevity risk assessment"}],
+        reasonCode: [{text: "Preventive health risk assessment"}],
         serviceProvider: {reference: string `Organization/${system.organizationId}`}
     };
     // Not `createOnce`: wso2/fhir-server does not index Encounter.identifier, so a conditional create
@@ -510,14 +510,14 @@ isolated function createEhrDraftNote(string assessmentId, string ehr, string pat
         identifier: [{system: ASSESSMENT_ID_SYSTEM, value: assessmentId}],
         status: "current",
         docStatus: "preliminary",
-        'type: {coding: [{system: LOINC, code: "11506-3", display: "Progress note"}], text: "Longevity assessment note"},
+        'type: {coding: [{system: LOINC, code: "11506-3", display: "Progress note"}], text: "Preventive health assessment note"},
         category: [{coding: [{system: "http://hl7.org/fhir/us/core/CodeSystem/us-core-documentreference-category",
             code: "clinical-note", display: "Clinical Note"}]}],
         subject: {reference: string `Patient/${patientId}`},
         date: nowIso(),
         author: [{reference: string `Practitioner/${practitionerId}`}],
-        description: "Longevity assessment — draft for physician review",
-        content: [{attachment: {contentType: "text/markdown", title: "Longevity assessment — plan",
+        description: "Preventive health assessment — draft for physician review",
+        content: [{attachment: {contentType: "text/markdown", title: "Preventive health assessment — plan",
             data: array:toBase64(noteMarkdown.toBytes())}}],
         context: {encounter: [{reference: string `Encounter/${encounterId}`}]}
     };
@@ -542,8 +542,8 @@ isolated function finalizeEhrNote(string ehr, string noteId, string noteMarkdown
         signed += string `${"\n\n"}Physician comment: ${comment}`;
     }
     note["docStatus"] = "final";
-    note["description"] = "Longevity assessment";
-    note["content"] = [{attachment: {contentType: "text/markdown", title: "Longevity assessment — plan",
+    note["description"] = "Preventive health assessment";
+    note["content"] = [{attachment: {contentType: "text/markdown", title: "Preventive health assessment — plan",
         data: array:toBase64(signed.toBytes())}}];
     // REPRESENTATION, not the default MINIMAL: with MINIMAL the connector requires a Location header,
     // which wso2/fhir-server does not send on update (ETag only).
@@ -590,7 +590,7 @@ isolated function labServiceRequest(string subjectReference, string placerOrderI
         status: "active",
         intent: "order",
         category: [{coding: [{system: "http://snomed.info/sct", code: "108252007", display: "Laboratory procedure"}]}],
-        code: {text: "Longevity biomarker panel"},
+        code: {text: "Biomarker panel"},
         orderDetail: orderDetail,
         subject: {reference: subjectReference},
         authoredOn: nowIso(),
