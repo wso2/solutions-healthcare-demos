@@ -6,7 +6,7 @@ WSO2 integration technology:
 - **Ballerina** services, with the official FHIR connector talking to two EHRs (standing in for **Oracle Health / Cerner** and **athenahealth**) and a reference lab (standing in for **Quest Diagnostics**)
 - one durable **Temporal workflow** per assessment (`ballerina/workflow`), whose waits on people are real **human tasks**
 - **three Claude agents**, with read-only EHR access through the **WSO2 FHIR MCP server** and literature search through a **PubMed MCP server** (Ballerina, NCBI E-utilities)
-- a **React portal**: physician workspace (patient summary, EHR explorer, Copilot, a live **Workflow view**), patient app and lab console
+- a **React portal**: a home page with the flow, and three apps that each open in their own tab — physician workspace (patient summary, EHR explorer, lab order, AI results analysis and release), patient app, and lab console (with the presenter's failure switches)
 - realistic patient records generated with **Synthea**, with a curated storyline for the demo personas
 - **WSO2 Agent Manager** governing the agents: an **AgentID** and **roles** per agent deciding which MCP tools it may call, Claude through the **AI gateway** with a key per agent and a **PHI-redaction guardrail**, every run **traced**, and **evaluation monitors** with built-in and custom evaluators — see [docs/agent-manager.md](docs/agent-manager.md)
 
@@ -78,10 +78,9 @@ cp secrets.example.toml secrets.toml        # then put your anthropicApiKey in i
 
 | URL | What |
 |---|---|
-| http://localhost:5173 | Demo portal: physician workspace, patient app, lab console |
+| http://localhost:5173 | Demo portal home: the flow; opens the physician workspace, patient app and lab console in new tabs |
 | http://localhost:8233 | Temporal UI: every assessment as a durable workflow |
 | http://console.amp.localhost:8080 | WSO2 Agent Manager console (admin / admin) → project *Longevity Clinic* |
-| http://localhost:5173/agent-manager | Portal: agent identities, roles and a live permission matrix with real probes |
 | http://localhost:9090/api/system | Integration API |
 | http://localhost:8081/fhir/r4 · :8083 · :8082 | Cerner, Athena and lab FHIR servers |
 | http://localhost:8474/proxies | Toxiproxy (what the outage switches change) |
@@ -101,27 +100,27 @@ cp secrets.example.toml secrets.toml        # then put your anthropicApiKey in i
 |---|---|---|---|
 | 1 | Pick the EHR, open the patient: **International Patient Summary** (allergy banner, problems, medications incl. patient-reported, vitals with trends, results, immunizations, procedures, social and family history, rule-based flags, care gaps), past assessments, **EHR explorer** | Physician | — |
 | 2 | Start the assessment: record pulled from the patient's EHR, visit opened there | Integration | activities |
-| 3 | Explore the record (data types, date range, text, abnormal only), select rows, **AI overview & evaluation**, follow-ups in the same conversation, order labs | Physician + Copilot | ⏸ **human task** (physician) |
+| 3 | Explore the record (data types, date range, text, abnormal only), order labs from the lab catalog (the AI evaluation is hidden in the portal: `SHOW_AI_EVALUATION` in `EvaluationPanel.tsx`) | Physician | ⏸ **human task** (physician) |
 | 4 | Order of record in the EHR, patient matched in the lab by MRN, order to the lab, **patient notified** (FHIR `Communication`) | Integration | activities |
 | 5 | Patient sees "visit the lab" with preparation instructions; lab console → **Collect specimen** | Patient → Lab | ⏸ **human task** (patient; completed by the lab) |
 | 6 | Lab processes; lab console → **Release results** (webhook; fallback poller) | Lab | ⏸ system event |
 | 7 | Results filed in the EHR → **Results Analysis** → **Care Plan** → draft note in the EHR (preliminary) — unattended | Agents | activities |
-| 8 | Physician reviews and **releases**: note final, visit closed, Longevity Record published, patient sees the report | Physician | ⏸ **human task** (physician) |
+| 8 | Physician reviews and **releases**: note final, visit closed, report published, patient sees it | Physician | ⏸ **human task** (physician) |
 
 ## Demo script (about 15 minutes)
 
 1. **Physician → Athena → Sofia Alvarez.** The patient summary is built live from athenahealth over FHIR (12 searches in parallel, the EHR has no `$summary`); *View IPS bundle* shows the FHIR document. Point at the red allergy banner (aspirin, angioedema) and the first flag: *NSAID in use despite aspirin allergy* — a deterministic rule, because her ibuprofen is a patient-reported medication.
 2. **EHR explorer.** Lab results + medications + notes, last 3 years → the FHIR queries are listed. Read a note ("taking ibuprofen 400 mg two to three times daily").
-3. **AI overview & evaluation.** Select all, ask *"What explains the falling eGFR, and what should we measure?"*. The assessment starts (Temporal workflow) and the Copilot connects eGFR 88 → 79 → 71 with daily ibuprofen on a thiazide and the aspirin cross-reactivity. Ask a follow-up.
-4. **Switch to Workflow.** Swimlanes per actor: the workflow is suspended on a *human task* for the physician. Show Temporal UI.
-5. **Order labs.** Order of record in athenahealth, order to Quest, patient notified. The workflow now waits on the **patient** — open the **patient app**: "Action needed: visit Quest Diagnostics", fasting instructions, order number.
-6. **Simulate a crash** (Workflow → Simulate → Crash). The integration restarts in seconds; the workflow is still waiting on the patient.
-7. **Lab console → Collect specimen** → waiting on the **lab**. Optionally turn on *Lab webhook down* first: the fallback poller completes the task ~20 s later.
-8. **Release results.** Results filed in the EHR, then both agents run unattended (Workflow view: AI lane). The analysis confirms early CKD with cystatin C, insulin resistance (HOMA-IR) and a metabolic liver pattern.
+3. **Start the assessment and order labs.** The assessment starts (Temporal workflow); review the record beside the order form and pick the tests from the lab catalog (e.g. kidney function, metabolic panel, advanced lipids, liver panel).
+4. **Temporal UI.** The workflow is suspended on a *human task* for the physician.
+5. **Order labs.** Order of record in athenahealth, order to Quest, patient notified. The workflow now waits on the **patient** — open the **patient app** (home page → Patient app, in its own tab): "Action needed: visit Quest Diagnostics", fasting instructions, order number.
+6. **Simulate a crash** (lab console → Simulate failures → Crash). The integration restarts in seconds; the workflow is still waiting on the patient.
+7. **Lab console → Collect specimen** → waiting on the **lab**. Optionally turn on *Lab webhook down* (lab console) first: the fallback poller completes the task ~20 s later.
+8. **Release results.** Results filed in the EHR, then both agents run unattended. The analysis — headline, risk counts, then tabs for overview, risk flags, lab results, care plan, chart note and patient report — confirms early CKD with cystatin C, insulin resistance (HOMA-IR) and a metabolic liver pattern.
 9. **Review & release.** The draft note becomes final in athenahealth, the visit closes, the patient app shows the report.
-10. **EHR outage** (any assessment, before an EHR write): turn on *athenahealth outage*, act (e.g. order labs). The step retries live (attempt 2, 3, …); leave it cut and a **review** appears — turn the outage off and click **Retry**: it completes. Turn it off within ~45 s instead and the retry succeeds on its own.
+10. **EHR outage** (any assessment, before an EHR write): turn on *athenahealth outage* in the lab console, act (e.g. order labs). The step retries; leave it cut and the assessment pauses with **Retry / Stop** — turn the outage off and click **Retry**: it completes. Turn it off within ~45 s instead and the retry succeeds on its own.
 
-11. **Agent Manager** (portal → *Agent Manager*). Each agent's AgentID and roles, and the live permission matrix: *Try* reading the Cerner EHR as the Copilot (allowed) and as the Care Plan agent (refused by Agent Manager); give Care Plan `ehr-reader` in the console, *Re-check*, try again. Then the console: the Copilot's traces (LLM calls, FHIR and PubMed tool calls, tokens), its monitor's scores, the `anthropic` provider with the PHI guardrail. Full script: [docs/agent-manager.md](docs/agent-manager.md#5-a-five-minute-demo).
+11. **Agent Manager** (console only; the portal no longer shows governance). The console: the Copilot's traces (LLM calls, FHIR and PubMed tool calls, tokens), its monitor's scores, the `anthropic` provider with the PHI guardrail. Full script: [docs/agent-manager.md](docs/agent-manager.md#6-a-ten-minute-demo).
 
 Other personas: **Daniel Reyes** (Cerner) — silent cardiometabolic drift, father's MI at 54, ApoB/Lp(a)/HOMA-IR story; **Priya Nair** (Cerner) — ferritin and hemoglobin falling under treated hypothyroidism, iron deficiency treated in 2019; **Marcus Bell** (Athena) — healthy control.
 

@@ -13,7 +13,7 @@ import { Avatar, Badge, Empty, ErrorNote, Spinner } from '../components/ui'
 
 // The patient app (the customer's layer 4). It shows where the patient's assessment is, what they need to
 // do (go to the lab), and — only once the physician has released it — their plain-language report from
-// the published Longevity Record. It never talks to the EHR or the lab.
+// the published health record. It never talks to the EHR or the lab.
 
 export function PatientHome() {
   const { data: patients, error } = usePolling(() => api.patientAppPatients(), 5000)
@@ -21,7 +21,7 @@ export function PatientHome() {
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
         <h1 className="text-xl font-semibold tracking-tight text-ink">Patient app</h1>
-        <p className="text-sm text-ink-muted">Sign in as a patient with a longevity assessment.</p>
+        <p className="text-sm text-ink-muted">Sign in as a patient with an assessment.</p>
       </div>
       {error && <ErrorNote message={error} />}
       {!patients && !error && <div className="flex justify-center py-10 text-ink-muted"><Spinner /></div>}
@@ -82,7 +82,7 @@ function JourneyView({ journey }: { journey: PatientJourney }) {
   return (
     <div className="space-y-5">
       <section className="rounded-2xl border border-line bg-gradient-to-br from-brand-soft via-surface to-surface px-6 py-6 shadow-card">
-        <p className="text-sm font-medium text-brand-ink">Your longevity assessment</p>
+        <p className="text-sm font-medium text-brand-ink">Your health assessment</p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-ink">
           {a.step === 'visit-lab' ? 'Next step: your blood test' : a.step === 'processing' ? 'Your sample is at the lab' : a.step === 'reviewing' ? 'Dr. Park is reviewing your results' : a.step === 'stopped' ? 'Your assessment was paused' : 'Dr. Park is reviewing your record'}
         </h1>
@@ -185,7 +185,7 @@ function ReportView({ record }: { record: LongevityRecord }) {
     <div className="space-y-6">
       <section className="overflow-hidden rounded-2xl border border-line bg-gradient-to-br from-brand-soft via-surface to-surface shadow-card">
         <div className="px-6 py-7 sm:px-8">
-          <p className="text-sm font-medium text-brand-ink">Your longevity report · {formatDate(record.generatedAt)}</p>
+          <p className="text-sm font-medium text-brand-ink">Your health report · {formatDate(record.generatedAt)}</p>
           <h1 className="mt-2 text-2xl font-semibold leading-tight tracking-tight text-ink sm:text-[28px]">Hi {firstName}. {report.headline}</h1>
           <p className="mt-4 text-[15px] leading-relaxed text-ink-soft">{report.whatWeFound}</p>
           <div className="mt-5 flex items-center gap-2 text-xs text-ink-muted">

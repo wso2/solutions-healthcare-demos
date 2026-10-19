@@ -1,66 +1,70 @@
-import { useEffect, useState, type ReactNode } from 'react'
-import { NavLink, Link } from 'react-router-dom'
-import { Activity, FlaskConical, HeartPulse, Moon, ShieldCheck, Stethoscope, Sun } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Link, Outlet } from 'react-router-dom'
+import { Activity, FlaskConical, HeartPulse, Moon, Stethoscope, Sun, type LucideIcon } from 'lucide-react'
 import { loadSystem } from '../lib/useSystem'
 import { usePolling } from '../lib/usePolling'
-import { PresenterGuide } from './PresenterGuide'
 
-const nav = [
-  { to: '/physician', label: 'Physician', icon: Stethoscope },
-  { to: '/patient', label: 'Patient app', icon: HeartPulse },
-  { to: '/lab', label: 'Lab console', icon: FlaskConical },
-  { to: '/agent-manager', label: 'Agent Manager', icon: ShieldCheck },
-]
+// One app per browser tab: the header names the app and links only to its own start page.
 
-export function AppShell({ children }: { children: ReactNode }) {
+export type AppKey = 'physician' | 'patient' | 'lab'
+
+export const APPS: Record<AppKey, { to: string; title: string; icon: LucideIcon; color: string }> = {
+  physician: { to: '/physician', title: 'Physician workspace', icon: Stethoscope, color: 'rgb(var(--physician))' },
+  patient: { to: '/patient', title: 'Patient app', icon: HeartPulse, color: 'rgb(var(--brand))' },
+  lab: { to: '/lab', title: 'Lab console', icon: FlaskConical, color: 'rgb(var(--lab))' },
+}
+
+export function AppShell({ app }: { app: AppKey }) {
+  const { to, title, icon: Icon, color } = APPS[app]
+  useEffect(() => {
+    document.title = `${title} · Healthspan`
+  }, [title])
   return (
     <div className="min-h-screen">
       <header className="sticky top-0 z-30 border-b border-line bg-surface/90 backdrop-blur">
-        <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-6 px-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-2.5">
-            <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-white dark:text-canvas">
-              <Activity size={18} strokeWidth={2.4} />
+        <div className="mx-auto flex h-14 max-w-[1400px] items-center gap-3 px-4 sm:px-6">
+          <Link to={to} className="flex min-w-0 items-center gap-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white" style={{ background: color }}>
+              <Icon size={17} strokeWidth={2.3} />
             </span>
-            <span className="hidden text-sm font-semibold tracking-tight text-ink sm:block">Healthspan Workspace</span>
+            <span className="min-w-0 leading-tight">
+              <span className="block truncate text-sm font-semibold tracking-tight text-ink">{title}</span>
+              <span className="block text-[11px] text-ink-muted">Healthspan</span>
+            </span>
           </Link>
-          <nav className="flex items-center gap-1">
-            {nav.map(({ to, label, icon: Icon }) => (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) =>
-                  `flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition ${
-                    isActive ? 'bg-brand-soft text-brand-ink' : 'text-ink-soft hover:bg-sunken hover:text-ink'
-                  }`
-                }
-              >
-                <Icon size={16} />
-                <span className="hidden md:inline">{label}</span>
-              </NavLink>
-            ))}
-          </nav>
           <HealthIndicator />
           <ThemeToggle />
         </div>
       </header>
-      <main className="mx-auto max-w-[1400px] px-4 pb-20 pt-6 sm:px-6">{children}</main>
-      <PresenterGuide />
+      <main className="mx-auto max-w-[1400px] px-4 pb-20 pt-6 sm:px-6">
+        <Outlet />
+      </main>
     </div>
   )
 }
 
+export function BrandMark() {
+  return (
+    <span className="flex items-center gap-2.5">
+      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-white dark:text-canvas">
+        <Activity size={18} strokeWidth={2.4} />
+      </span>
+      <span className="text-sm font-semibold tracking-tight text-ink">Healthspan</span>
+    </span>
+  )
+}
+
 /**
- * What the demo depends on, checked every 15 s: the integration itself, each EHR, the model configuration
- * and Agent Manager. The dot carries a word beside it, never colour alone.
+ * What the demo depends on, checked every 15 s: the integration itself, each EHR and the model
+ * configuration. The dot carries a word beside it, never colour alone.
  */
-function HealthIndicator() {
+export function HealthIndicator() {
   const { data: system, error } = usePolling(() => loadSystem(true), 15000)
   const checks = system
     ? [
-        { label: 'Integration (WSO2 · Ballerina)', ok: true },
+        { label: 'Integration', ok: true },
         ...system.ehrs.map((e) => ({ label: `${e.name} FHIR`, ok: e.reachable })),
-        { label: `Model · ${system.model.name}`, ok: system.model.configured },
-        { label: 'WSO2 Agent Manager', ok: system.agentManager.enabled },
+        { label: 'AI model', ok: system.model.configured },
       ]
     : []
   const down = error ? 1 : checks.filter((c) => !c.ok).length
@@ -73,7 +77,7 @@ function HealthIndicator() {
         <span className={`h-2 w-2 rounded-full ${dot} ${state === 'down' ? 'animate-pulse' : ''}`} aria-hidden />
         <span className="hidden lg:inline">{word}</span>
       </button>
-      <div className="invisible absolute right-0 top-full z-40 mt-1 w-64 rounded-lg border border-line bg-surface p-2 text-xs opacity-0 shadow-pop transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
+      <div className="invisible absolute right-0 top-full z-40 mt-1 w-60 rounded-lg border border-line bg-surface p-2 text-xs opacity-0 shadow-pop transition group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
         {error && <p className="px-1 py-1 text-act-ink">The integration API does not answer: {error}</p>}
         <ul className="space-y-1">
           {checks.map((c) => (
@@ -89,7 +93,7 @@ function HealthIndicator() {
 }
 
 /** Light/dark switch. The choice is a per-viewer convenience, so browser storage is fine for it. */
-function ThemeToggle() {
+export function ThemeToggle() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     try {
       const saved = localStorage.getItem('theme')

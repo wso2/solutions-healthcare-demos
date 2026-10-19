@@ -6,21 +6,27 @@ import { PatientPage } from './pages/PatientPage'
 import { AssessmentPage } from './pages/AssessmentPage'
 import { PatientHome, PatientJourneyPage } from './pages/PatientPages'
 import { LabConsole } from './pages/LabConsole'
-import { AgentManagerPage } from './pages/AgentManagerPage'
+
+// The home page shows the flow and opens each app in its own browser tab; an app has no navigation to
+// the others, so every tab stays one persona.
 
 export default function App() {
   return (
-    <AppShell>
-      <Routes>
-        <Route path="/" element={<Home />} />
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route element={<AppShell app="physician" />}>
         <Route path="/physician" element={<PhysicianHome />} />
         <Route path="/physician/ehrs/:ehr/patients/:patientId" element={<PatientPage />} />
         <Route path="/physician/assessments/:id" element={<AssessmentPage />} />
+      </Route>
+      <Route element={<AppShell app="patient" />}>
         <Route path="/patient" element={<PatientHome />} />
         <Route path="/patient/:ehr/:patientId" element={<PatientJourneyPage />} />
+      </Route>
+      <Route element={<AppShell app="lab" />}>
         <Route path="/lab" element={<LabConsole />} />
-        <Route path="/agent-manager" element={<AgentManagerPage />} />
-      </Routes>
-    </AppShell>
+      </Route>
+      <Route path="*" element={<Home />} />
+    </Routes>
   )
 }

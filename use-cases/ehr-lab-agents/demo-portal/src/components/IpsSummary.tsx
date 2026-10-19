@@ -97,7 +97,7 @@ export function IpsSummary({ summary }: { summary: PatientSummary }) {
           <RiskFlags flags={summary.flags} />
         </Card>
         <Card>
-          <CardHeader title="Care gaps" subtitle="Longevity baseline never measured" />
+          <CardHeader title="Care gaps" subtitle="Recommended baseline tests never measured" />
           <ul className="space-y-2 px-5 py-4">
             {summary.careGaps.map((gap) => (
               <li key={gap.title} className="flex items-center justify-between gap-2 text-sm">
@@ -326,7 +326,7 @@ export function BiomarkerCard({ series }: { series: BiomarkerSeries }) {
       <div className="mt-2">
         <BiomarkerChart points={series.points} unit={series.unit} referenceLow={series.referenceLow} referenceHigh={series.referenceHigh} height={120} />
       </div>
-      {series.longevityTarget && <p className="mt-1 text-[11px] text-ink-muted">Longevity target {series.longevityTarget}</p>}
+      {series.longevityTarget && <p className="mt-1 text-[11px] text-ink-muted">Target {series.longevityTarget}</p>}
     </div>
   )
 }

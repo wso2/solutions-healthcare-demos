@@ -20,7 +20,7 @@ const stateLabel: Record<StepState, string> = {
 
 export function Stepper({ states, selected, onSelect, waitingLabel }: Props) {
   return (
-    <ol className="grid grid-cols-3 gap-2 md:grid-cols-6">
+    <ol className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-5">
       {STEPS.map((step, index) => {
         const state = states[step.key]
         const clickable = state !== 'upcoming'

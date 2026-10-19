@@ -1,6 +1,6 @@
-import type { ReactNode } from 'react'
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
-import { AlertTriangle, ArrowDownRight, ArrowRight, ArrowUpRight, CheckCircle2, Info, Loader2, OctagonAlert, Sparkles } from 'lucide-react'
+import { AlertTriangle, ArrowDownRight, ArrowRight, ArrowUpRight, CheckCircle2, ChevronDown, Info, Loader2, OctagonAlert, Sparkles } from 'lucide-react'
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <section className={`card ${className}`}>{children}</section>
@@ -136,4 +136,53 @@ export function TrendIcon({ trend }: { trend: string }) {
   if (trend === 'rising') return <ArrowUpRight size={14} />
   if (trend === 'falling') return <ArrowDownRight size={14} />
   return <ArrowRight size={14} />
+}
+
+/** Long text shown to a fixed height with a fade, and a toggle only when it actually overflows. */
+export function Expandable({ children, collapsedHeight = 120, moreLabel = 'Read more' }: { children: ReactNode; collapsedHeight?: number; moreLabel?: string }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [open, setOpen] = useState(false)
+  const [overflows, setOverflows] = useState(false)
+  useLayoutEffect(() => {
+    if (ref.current) setOverflows(ref.current.scrollHeight > collapsedHeight + 24)
+  }, [children, collapsedHeight])
+  const clipped = overflows && !open
+  return (
+    <div>
+      <div
+        ref={ref}
+        className="overflow-hidden"
+        style={clipped ? { maxHeight: collapsedHeight, maskImage: 'linear-gradient(to bottom, black 55%, transparent)', WebkitMaskImage: 'linear-gradient(to bottom, black 55%, transparent)' } : undefined}
+      >
+        {children}
+      </div>
+      {overflows && (
+        <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-brand-ink hover:underline">
+          {open ? 'Show less' : moreLabel} <ChevronDown size={13} className={`transition ${open ? 'rotate-180' : ''}`} />
+        </button>
+      )}
+    </div>
+  )
+}
+
+/** Underlined tabs inside a card. */
+export function Tabs<K extends string>({ tabs, active, onChange }: { tabs: { key: K; label: ReactNode }[]; active: K; onChange: (key: K) => void }) {
+  return (
+    <div className="flex gap-1 overflow-x-auto border-b border-line px-3" role="tablist">
+      {tabs.map((t) => (
+        <button
+          key={t.key}
+          type="button"
+          role="tab"
+          aria-selected={active === t.key}
+          onClick={() => onChange(t.key)}
+          className={`-mb-px flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition ${
+            active === t.key ? 'border-brand text-ink' : 'border-transparent text-ink-soft hover:text-ink'
+          }`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  )
 }

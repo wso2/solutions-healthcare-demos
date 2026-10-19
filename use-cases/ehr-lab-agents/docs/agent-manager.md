@@ -65,8 +65,8 @@ flowchart LR
 ./scripts/amp-evaluations.sh --backfill 24   # custom evaluators, a monitor per agent, review of the last 24 h
 ```
 
-Console: http://console.amp.localhost:8080 (admin / admin) → project **Longevity Clinic**. Portal:
-http://localhost:5173/agent-manager. Every script is idempotent; keys and secrets are rotated on each run and
+Console: http://console.amp.localhost:8080 (admin / admin) → project **Longevity Clinic**. The portal
+does not show governance; demo it from the console and the scripts. Every script is idempotent; keys and secrets are rotated on each run and
 written to gitignored files (`secrets.toml`, `.amp/`), never printed.
 
 ## 1. Agent identity and permissions
@@ -205,8 +205,7 @@ raise a review — operations raise the budget and press **Retry**, and the asse
 
 **Cost.** AMP's console shows tokens per trace but not money. The trace router keeps a ledger of every agent
 run (tokens from its `chat` spans, the assessment from `gen_ai.conversation.id`), priced with the same gateway
-price list, at `GET /api/agent-manager/usage`. The portal shows spend per agent against its budget, recent runs,
-the AI cost of an assessment, and tokens and cost on each AI step of the workflow.
+price list, at `GET /api/agent-manager/usage` (spend per agent, recent runs, the AI cost of an assessment).
 
 **PHI guardrail.** `amp-guardrails.sh` adds `pii-masking-regex` to the provider with `redactPII: true`, applied
 to the whole request body (`jsonPath: ""`), so the conversation history and the FHIR data in tool results are
@@ -404,28 +403,21 @@ are available. An LLM-judge evaluator is a prompt template with `{trace.output}`
 
 ## 6. A ten-minute demo
 
-The portal's **Demo guide** (bottom right) walks through these steps and ticks them off from what the workflow
-reaches.
-
-1. **Identity** (portal → Agent Manager): three AgentIDs, their roles, and the live permission matrix. Try
-   *Read the Cerner EHR* as the Copilot (allowed), then as the Care Plan agent (refused by Agent Manager).
-   Assign `ehr-reader` to Care Plan in the console, Re-check, Try again: allowed.
-2. **FHIR de-identification** (console → MCP proxies → fhir-cerner → policies: `mcp-fhir-deidentify`). On the
-   Agent Manager page, **Try it live** reads one Patient from the FHIR server and, as the Copilot, through the MCP
-   proxy, and puts the two side by side (an MCP call; no model is involved); for proof, `./scripts/amp-setup.sh --no-fhir-policy` and back.
-3. **Run an assessment** (Physician → Sofia Alvarez → AI overview & evaluation), then follow it on the
-   **Workflow** tab: every stage live from Temporal, with tokens and cost on the AI steps and the assessment's
-   AI total in the header. The Copilot reads the EHR through the FHIR MCP proxy and cites PubMed.
-4. **Govern the spend** (portal → Agent Manager → AI cost and budgets; console → agent → model configuration).
-   `./scripts/amp-budgets.sh --exhaust care-planner`, release the lab results: the Care Plan step retries, then
-   turns red with "An AI agent could not complete its step" (429 from Agent Manager). `./scripts/amp-budgets.sh`
-   to restore, press **Retry**: the workflow completes.
+1. **Identity** (console → project → agents): three AgentIDs and their roles — `ehr-reader` on the Copilot
+   and Results Analysis, no EHR access for Care Plan.
+2. **FHIR de-identification** (console → MCP proxies → fhir-cerner → policies: `mcp-fhir-deidentify`). For
+   proof, `./scripts/amp-setup.sh --no-fhir-policy` and back.
+3. **Run an assessment** (portal home → Physician workspace → Sofia Alvarez → order labs; release results from
+   the lab console). The Results Analysis agent reads the EHR through the FHIR MCP proxy and cites PubMed.
+4. **Govern the spend** (console → agent → model configuration). `./scripts/amp-budgets.sh --exhaust care-planner`,
+   release the lab results: the Care Plan step retries, then the assessment pauses with "Daily AI budget
+   reached" and **Retry / Stop**. `./scripts/amp-budgets.sh` to restore, press **Retry**: the workflow completes.
 5. **Traces** (console → Diagnostic Copilot → Traces): the run with its LLM calls, `search`/`read` and
    `search_pubmed` tool calls, tokens and duration.
-6. **Guardrail:** `./scripts/amp-guardrails.sh --verify` — Claude can only repeat `*****` for the MRN, SSN and
+6. **Guardrail:** `./scripts/amp-guardrails.sh --verify` — the model can only repeat `*****` for the MRN, SSN and
    phone number it was sent.
 7. **Evaluation** (console → agent → Monitors): scores per evaluator over time. Open a trace to see its
-   per-evaluator scores and explanations.
+   per-evaluator scores and explanations. `./scripts/amp-scores.sh` prints the same in the terminal.
 
 ## Notes for a real deployment
 

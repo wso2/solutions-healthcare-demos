@@ -1,71 +1,106 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Fragment, useMemo, useState } from 'react'
 import {
-  BarChart3, Bell, BookOpen, CheckCircle2, ClipboardCheck, ExternalLink, FileSignature, FlaskConical, GitBranch, Send, Siren, Target, TestTube2,
-  TriangleAlert, UserRound,
+  Bell, BookOpen, CalendarClock, CheckCircle2, ChevronDown, Circle, Clock, FileSignature, FlaskConical, RotateCcw, Send, Siren, Sparkles, Target, TestTube2,
 } from 'lucide-react'
-import { api, type AgentRun, type Assessment, type BiomarkerInsight, type BiomarkerPoint, type LabCatalog, type LabResultValue } from '../lib/api'
+import { api, type Assessment, type BiomarkerInsight, type BiomarkerPoint, type LabCatalog, type LabResultValue, type Level, type ResultsAnalysis } from '../lib/api'
 import { formatDate, formatNumber, formatRange, formatTime } from '../lib/format'
 import { BiomarkerChart } from './BiomarkerChart'
-import { AgentFailureNote, AgentReceipt, useAssessmentRuns } from './governance'
-import { AiBadge, Badge, Card, CardHeader, ErrorNote, Markdown, SeverityChip, Spinner, TrendIcon, Working, levelSeverity, type Severity } from './ui'
+import { AgentFailureNote } from './AgentFailureNote'
+import { AiBadge, Badge, Card, CardHeader, ErrorNote, Markdown, SeverityChip, Spinner, Tabs, TrendIcon, levelSeverity, type Severity } from './ui'
 
-// The journey after the order: the patient's lab visit, lab processing, the unattended AI analysis,
-// the physician's review and release, and the outcome.
+// The journey after the order: the lab visit and results, the unattended AI analysis, the physician's
+// review and release, and the outcome.
 
 const testName = (catalog: LabCatalog | undefined, code: string) => catalog?.orderableTests.find((t) => t.code === code)?.name ?? code
+const levelBar: Record<Level, string> = { high: 'bg-act', moderate: 'bg-watch', low: 'bg-line' }
 
-/** Order placed → waiting on the patient → waiting on the lab. */
+/** Order placed → patient notified → specimen collected → results back. */
 export function OrderStatusPanel({ assessment, catalog }: { assessment: Assessment; catalog?: LabCatalog }) {
   const { data, stage } = assessment
   const order = data.labOrder
-  if (!order) return <Working title="Placing the order" detail={`Order of record in ${assessment.ehrName}, patient matched in the lab by MRN, order sent to Quest.`} />
+  const firstName = assessment.patientName.split(' ')[0]
+  if (!order) {
+    return <ProgressCard title="Placing the order" rows={[{ label: `Recording the order in ${assessment.ehrName} and sending it to Quest Diagnostics`, state: 'working' }]} />
+  }
   const steps = [
-    { key: 'ordered', label: 'Ordered', done: true, detail: `${order.tests.length} tests · ${order.placerOrderId}` },
-    { key: 'notified', label: 'Patient notified', done: !!data.patientNotification, detail: data.patientNotification ? `Communication/${data.patientNotification.communicationId.slice(0, 8)}` : 'Sending…' },
-    { key: 'visit', label: 'Lab visit', done: !!data.labVisit, active: stage === 'AWAITING_PATIENT', detail: data.labVisit ? `Collected ${formatTime(data.labVisit.collectedAt)}` : 'Waiting on the patient' },
-    { key: 'processing', label: 'Processing', done: !!data.labResults, active: stage === 'AWAITING_LAB', detail: stage === 'AWAITING_LAB' ? 'Waiting on the lab' : data.labResults ? 'Resulted' : '—' },
+    { label: 'Ordered', done: true, detail: `${order.tests.length} test${order.tests.length === 1 ? '' : 's'}` },
+    { label: 'Patient notified', done: !!data.patientNotification, detail: data.patientNotification ? 'In the patient app' : 'Sending…' },
+    { label: 'Specimen collected', done: !!data.labVisit, active: stage === 'AWAITING_PATIENT', detail: data.labVisit ? formatTime(data.labVisit.collectedAt) : 'Waiting on the patient' },
+    { label: 'Results ready', done: !!data.labResults, active: stage === 'AWAITING_LAB', detail: data.labResults ? formatTime(data.labResults.issued) : stage === 'AWAITING_LAB' ? 'Lab processing' : '—' },
   ]
+  const status = stage === 'AWAITING_PATIENT'
+    ? { icon: Clock, text: `Waiting for ${firstName} to visit Quest Diagnostics for the blood draw.` }
+    : stage === 'AWAITING_LAB'
+      ? { icon: TestTube2, text: 'Specimen collected — Quest Diagnostics is processing it. Results return automatically.' }
+      : data.labResults
+        ? { icon: CheckCircle2, text: `Results received ${formatDate(data.labResults.issued)} and filed in ${assessment.ehrName}.` }
+        : undefined
+
   return (
-    <div className="space-y-5">
+    <div className="grid gap-5 [&>*]:min-w-0 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
       <Card>
-        <CardHeader title="Lab order in progress" subtitle={`Order of record ServiceRequest/${order.ehrServiceRequestId.slice(0, 8)} in ${assessment.ehrName} · Quest ServiceRequest/${order.labServiceRequestId.slice(0, 8)}`} icon={<FlaskConical size={16} />} />
-        <ol className="grid gap-3 px-5 py-5 sm:grid-cols-4">
-          {steps.map((s) => (
-            <li key={s.key} className={`rounded-xl border px-3 py-3 ${s.active ? 'border-watch/50 bg-watch-soft/60' : s.done ? 'border-line bg-surface' : 'border-dashed border-line bg-sunken/40'}`}>
-              <p className="flex items-center gap-1.5 text-sm font-medium text-ink">
-                {s.done ? <CheckCircle2 size={15} className="text-good" /> : s.active ? <Spinner size={14} className="text-watch-ink" /> : <span className="h-3.5 w-3.5 rounded-full border border-line" />}
-                {s.label}
-              </p>
-              <p className="mt-1 text-xs text-ink-muted">{s.detail}</p>
-            </li>
-          ))}
-        </ol>
-        <div className="flex flex-wrap gap-1.5 border-t border-line px-5 py-3">
-          {order.tests.map((code) => <Badge key={code} className="!whitespace-normal">{testName(catalog, code)}</Badge>)}
+        <CardHeader title="Lab visit & results" subtitle={`Order ${order.placerOrderId} · Quest Diagnostics`} icon={<FlaskConical size={16} />} />
+        <div className="space-y-5 px-5 py-5">
+          <ol className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {steps.map((s, i) => (
+              <li key={s.label} className="relative">
+                {i < steps.length - 1 && <span aria-hidden className={`absolute left-7 right-0 top-3 hidden h-0.5 sm:block ${s.done ? 'bg-brand' : 'bg-line'}`} />}
+                <span className={`relative z-10 flex h-6 w-6 items-center justify-center rounded-full ${s.done ? 'bg-brand text-white dark:text-canvas' : s.active ? 'bg-watch-soft text-watch-ink ring-2 ring-watch' : 'border border-line bg-surface text-ink-muted'}`}>
+                  {s.done ? <CheckCircle2 size={14} /> : s.active ? <Clock size={13} /> : <Circle size={8} />}
+                </span>
+                <p className={`mt-2 text-sm font-medium ${s.done || s.active ? 'text-ink' : 'text-ink-muted'}`}>{s.label}</p>
+                <p className="text-xs text-ink-muted">{s.detail}</p>
+              </li>
+            ))}
+          </ol>
+          {status && (
+            <p className={`flex items-start gap-2 rounded-lg px-3 py-2.5 text-sm ${data.labResults ? 'bg-good-soft text-good-ink' : 'bg-watch-soft/70 text-watch-ink'}`}>
+              <status.icon size={16} className="mt-0.5 shrink-0" /> {status.text}
+            </p>
+          )}
+          <div>
+            <h3 className="eyebrow mb-2">Tests</h3>
+            <ul className="grid gap-1.5 sm:grid-cols-2">
+              {order.tests.map((code) => (
+                <li key={code} className="flex items-center gap-2 rounded-lg bg-sunken/70 px-3 py-2 text-sm text-ink"><FlaskConical size={14} className="shrink-0 text-lab" /> {testName(catalog, code)}</li>
+              ))}
+            </ul>
+          </div>
         </div>
       </Card>
 
       {data.patientNotification && (
-        <Card>
-          <CardHeader title="What the patient was told" subtitle="Filed in the EHR as a FHIR Communication, shown in the patient app" icon={<Bell size={16} />} />
+        <Card className="self-start">
+          <CardHeader title="Message to the patient" subtitle="Shown in the patient app and filed in the EHR" icon={<Bell size={16} />} />
           <div className="space-y-3 px-5 py-4">
             <p className="text-sm leading-relaxed text-ink">{data.patientNotification.message}</p>
-            <div className="flex flex-wrap gap-2">
-              <Link to={`/patient/${assessment.ehr}/${assessment.patientId}`} className="btn-secondary py-1.5 text-xs"><UserRound size={14} /> Open the patient app</Link>
-              <Link to="/lab" className="btn-secondary py-1.5 text-xs"><TestTube2 size={14} /> Open the lab console</Link>
-            </div>
+            {data.patientNotification.instructions.length > 0 && (
+              <ul className="space-y-1 text-sm text-ink-soft">
+                {data.patientNotification.instructions.map((i) => <li key={i} className="flex gap-2"><CheckCircle2 size={14} className="mt-0.5 shrink-0 text-good" /> {i}</li>)}
+              </ul>
+            )}
           </div>
         </Card>
       )}
-
-      {stage === 'AWAITING_PATIENT' && (
-        <Working title="Waiting on the patient — a human task in the workflow" detail="The workflow is suspended and holds no thread. When the patient arrives and the lab collects the specimen (lab console → “Collect specimen”), the lab completes the task." />
-      )}
-      {stage === 'AWAITING_LAB' && (
-        <Working title="Specimen collected — waiting on the lab" detail="Release results from the lab console. The lab notifies the integration by webhook; a fallback poller covers a missed notification." />
-      )}
     </div>
+  )
+}
+
+function ProgressCard({ title, rows }: { title: string; rows: { label: string; state: 'done' | 'working' | 'pending' }[] }) {
+  return (
+    <Card>
+      <div className="px-5 py-5">
+        <p className="flex items-center gap-2 text-sm font-semibold text-ink"><Sparkles size={16} className="text-ai" /> {title}</p>
+        <ul className="mt-4 space-y-3">
+          {rows.map((r) => (
+            <li key={r.label} className="flex items-center gap-3 text-sm">
+              {r.state === 'done' ? <CheckCircle2 size={18} className="text-good" /> : r.state === 'working' ? <Spinner size={18} className="text-ai" /> : <Circle size={18} className="text-line" />}
+              <span className={r.state === 'pending' ? 'text-ink-muted' : 'text-ink'}>{r.label}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </Card>
   )
 }
 
@@ -76,122 +111,238 @@ const insightSeverity: Record<BiomarkerInsight['status'], Severity> = {
   'out-of-range': 'act',
 }
 
+type ReviewTab = 'overview' | 'risks' | 'results' | 'plan' | 'note' | 'patient'
+
 /** Results arrive → analysis and care plan run unattended → physician reviews and releases. */
 export function ReviewPanel({ assessment, catalog, onChanged }: { assessment: Assessment; catalog?: LabCatalog; onChanged: () => void }) {
   const { stage, data } = assessment
   const analysis = data.analysis
   const plan = data.carePlan
-  const agentsActive = stage === 'ANALYZING_RESULTS' || stage === 'GENERATING_CARE_PLAN' || stage === 'AWAITING_REVIEW'
-  const runs = useAssessmentRuns(assessment.id, agentsActive)
-  // An agent step that ran out of retries waits for operations; say so here, not only on the Workflow tab.
-  const review = Object.keys(assessment.openReviews ?? {}).length > 0
-  const agentError = review ? [...assessment.timeline].reverse().find((e) => e.actor === 'agent' && e.status === 'error') : undefined
+  const [tab, setTab] = useState<ReviewTab>('overview')
+  const paused = Object.keys(assessment.openReviews ?? {}).length > 0
+  const sections = useMemo(() => (analysis ? splitSections(analysis.updatedSummary) : []), [analysis])
+  const urgent = sections.find((s) => /urgent/i.test(s.title))
+
   return (
     <div className="space-y-5">
-      {review && (
-        <div className="space-y-2">
-          <AgentFailureNote message={agentError?.detail ?? agentError?.title ?? 'An AI agent could not complete its step.'}
-            hint="The workflow has paused for operations to retry or stop it." />
-          <Link to="?view=workflow" className="btn-secondary py-1.5 text-xs"><GitBranch size={14} /> Retry or stop on the Workflow tab</Link>
-        </div>
+      {!plan && !paused && (
+        <ProgressCard title="AI is working on the results" rows={[
+          { label: 'Comparing the new results with the patient’s history', state: analysis ? 'done' : 'working' },
+          { label: 'Drafting the chart note, goals and patient report', state: analysis ? 'working' : 'pending' },
+        ]} />
       )}
-      {!analysis && !review && <Working title="Results Analysis is comparing the results with the EHR history" detail="Results are filed in the EHR first. The Care Plan agent runs straight after — no clicks needed." />}
-      {analysis && !plan && !review && <Working title="Care Plan agent is drafting the chart note and the patient report" detail="Then the draft note is filed in the EHR as preliminary and the workflow waits for your review." />}
       {stage === 'AWAITING_REVIEW' && plan && assessment.openTasks.reviewAndRelease && <ReleaseForm assessment={assessment} onChanged={onChanged} />}
+
       {analysis && (
         <Card>
-          <CardHeader title="Results analysis" icon={<BarChart3 size={16} />} action={<AiBadge label={stage === 'COMPLETED' ? 'AI draft · physician released' : undefined} />} />
-          <div className="space-y-4 px-5 py-4">
-            <p className="text-base font-semibold leading-snug text-ink">{analysis.headline}</p>
-            <AnalysisSummary text={analysis.updatedSummary} />
+          <div className="px-5 py-5 sm:px-6">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wider text-ai-ink"><Sparkles size={13} /> Results analysis</p>
+              <AiBadge label={stage === 'COMPLETED' ? 'AI draft · physician released' : 'AI draft · physician review required'} />
+            </div>
+            <h2 className="mt-3 max-w-4xl text-lg font-semibold leading-snug tracking-tight text-ink sm:text-xl">{analysis.headline}</h2>
+            <Stats analysis={analysis} results={data.labResults?.results} followUps={plan?.followUpLabs.length} />
+            {urgent && (
+              <div className="mt-5 rounded-lg border border-act/25 bg-act-soft/60 px-4 py-3">
+                <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-act-ink"><Siren size={13} /> {urgent.title}</p>
+                <div className="max-w-4xl"><Markdown>{linkCitations(urgent.body)}</Markdown></div>
+              </div>
+            )}
           </div>
-          <AgentReceipt step="analysis" runs={runs} />
+          <Tabs<ReviewTab>
+            active={tab}
+            onChange={setTab}
+            tabs={[
+              { key: 'overview', label: 'Overview' },
+              { key: 'risks', label: <>Risk flags <Count n={analysis.riskFlags.length} /></> },
+              ...(data.labResults ? [{ key: 'results' as const, label: <>Lab results <Count n={data.labResults.results.length} /></> }] : []),
+              ...(plan ? [
+                { key: 'plan' as const, label: 'Care plan' },
+                { key: 'note' as const, label: 'Chart note' },
+                { key: 'patient' as const, label: 'Patient report' },
+              ] : []),
+            ]}
+          />
+          <div className="px-5 py-5 sm:px-6">
+            {tab === 'overview' && <Overview analysis={analysis} sections={sections.filter((s) => s !== urgent)} />}
+            {tab === 'risks' && <RiskFlags flags={analysis.riskFlags} />}
+            {tab === 'results' && data.labResults && (
+              <div className="space-y-6">
+                <ResultsTable results={data.labResults.results} insights={analysis.biomarkerInsights} />
+                <KeyTrends assessment={assessment} />
+              </div>
+            )}
+            {tab === 'plan' && plan && <CarePlanView plan={plan} catalog={catalog} />}
+            {tab === 'note' && plan && (
+              <div className="max-w-3xl">
+                <p className="mb-4 text-xs text-ink-muted">
+                  {stage === 'COMPLETED' ? `Final — signed in ${assessment.ehrName}` : `Draft — filed in ${assessment.ehrName} as preliminary until you release it`}
+                </p>
+                <Markdown>{linkCitations(plan.physicianNote)}</Markdown>
+              </div>
+            )}
+            {tab === 'patient' && plan && <PatientReportPreview plan={plan} released={stage === 'COMPLETED'} />}
+          </div>
         </Card>
       )}
-      <div className="grid gap-5 [&>*]:min-w-0 xl:grid-cols-5">
-        <div className="space-y-5 xl:col-span-3">
-          {data.labResults && <ResultsTable results={data.labResults.results} insights={analysis?.biomarkerInsights} issued={data.labResults.issued} />}
-          <KeyTrends assessment={assessment} />
-        </div>
-        <div className="space-y-5 xl:col-span-2">
-          {analysis && (
-            <Card>
-              <CardHeader title="Risk flags" icon={<TriangleAlert size={16} />} action={<AiBadge label="AI" />} />
-              <ul className="divide-y divide-line">
-                {analysis.riskFlags.map((flag) => (
-                  <li key={flag.area + flag.finding} className="px-5 py-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-medium text-ink">{flag.area}</p>
-                      <SeverityChip severity={levelSeverity(flag.severity)} label={flag.severity} />
-                    </div>
-                    <p className="mt-1 text-xs leading-relaxed text-ink-soft">{flag.finding}</p>
-                    <ul className="mt-1.5 flex flex-wrap gap-1">
-                      {flag.evidence.slice(0, 4).map((e) => <li key={e} className="rounded bg-sunken px-1.5 py-0.5 text-[11px] text-ink-muted">{e}</li>)}
-                    </ul>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          )}
-          {analysis && (analysis.suggestedNextSteps?.length ?? 0) > 0 && (
-            <Card>
-              <CardHeader title="Suggested next steps" subtitle="For the physician to consider — not orders" />
-              <ul className="space-y-2 px-5 py-4 text-sm text-ink">
-                {(analysis.suggestedNextSteps ?? []).map((s) => <li key={s} className="leading-snug">• {s}</li>)}
-              </ul>
-            </Card>
-          )}
-        </div>
-      </div>
-      {plan && <CarePlanDraft assessment={assessment} catalog={catalog} runs={runs} />}
     </div>
+  )
+}
+
+function Count({ n }: { n: number }) {
+  return <span className="rounded-full bg-sunken px-1.5 text-[11px] tabular-nums text-ink-muted">{n}</span>
+}
+
+function Stats({ analysis, results, followUps }: { analysis: ResultsAnalysis; results?: LabResultValue[]; followUps?: number }) {
+  const high = analysis.riskFlags.filter((f) => f.severity === 'high').length
+  const moderate = analysis.riskFlags.filter((f) => f.severity === 'moderate').length
+  const outOfRange = results ? results.filter((r) => r.interpretation === 'H' || r.interpretation === 'L').length : undefined
+  const stats = [
+    { label: 'High risk', value: high, tone: high ? 'text-act-ink' : 'text-ink' },
+    { label: 'Moderate risk', value: moderate, tone: moderate ? 'text-watch-ink' : 'text-ink' },
+    ...(outOfRange !== undefined ? [{ label: 'Results out of range', value: `${outOfRange} / ${results!.length}`, tone: outOfRange ? 'text-act-ink' : 'text-ink' }] : []),
+    ...(followUps !== undefined ? [{ label: 'Follow-up tests', value: followUps, tone: 'text-ink' }] : []),
+  ]
+  return (
+    <dl className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {stats.map((s) => (
+        <div key={s.label} className="rounded-lg bg-sunken/70 px-3 py-2.5">
+          <dt className="text-xs text-ink-muted">{s.label}</dt>
+          <dd className={`mt-0.5 text-xl font-semibold tabular-nums ${s.tone}`}>{s.value}</dd>
+        </div>
+      ))}
+    </dl>
   )
 }
 
 const PMID = /\[?PMID:?\s*(\d{5,9})\]?/g
 
-/** PubMed ids the agents cite, as links (the agents find them with the PubMed MCP server). */
+/** PubMed ids the agents cite, as links. */
 function linkCitations(text: string): string {
   return text.replace(PMID, (_m, id: string) => `[PMID ${id}](https://pubmed.ncbi.nlm.nih.gov/${id}/)`)
 }
 
-/**
- * The analysis as sections: the agent writes paragraphs that open with a bold label ("**Most urgent — …:**").
- * The most urgent one becomes a callout, the rest a grid; anything else stays as written.
- */
-function AnalysisSummary({ text }: { text: string }) {
-  const paragraphs = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)
-  const sections = paragraphs.map((p) => {
+/** The agent writes paragraphs that open with a bold label ("**Most urgent — …:**"); split them into sections. */
+function splitSections(text: string): { title: string; body: string }[] {
+  return text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean).map((p) => {
     const m = p.match(/^\*\*(.+?)\*\*\s*[:—–-]?\s*([\s\S]*)$/)
     return m ? { title: m[1].replace(/[:\s]+$/, ''), body: m[2] } : { title: '', body: p }
   })
-  const citations = (text.match(PMID) ?? []).length
-  if (sections.filter((s) => s.title).length < 2) {
-    return <Markdown>{linkCitations(text)}</Markdown>
-  }
-  const urgent = sections.find((s) => /urgent/i.test(s.title))
-  const rest = sections.filter((s) => s !== urgent)
+}
+
+function Overview({ analysis, sections }: { analysis: ResultsAnalysis; sections: { title: string; body: string }[] }) {
+  const [allSteps, setAllSteps] = useState(false)
+  const steps = analysis.suggestedNextSteps ?? []
+  const citations = (analysis.updatedSummary.match(PMID) ?? []).length
   return (
-    <div className="space-y-3">
-      {urgent && (
-        <div className="rounded-lg border border-act/25 bg-act-soft/60 px-4 py-3">
-          <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-act-ink"><Siren size={13} /> {urgent.title}</p>
-          <Markdown>{linkCitations(urgent.body)}</Markdown>
-        </div>
-      )}
-      <div className="grid gap-3 md:grid-cols-2">
-        {rest.map((s, i) => (
-          <div key={s.title + i} className={`rounded-lg border border-line px-4 py-3 ${s.title ? '' : 'md:col-span-2'}`}>
-            {s.title && <p className="eyebrow mb-1">{s.title}</p>}
+    <div className="grid gap-8 [&>*]:min-w-0 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+      <div className="space-y-5">
+        {sections.map((s, i) => (
+          <section key={s.title + i}>
+            {s.title && <h3 className="mb-1.5 text-sm font-semibold text-ink">{s.title}</h3>}
             <Markdown>{linkCitations(s.body)}</Markdown>
-          </div>
+          </section>
         ))}
+        {citations > 0 && (
+          <p className="flex items-center gap-1.5 text-xs text-ink-muted"><BookOpen size={12} /> {citations} PubMed citation{citations === 1 ? '' : 's'}</p>
+        )}
       </div>
-      {citations > 0 && (
-        <p className="flex items-center gap-1.5 text-[11px] text-ink-muted">
-          <BookOpen size={12} /> {citations} PubMed citation{citations === 1 ? '' : 's'}, found by the agent with the PubMed MCP server
-        </p>
+      {steps.length > 0 && (
+        <aside>
+          <h3 className="eyebrow mb-3">Suggested next steps</h3>
+          <ol className="space-y-3">
+            {(allSteps ? steps : steps.slice(0, 4)).map((s, i) => (
+              <li key={s} className="flex gap-3">
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-brand-soft text-xs font-semibold text-brand-ink">{i + 1}</span>
+                <p className="text-sm leading-relaxed text-ink">{s}</p>
+              </li>
+            ))}
+          </ol>
+          {steps.length > 4 && (
+            <button type="button" onClick={() => setAllSteps(!allSteps)} className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-brand-ink hover:underline">
+              {allSteps ? 'Show fewer' : `Show all ${steps.length}`} <ChevronDown size={13} className={`transition ${allSteps ? 'rotate-180' : ''}`} />
+            </button>
+          )}
+          <p className="mt-4 text-xs text-ink-muted">For the physician to consider — not orders.</p>
+        </aside>
       )}
+    </div>
+  )
+}
+
+function RiskFlags({ flags }: { flags: ResultsAnalysis['riskFlags'] }) {
+  const [open, setOpen] = useState<string>()
+  const order: Record<Level, number> = { high: 0, moderate: 1, low: 2 }
+  return (
+    <ul className="divide-y divide-line rounded-lg border border-line">
+      {[...flags].sort((a, b) => order[a.severity] - order[b.severity]).map((f) => {
+        const key = f.area + f.finding
+        const isOpen = open === key
+        return (
+          <li key={key}>
+            <button type="button" onClick={() => setOpen(isOpen ? undefined : key)} aria-expanded={isOpen} className="flex w-full items-start gap-3 px-4 py-3 text-left hover:bg-sunken/60">
+              <span className={`mt-1 h-9 w-1 shrink-0 rounded-full ${levelBar[f.severity]}`} aria-hidden />
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-medium text-ink">{f.area}</span>
+                <span className="mt-0.5 block text-sm leading-snug text-ink-soft">{f.finding}</span>
+              </span>
+              <SeverityChip severity={levelSeverity(f.severity)} label={f.severity} />
+              {f.evidence.length > 0 && <ChevronDown size={15} className={`mt-0.5 shrink-0 text-ink-muted transition ${isOpen ? 'rotate-180' : ''}`} />}
+            </button>
+            {isOpen && f.evidence.length > 0 && (
+              <ul className="space-y-1 pb-3 pl-8 pr-4 text-xs text-ink-soft">
+                {f.evidence.map((e) => <li key={e}>• {e}</li>)}
+              </ul>
+            )}
+          </li>
+        )
+      })}
+    </ul>
+  )
+}
+
+/**
+ * A step that ran out of retries (an EHR outage, an AI failure) waits for someone to retry or stop it.
+ * Shown above every step, since any step can pause.
+ */
+export function OpenReviews({ assessment, onChanged }: { assessment: Assessment; onChanged: () => void }) {
+  const tasks = Object.keys(assessment.openReviews ?? {})
+  if (tasks.length === 0) return null
+  const lastError = [...assessment.timeline].reverse().find((e) => e.status === 'error')
+  const message = lastError?.detail ?? lastError?.title ?? 'A step could not complete.'
+  return (
+    <>
+      {tasks.map((taskId) => (
+        <div key={taskId} className="space-y-2">
+          {lastError?.actor === 'agent' ? (
+            <AgentFailureNote message={message} hint="Retry the step, or stop the assessment." />
+          ) : (
+            <ErrorNote message={`Paused after repeated failures: ${message.replace(/\.$/, "")}. Fix the cause, then retry.`} />
+          )}
+          <ReviewActions assessmentId={assessment.id} taskId={taskId} onChanged={onChanged} />
+        </div>
+      ))}
+    </>
+  )
+}
+
+function ReviewActions({ assessmentId, taskId, onChanged }: { assessmentId: string; taskId: string; onChanged: () => void }) {
+  const [busy, setBusy] = useState<'retry' | 'stop'>()
+  async function decide(retry: boolean) {
+    setBusy(retry ? 'retry' : 'stop')
+    try {
+      await api.decideReview(assessmentId, taskId, retry)
+      onChanged()
+    } finally {
+      setBusy(undefined)
+    }
+  }
+  return (
+    <div className="flex gap-2">
+      <button type="button" className="btn-primary py-1.5 text-xs" disabled={!!busy} onClick={() => decide(true)}>
+        {busy === 'retry' ? <Spinner size={13} /> : <RotateCcw size={13} />} Retry
+      </button>
+      <button type="button" className="btn-secondary py-1.5 text-xs" disabled={!!busy} onClick={() => decide(false)}>Stop assessment</button>
     </div>
   )
 }
@@ -215,7 +366,7 @@ function ReleaseForm({ assessment, onChanged }: { assessment: Assessment; onChan
     <Card className="ring-1 ring-brand/30">
       <CardHeader
         title="Review and release"
-        subtitle="Completes the workflow's review task: the note becomes final in the EHR, the visit closes, and the patient sees the report"
+        subtitle={`Review the analysis below. Releasing signs the chart note in ${assessment.ehrName}, closes the visit and shares the report with the patient.`}
         icon={<FileSignature size={16} />}
       />
       <div className="flex flex-col gap-3 px-5 py-4 sm:flex-row sm:items-end">
@@ -233,57 +384,69 @@ function ReleaseForm({ assessment, onChanged }: { assessment: Assessment; onChan
   )
 }
 
-function CarePlanDraft({ assessment, catalog, runs }: { assessment: Assessment; catalog?: LabCatalog; runs: AgentRun[] }) {
-  const plan = assessment.data.carePlan!
-  const released = assessment.stage === 'COMPLETED'
+function CarePlanView({ plan, catalog }: { plan: NonNullable<Assessment['data']['carePlan']>; catalog?: LabCatalog }) {
   return (
-    <div className="grid gap-5 [&>*]:min-w-0 xl:grid-cols-2">
-      <Card>
-        <CardHeader
-          title={released ? 'Chart note (final)' : 'Chart note (draft)'}
-          subtitle={`${assessment.ehrName} DocumentReference/${assessment.data.draftNote?.noteId.slice(0, 8) ?? '…'} · ${released ? 'final' : 'preliminary until released'}`}
-          icon={<ClipboardCheck size={16} />}
-          action={<AiBadge label={released ? 'AI draft · physician released' : undefined} />}
-        />
-        <div className="max-h-[520px] overflow-y-auto px-5 py-4"><Markdown>{linkCitations(plan.physicianNote)}</Markdown></div>
-        <AgentReceipt step="care-plan" runs={runs} />
-      </Card>
-      <div className="space-y-5">
-        <Card>
-          <CardHeader title="Goals & follow-up" icon={<Target size={16} />} />
-          <ul className="divide-y divide-line">
-            {plan.goals.map((g) => (
-              <li key={g.title} className="px-5 py-2.5">
-                <p className="text-sm font-medium text-ink">{g.title}</p>
-                <p className="text-xs text-ink-muted">{g.target} · {g.timeframe} · {g.category}</p>
+    <div className="grid gap-8 [&>*]:min-w-0 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)]">
+      <div>
+        <h3 className="eyebrow mb-3">Goals</h3>
+        <ul className="grid gap-3 sm:grid-cols-2">
+          {plan.goals.map((g) => (
+            <li key={g.title} className="rounded-lg border border-line px-4 py-3">
+              <p className="flex items-start gap-2 text-sm font-medium text-ink"><Target size={15} className="mt-0.5 shrink-0 text-brand" /> {g.title}</p>
+              <p className="mt-1.5 text-xs leading-relaxed text-ink-soft">{g.target}</p>
+              <p className="mt-2 flex flex-wrap gap-1.5">
+                <Badge>{g.timeframe}</Badge>
+                <Badge tone="brand" className="capitalize">{g.category}</Badge>
+              </p>
+            </li>
+          ))}
+        </ul>
+      </div>
+      {plan.followUpLabs.length > 0 && (
+        <aside>
+          <h3 className="eyebrow mb-3">Follow-up labs</h3>
+          <ul className="divide-y divide-line rounded-lg border border-line">
+            {plan.followUpLabs.map((f) => (
+              <li key={f.testCode} className="flex items-center justify-between gap-3 px-4 py-2.5">
+                <span className="flex min-w-0 items-center gap-2 text-sm text-ink"><FlaskConical size={14} className="shrink-0 text-lab" /> {testName(catalog, f.testCode)}</span>
+                <span className="flex shrink-0 items-center gap-1 text-xs text-ink-muted"><CalendarClock size={12} /> {f.timing}</span>
               </li>
             ))}
           </ul>
-          {plan.followUpLabs.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 border-t border-line px-5 py-3">
-              {plan.followUpLabs.map((f) => <Badge key={f.testCode} className="!whitespace-normal">{testName(catalog, f.testCode)} · {f.timing}</Badge>)}
+        </aside>
+      )}
+    </div>
+  )
+}
+
+function PatientReportPreview({ plan, released }: { plan: NonNullable<Assessment['data']['carePlan']>; released: boolean }) {
+  const report = plan.patientReport
+  return (
+    <div className="max-w-3xl space-y-4">
+      <p className="text-xs text-ink-muted">{released ? 'Visible in the patient app' : 'The patient sees this only after you release it'}</p>
+      <p className="text-lg font-semibold leading-snug text-ink">{report.headline}</p>
+      <p className="text-sm leading-relaxed text-ink-soft">{report.whatWeFound}</p>
+      <ul className="grid gap-2 sm:grid-cols-2">
+        {report.keyResults.map((r) => (
+          <li key={r.name} className="rounded-lg border border-line px-3 py-2.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-xs font-medium text-ink-soft">{r.name}</span>
+              <SeverityChip severity={r.status === 'good' ? 'good' : r.status === 'watch' ? 'watch' : 'act'} label={r.status === 'act' ? 'needs action' : r.status} />
             </div>
-          )}
-        </Card>
-        <Card>
-          <CardHeader title="Patient report preview" subtitle={released ? 'Visible in the patient app' : 'The patient sees this only after you release it'} icon={<UserRound size={16} />} />
-          <div className="space-y-3 px-5 py-4">
-            <p className="font-semibold text-ink">{plan.patientReport.headline}</p>
-            <p className="text-sm leading-relaxed text-ink-soft">{plan.patientReport.whatWeFound}</p>
-            <ul className="grid gap-2 sm:grid-cols-2">
-              {plan.patientReport.keyResults.map((r) => (
-                <li key={r.name} className="rounded-lg border border-line px-3 py-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-medium text-ink">{r.name}</span>
-                    <SeverityChip severity={r.status === 'good' ? 'good' : r.status === 'watch' ? 'watch' : 'act'} label={r.status} />
-                  </div>
-                  <p className="mt-1 text-sm font-semibold tabular-nums text-ink">{r.value}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </Card>
-      </div>
+            <p className="mt-1 text-base font-semibold tabular-nums text-ink">{r.value}</p>
+          </li>
+        ))}
+      </ul>
+      {report.yourPlan.length > 0 && (
+        <div>
+          <h3 className="eyebrow mb-2">Your plan</h3>
+          <ul className="space-y-2">
+            {report.yourPlan.map((p) => (
+              <li key={p.title} className="text-sm"><span className="font-medium text-ink">{p.title}.</span> <span className="text-ink-soft">{p.detail}</span></li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   )
 }
@@ -293,52 +456,44 @@ export function ConclusionPanel({ assessment, catalog }: { assessment: Assessmen
   const { data } = assessment
   return (
     <div className="space-y-5">
-      <Card className="border-good/30">
-        <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex min-w-0 items-start gap-3">
-            <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-good" />
-            <div>
-              <p className="font-semibold text-ink">Released to the patient</p>
-              <p className="mt-0.5 text-sm text-ink-soft">
-                Note signed in {assessment.ehrName}, visit closed, Longevity Record published.
-                {data.release?.comment ? ` Your comment: “${data.release.comment}”` : ''}
-              </p>
-            </div>
-          </div>
-          <Link to={`/patient/${assessment.ehr}/${assessment.patientId}`} className="btn-secondary shrink-0">
-            <UserRound size={15} /> Patient app <ExternalLink size={13} />
-          </Link>
+      <div className="flex items-start gap-3 rounded-xl border border-good/30 bg-good-soft/60 px-5 py-4">
+        <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-good" />
+        <div>
+          <p className="font-semibold text-ink">Released to the patient</p>
+          <p className="mt-0.5 text-sm text-ink-soft">
+            Note signed in {assessment.ehrName}, visit closed, report shared in the patient app.
+            {data.release?.comment ? ` Your comment: “${data.release.comment}”` : ''}
+          </p>
         </div>
-      </Card>
+      </div>
       <ReviewPanel assessment={assessment} catalog={catalog} onChanged={() => undefined} />
     </div>
   )
 }
 
-function ResultsTable({ results, insights, issued }: { results: LabResultValue[]; insights?: BiomarkerInsight[]; issued?: string }) {
+function ResultsTable({ results, insights }: { results: LabResultValue[]; insights?: BiomarkerInsight[] }) {
+  const [open, setOpen] = useState<string>()
   return (
-    <Card>
-      <CardHeader title="Lab results" subtitle={issued ? `Issued ${formatDate(issued)} · filed in the EHR` : 'From the lab'} />
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-line text-left text-xs text-ink-muted">
-              <th className="px-5 py-2 font-medium">Test</th>
-              <th className="px-3 py-2 text-right font-medium">Result</th>
-              <th className="px-3 py-2 font-medium">Reference</th>
-              <th className="px-3 py-2 font-medium">Reading</th>
-            </tr>
-          </thead>
-          <tbody>
-            {results.map((r) => {
-              const insight = insights?.find((i) => i.code === r.code)
-              const flagged = r.interpretation === 'H' || r.interpretation === 'L'
-              return (
-                <tr key={r.code} className="border-b border-line align-top last:border-0">
-                  <td className="px-5 py-2.5">
-                    <p className="font-medium text-ink">{r.name}</p>
-                    {insight && <Interpretation text={insight.interpretation} />}
-                  </td>
+    <div className="overflow-x-auto rounded-lg border border-line">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="border-b border-line bg-sunken/60 text-left text-xs text-ink-muted">
+            <th className="px-4 py-2 font-medium">Test</th>
+            <th className="px-3 py-2 text-right font-medium">Result</th>
+            <th className="px-3 py-2 font-medium">Reference</th>
+            <th className="px-3 py-2 font-medium">Reading</th>
+            <th className="w-8" />
+          </tr>
+        </thead>
+        <tbody>
+          {results.map((r) => {
+            const insight = insights?.find((i) => i.code === r.code)
+            const flagged = r.interpretation === 'H' || r.interpretation === 'L'
+            const isOpen = open === r.code
+            return (
+              <Fragment key={r.code}>
+                <tr className={`border-b border-line last:border-0 ${insight ? 'cursor-pointer hover:bg-sunken/50' : ''}`} onClick={() => insight && setOpen(isOpen ? undefined : r.code)}>
+                  <td className="px-4 py-2.5 font-medium text-ink">{r.name}</td>
                   <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">
                     <span className={`font-semibold ${flagged ? 'text-act-ink' : 'text-ink'}`}>{formatNumber(r.value)}</span>
                     <span className="ml-1 text-xs text-ink-muted">{r.unit}</span>
@@ -349,28 +504,23 @@ function ResultsTable({ results, insights, issued }: { results: LabResultValue[]
                     {insight ? (
                       <span className="flex items-center gap-1.5">
                         <SeverityChip severity={insightSeverity[insight.status]} label={insight.status} />
-                        <span className="text-ink-muted" title={insight.trend}><TrendIcon trend={insight.trend} /></span>
+                        <span className="flex items-center gap-0.5 text-xs text-ink-muted"><TrendIcon trend={insight.trend} /> {insight.trend}</span>
                       </span>
                     ) : <span className="text-xs text-ink-muted">—</span>}
                   </td>
+                  <td className="pr-3 text-ink-muted">{insight && <ChevronDown size={14} className={`transition ${isOpen ? 'rotate-180' : ''}`} />}</td>
                 </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-    </Card>
-  )
-}
-
-/** The agent's reading of one result: three lines, the rest on click. */
-function Interpretation({ text }: { text: string }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <button type="button" onClick={() => setOpen(!open)} aria-expanded={open}
-      className={`mt-0.5 block max-w-md text-left text-xs leading-snug text-ink-muted hover:text-ink-soft ${open ? '' : 'line-clamp-3'}`}>
-      {text}
-    </button>
+                {isOpen && insight && (
+                  <tr className="border-b border-line bg-sunken/40 last:border-0">
+                    <td colSpan={5} className="px-4 py-3 text-sm leading-relaxed text-ink-soft">{insight.interpretation}</td>
+                  </tr>
+                )}
+              </Fragment>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
@@ -393,10 +543,10 @@ function KeyTrends({ assessment }: { assessment: Assessment }) {
   if (!series.length) return null
   return (
     <div>
-      <h3 className="eyebrow mb-3">History + today · filled dot is today's result</h3>
+      <h3 className="eyebrow mb-3">History · the filled dot is today’s result</h3>
       <div className="grid gap-3 md:grid-cols-2">
         {series.map((s) => (
-          <div key={s.code} className="card p-4">
+          <div key={s.code} className="rounded-lg border border-line p-4">
             <p className="text-sm font-medium text-ink">{s.name} <span className="text-xs font-normal text-ink-muted">{s.unit}</span></p>
             <BiomarkerChart points={s.points} unit={s.unit} referenceLow={s.referenceLow} referenceHigh={s.referenceHigh} height={130} highlightSource="lab-today" />
           </div>

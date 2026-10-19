@@ -8,7 +8,7 @@ import { formatDate } from '../lib/format'
 import { Badge, Card, Empty, ErrorNote, Spinner } from './ui'
 
 // The EHR data explorer: pick data types and a date range, fetch them from the patient's EHR (one FHIR
-// search per type, filtered by the EHR), narrow the table, and hand a selection to the Copilot.
+// search per type, filtered by the EHR), narrow the table, and hand a selection to the AI evaluation.
 
 const KIND_META: Record<string, { label: string; icon: LucideIcon }> = {
   encounter: { label: 'Encounter', icon: CalendarDays },
@@ -56,7 +56,7 @@ interface Props {
   ehr: string
   ehrName: string
   patientId: string
-  /** When given, rows are selectable and the selection can be sent to the Copilot. */
+  /** When given, rows are selectable and the selection can be sent for an AI evaluation. */
   onEvaluate?: (args: EvaluateArgs) => Promise<void>
   evaluating?: boolean
 }
@@ -312,7 +312,7 @@ export function Explorer({ ehr, ehrName, patientId, onEvaluate, evaluating }: Pr
               <div className="flex flex-col gap-2 sm:flex-row">
                 <input
                   className="field flex-1"
-                  placeholder="Ask the Copilot — e.g. “What explains the falling eGFR, and what should we measure?”"
+                  placeholder="Optional question — e.g. “What explains the falling eGFR, and what should we measure?”"
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                 />
@@ -322,7 +322,7 @@ export function Explorer({ ehr, ehrName, patientId, onEvaluate, evaluating }: Pr
                   disabled={selected.size === 0 || evaluating}
                   onClick={() => onEvaluate({ rows: selectedRows, question, dateFrom: from || undefined, dateTo: to || undefined })}
                 >
-                  {evaluating ? <Spinner size={15} /> : <Sparkles size={15} />} AI overview & evaluation
+                  {evaluating ? <Spinner size={15} /> : <Sparkles size={15} />} Evaluate with AI
                 </button>
               </div>
             </div>

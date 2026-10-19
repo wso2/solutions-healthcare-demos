@@ -10,7 +10,7 @@ import { PatientHeader } from '../components/patient'
 import { Badge, Card, Empty, ErrorNote, Spinner } from '../components/ui'
 
 // One patient, live from their EHR: the International Patient Summary, the data explorer, and their
-// assessments. Asking the Copilot from the explorer starts (or resumes) an assessment.
+// assessments.
 
 const TABS = [
   { key: 'summary', label: 'Patient summary', icon: FileHeart },
@@ -64,7 +64,7 @@ export function PatientPage() {
               </Link>
             ) : (
               <button type="button" className="btn-primary" onClick={() => start()} disabled={starting}>
-                {starting ? <Spinner size={15} /> : <Play size={15} />} Start longevity assessment
+                {starting ? <Spinner size={15} /> : <Play size={15} />} Start assessment
               </button>
             )}
           />
@@ -87,13 +87,7 @@ export function PatientPage() {
 
       {tab === 'summary' && <IpsSummary summary={summary} />}
       {tab === 'explorer' && (
-        <Explorer
-          ehr={ehr}
-          ehrName={summary.patient.ehrName}
-          patientId={patientId}
-          evaluating={starting}
-          onEvaluate={async (args) => start(args)}
-        />
+        <Explorer ehr={ehr} ehrName={summary.patient.ehrName} patientId={patientId} />
       )}
       {tab === 'assessments' && <AssessmentHistory assessments={assessments} />}
     </div>
@@ -102,7 +96,7 @@ export function PatientPage() {
 
 function AssessmentHistory({ assessments }: { assessments?: AssessmentListItem[] }) {
   if (!assessments) return <div className="flex justify-center py-10 text-ink-muted"><Spinner /></div>
-  if (assessments.length === 0) return <Card><Empty title="No assessments yet" detail="Start a longevity assessment to evaluate this patient with the Copilot and order labs." /></Card>
+  if (assessments.length === 0) return <Card><Empty title="No assessments yet" detail="Start an assessment to order labs for this patient." /></Card>
   return (
     <Card>
       <ul className="divide-y divide-line">
@@ -111,7 +105,7 @@ function AssessmentHistory({ assessments }: { assessments?: AssessmentListItem[]
             <Link to={`/physician/assessments/${a.id}`} className="flex flex-col gap-1 px-5 py-4 hover:bg-sunken/60 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <p className="flex items-center gap-2 text-sm font-medium text-ink">
-                  Longevity assessment <span className="font-mono text-xs text-ink-muted">{a.id}</span>
+                  Assessment <span className="font-mono text-xs text-ink-muted">{a.id}</span>
                 </p>
                 <p className="mt-0.5 line-clamp-2 text-xs text-ink-soft">{a.headline ?? (a.tests.length ? `Ordered: ${a.tests.join(', ')}` : stagePosition(a.stage).label)}</p>
               </div>

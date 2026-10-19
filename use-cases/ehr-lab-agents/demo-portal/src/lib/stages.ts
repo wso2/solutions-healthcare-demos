@@ -2,27 +2,26 @@ import type { Stage, WaitingOn } from './api'
 
 // The physician journey, as the clinical stepper shows it. Each workflow stage maps to one step and a state.
 
-export type StepKey = 'record' | 'evaluate' | 'patient' | 'lab' | 'analysis' | 'review'
+export type StepKey = 'record' | 'evaluate' | 'lab' | 'analysis' | 'review'
 export type StepState = 'done' | 'action' | 'working' | 'waiting' | 'upcoming' | 'failed'
 
 export const STEPS: { key: StepKey; label: string; hint: string }[] = [
   { key: 'record', label: 'Patient record', hint: 'Pulled from EHR' },
-  { key: 'evaluate', label: 'Evaluate & order', hint: 'Explorer + Copilot' },
-  { key: 'patient', label: 'Patient visit', hint: 'Lab draw' },
-  { key: 'lab', label: 'Lab processing', hint: 'Results' },
+  { key: 'evaluate', label: 'Order labs', hint: 'Physician' },
+  { key: 'lab', label: 'Lab visit & results', hint: 'Patient + lab' },
   { key: 'analysis', label: 'AI analysis', hint: 'Analysis + care plan' },
   { key: 'review', label: 'Review & release', hint: 'To EHR + patient' },
 ]
 
 const STAGE_POSITION: Record<Stage, { step: StepKey; state: StepState; label: string }> = {
-  STARTING: { step: 'record', state: 'working', label: 'Starting workflow' },
+  STARTING: { step: 'record', state: 'working', label: 'Starting' },
   BUILDING_SUMMARY: { step: 'record', state: 'working', label: 'Pulling record from EHR' },
-  AWAITING_PHYSICIAN: { step: 'evaluate', state: 'action', label: 'Waiting on you: evaluate & order' },
+  AWAITING_PHYSICIAN: { step: 'evaluate', state: 'action', label: 'Waiting on you: order labs' },
   PLACING_LAB_ORDER: { step: 'evaluate', state: 'working', label: 'Placing the order' },
-  AWAITING_PATIENT: { step: 'patient', state: 'waiting', label: 'Waiting on the patient' },
+  AWAITING_PATIENT: { step: 'lab', state: 'waiting', label: 'Waiting on the patient' },
   AWAITING_LAB: { step: 'lab', state: 'waiting', label: 'Waiting on the lab' },
-  ANALYZING_RESULTS: { step: 'analysis', state: 'working', label: 'Results Analysis running' },
-  GENERATING_CARE_PLAN: { step: 'analysis', state: 'working', label: 'Care Plan running' },
+  ANALYZING_RESULTS: { step: 'analysis', state: 'working', label: 'AI analysing results' },
+  GENERATING_CARE_PLAN: { step: 'analysis', state: 'working', label: 'AI drafting care plan' },
   AWAITING_REVIEW: { step: 'review', state: 'action', label: 'Waiting on you: review & release' },
   COMPLETED: { step: 'review', state: 'done', label: 'Released' },
   FAILED: { step: 'review', state: 'failed', label: 'Stopped' },
@@ -54,6 +53,6 @@ export const WAITING_ON: Record<WaitingOn, { label: string; tone: 'brand' | 'wat
   patient: { label: 'Waiting on patient', tone: 'watch' },
   lab: { label: 'Waiting on lab', tone: 'watch' },
   ai: { label: 'AI agents working', tone: 'ai' },
-  system: { label: 'Integration working', tone: 'neutral' },
+  system: { label: 'In progress', tone: 'neutral' },
   none: { label: 'Done', tone: 'good' },
 }

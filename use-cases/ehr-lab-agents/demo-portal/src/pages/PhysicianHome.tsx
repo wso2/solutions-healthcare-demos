@@ -114,7 +114,7 @@ export function PhysicianHome() {
 
       <div className="min-w-0 space-y-5 self-start">
       <Card>
-        <CardHeader title="Assessments" subtitle="Every longevity assessment, by who it is waiting on" icon={<ClipboardList size={16} />} />
+        <CardHeader title="Assessments" subtitle="Every assessment, by who it is waiting on" icon={<ClipboardList size={16} />} />
         <div className="flex flex-wrap gap-1 border-b border-line px-4 py-2.5">
           {BOARD_TABS.map((t) => (
             <button
