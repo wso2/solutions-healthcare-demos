@@ -1,5 +1,11 @@
 # Secrets — never commit. See secrets.example.toml.
 secrets.toml
+# Host mode (scripts/host-mode.sh): generated package configs (the integration's holds the secrets) and the
+# COMPOSE_FILE switch
+ehr_lab_physician/*/Config.toml
+.env
+# WSO2 Integrator's ICP runtime id (machine-specific)
+.icp_runtime_id
 # Credentials WSO2 Agent Manager issued to the agents (scripts/amp-setup.sh)
 .amp/
 

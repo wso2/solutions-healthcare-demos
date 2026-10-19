@@ -233,6 +233,34 @@ The integration's and the lab simulator's `Dependencies.toml` are committed and 
 2201.14.1 needs `data.csv` 1.x. Without the pin, every rebuild after the first fails with "Incompatible
 versions: ballerina/data.csv". Don't delete these files.
 
+### Running the integration and lab simulator in WSO2 Integrator
+
+To run or debug the two Ballerina services from WSO2 Integrator, use host mode. The integration and the
+lab simulator then run on the Mac. Everything else stays in containers, including the PubMed MCP server.
+
+```bash
+./scripts/host-mode.sh on       # write each package's Config.toml, stop both containers, point the rest at the Mac
+# Open ehr_lab_physician/ in WSO2 Integrator and run ehr_agentic_integration and lab_simulator,
+# or run `bal run` in each package directory.
+./scripts/host-mode.sh status
+./scripts/host-mode.sh off      # back to everything in containers (stop the local runs first)
+```
+
+`host-mode.sh on` generates the gitignored `Config.toml` files from `config/integration.toml`,
+`config/lab-simulator.toml` and `secrets.toml`, swapping each container address for a host port. After
+`amp-setup.sh` or `amp-models.sh` changes those files, run `./scripts/host-mode.sh config`.
+
+Host mode also sets `COMPOSE_FILE` in `.env`, so every `docker compose` command applies
+[`docker-compose.host.yml`](docker-compose.host.yml) until host mode is switched off:
+
+- The portal proxies `/api` and `/lab-api` to the Mac.
+- EHR and lab-webhook traffic still goes through Toxiproxy, so the outage switches and webhook retries
+  behave as they do in containers.
+- The agents' OpenRouter calls reach Agent Manager through the LLM auth adapter, published on 127.0.0.1:8015.
+
+Temporal holds the workflow state, so assessments that are already in flight carry on in whichever process
+is running.
+
 ### Pointing at a real EHR
 
 Edit its `[[ehrSystems]]` entry in `config/integration.toml`: `fhirBaseUrl`, `[ehrSystems.auth]` (token URL,

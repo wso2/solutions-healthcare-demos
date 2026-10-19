@@ -1,0 +1,38 @@
+# Host mode: the integration and the lab simulator run on the Mac (WSO2 Integrator or `bal run`), and
+# everything else stays in containers. Switch with ./scripts/host-mode.sh on|off — it writes the packages'
+# Config.toml files and sets COMPOSE_FILE in .env, so every `docker compose` command (and the scripts that
+# run one) uses this override while host mode is on.
+#
+# Containers reach the Mac as host.docker.internal (colima maps it to the Mac's loopback); the Mac reaches
+# containers on their published ports. Extra host ports, all on 127.0.0.1:
+#   18081 / 18083  Toxiproxy → Cerner / Athena FHIR   (the integration's EHR traffic still crosses the proxy,
+#                                                      so the outage switches cut it for real)
+#   19091          Toxiproxy → integration webhook    (lab simulator → integration, as in the container setup)
+#   8015           LLM auth adapter                   (the agents' OpenRouter calls into Agent Manager)
+
+services:
+  # Run on the Mac instead. The profile keeps `docker compose up` from starting them on the same ports.
+  integration:
+    profiles: [containers]
+  lab-simulator:
+    profiles: [containers]
+
+  portal:
+    depends_on: !reset []
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./demo-portal/nginx.host.conf:/etc/nginx/conf.d/default.conf:ro
+
+  toxiproxy:
+    # The lab-webhook proxy's upstream is integration:9090; this name now points at the Mac.
+    extra_hosts:
+      - "integration:host-gateway"
+    ports:
+      - "127.0.0.1:18081:8081"
+      - "127.0.0.1:18083:8083"
+      - "127.0.0.1:19091:9091"
+
+  llm-auth-adapter:
+    ports:
+      - "127.0.0.1:8015:8080"
