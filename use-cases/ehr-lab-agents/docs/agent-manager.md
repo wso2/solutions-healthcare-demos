@@ -31,7 +31,7 @@ flowchart LR
   subgraph AMP["WSO2 Agent Manager · k3d amp-local"]
     IDP["ThunderID<br/>AgentID tokens"]
     GW["AI gateway<br/>model config per agent · budget<br/>PHI guardrail"]
-    MP["MCP proxies<br/>fhir-cerner · fhir-athena · pubmed<br/>mcp-fhir-deidentify"]
+    MP["MCP proxies<br/>fhir-ehr · fhir-lab · pubmed<br/>mcp-fhir-deidentify"]
     OBS["Traces"]
     EV["Monitors + evaluators"]
   end
@@ -79,18 +79,23 @@ its roles carry, and the gateway refuses any tool call the token does not cover.
 
 | Proxy | Scope | Tools |
 |---|---|---|
-| `fhir-cerner`, `fhir-athena` | `read` | `get_capabilities`, `search`, `read` |
+| `fhir-ehr` (the EHR), `fhir-lab` (the lab's FHIR server) | `read` | `get_capabilities`, `search`, `read` |
 | | `write` | `create`, `update`, `delete` |
 | `pubmed` | `search` | `search_pubmed`, `get_abstract` |
 
 | Role | Scopes | Agents |
 |---|---|---|
-| `ehr-reader` | `fhir-cerner:read`, `fhir-athena:read` | Diagnostic Copilot, Results Analysis |
+| `ehr-reader` | `fhir-ehr:read` | Diagnostic Copilot, Results Analysis |
+| `lab-reader` | `fhir-lab:read` | Results Analysis |
 | `literature-searcher` | `pubmed:search` | all three |
-| `ehr-writer` | `fhir-cerner:write`, `fhir-athena:write` | none: EHRs change only through workflow activities |
+| `ehr-writer` | `fhir-ehr:write`, `fhir-lab:write` | none: the EHR and the lab change only through workflow activities |
 
 Every tool must sit under some scope, because AMP lets any authenticated agent call a tool no scope covers.
 That is why the write tools have a scope even though nobody holds it.
+
+Both FHIR MCP servers offer the same tool names, so the integration publishes each server's tools to the agent
+under a prefix (`ehr_search`, `lab_search`… — `mcp_toolkit.bal`) and calls the server with the tool's own name.
+The proxy therefore sees `search` and `read` as usual, and the scopes above apply unchanged.
 
 In Ballerina, the agent's MCP connection authenticates with its AgentID. `ai:McpToolKit` accepts an
 `http:ClientAuthConfig`, so token fetch and refresh are handled for you:
@@ -100,7 +105,7 @@ ai:McpToolKit toolkit = check new (proxyUrl, permittedTools, auth = {
     tokenUrl: agentManager.tokenUrl,            // http://default-idp.amp.localhost:8080/oauth2/token
     clientId: agent.clientId,
     clientSecret: agent.clientSecret,
-    scopes: agent.mcpScopes[target] ?: [],      // e.g. ["fhir-cerner:read"]
+    scopes: agent.mcpScopes[target] ?: [],      // e.g. ["fhir-ehr:read"]
     optionalParams: {"resource": proxyUrl}      // RFC 8707: one token per proxy
 });
 ```
@@ -136,7 +141,7 @@ looks like JSON but does not parse, or any processing error, becomes an `isError
 data. Paths use a FHIRPath subset compiled when the policy is deployed: `Type.a.b`, `where(x = 'v' and|or …)`,
 `!=`, `.exists()`, `extension('url')`, `ofType(T)`, `first()`, `[n]`.
 
-The demo's rules (`amp/fhir-deidentify.json`) are "minimum necessary" for these agents, live through the Cerner
+The demo's rules (`amp/fhir-deidentify.json`) are "minimum necessary" for these agents, live through the EHR's
 proxy as the Copilot:
 
 | Element | FHIR server | Agent sees |
@@ -157,8 +162,8 @@ proxy as the Copilot:
    with its definition);
 3. imports them into the k3d cluster and points the gateway's Helm values at them, with the hash key and the
    controller's definitions path (`ISSUES_TO_REPORT.md` D10);
-4. waits until AMP offers the policy for MCP proxies. `amp-setup.sh` then attaches it to `fhir-cerner` and
-   `fhir-athena` (`--no-fhir-policy` for a before/after). `--restore` returns to the stock gateway.
+4. waits until AMP offers the policy for MCP proxies. `amp-setup.sh` then attaches it to `fhir-ehr` and
+   `fhir-lab` (`--no-fhir-policy` for a before/after). `--restore` returns to the stock gateway.
 
 **Review of the proposal.** The design holds up; what building it showed:
 - **Choice types must be explicit.** `Observation.value` in an allowlist has to match `valueQuantity`,
@@ -404,8 +409,8 @@ are available. An LLM-judge evaluator is a prompt template with `{trace.output}`
 ## 6. A ten-minute demo
 
 1. **Identity** (console → project → agents): three AgentIDs and their roles — `ehr-reader` on the Copilot
-   and Results Analysis, no EHR access for Care Plan.
-2. **FHIR de-identification** (console → MCP proxies → fhir-cerner → policies: `mcp-fhir-deidentify`). For
+   and Results Analysis, `lab-reader` on Results Analysis only, no EHR or lab access for Care Plan.
+2. **FHIR de-identification** (console → MCP proxies → fhir-ehr → policies: `mcp-fhir-deidentify`). For
    proof, `./scripts/amp-setup.sh --no-fhir-policy` and back.
 3. **Run an assessment** (portal home → Physician workspace → Sofia Alvarez → order labs; release results from
    the lab console). The Results Analysis agent reads the EHR through the FHIR MCP proxy and cites PubMed.

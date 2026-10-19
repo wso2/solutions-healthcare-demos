@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Registers the demo's three agents in WSO2 Agent Manager and wires its three governance features:
 #
-#   identity    each agent gets an AgentID (OAuth client). The WSO2 FHIR MCP servers and the PubMed MCP
-#               server sit behind MCP proxies secured by AgentID, with a scope per tool group. Roles:
-#                 ehr-reader           FHIR read tools, both EHRs   → Diagnostic Copilot, Results Analysis
+#   identity    each agent gets an AgentID (OAuth client). The WSO2 FHIR MCP servers (fhir-ehr over the EHR,
+#               fhir-lab over the lab) and the PubMed MCP server sit behind MCP proxies secured by AgentID,
+#               with a scope per tool group. Roles:
+#                 ehr-reader           FHIR read tools, EHR         → Diagnostic Copilot, Results Analysis
+#                 lab-reader           FHIR read tools, lab         → Results Analysis
 #                 literature-searcher  PubMed search                → all three agents
 #                 ehr-writer           FHIR create/update/delete    → nobody (only workflow activities write)
 #               The FHIR MCP proxies also run mcp-fhir-deidentify (built in by scripts/amp-gateway.sh): names,
@@ -58,8 +60,6 @@ DESCRIPTIONS=(
   "Writes the clinical note and the patient report from the analysis. Has no EHR access."
 )
 EHR_READER=(true true false)
-EHRS=(cerner athena)
-EHR_PORTS=(8010 8011)
 
 WORK="$(mktemp -d)"
 chmod 700 "$WORK"
@@ -90,7 +90,7 @@ SCOPES="amp:environment:read amp:gateway:read amp:project:read amp:project:creat
 amp:llm-provider-template:read amp:llm-provider:create amp:llm-provider:read amp:llm-provider:update
 amp:llm-provider:deploy amp:llm-provider:api-key-manage
 amp:agent:create amp:agent:read amp:agent:update amp:agent:api-key-manage amp:agent:token-manage
-amp:mcp-server:connect amp:mcp-server:create amp:mcp-server:read amp:mcp-server:update
+amp:mcp-server:connect amp:mcp-server:create amp:mcp-server:read amp:mcp-server:update amp:mcp-server:delete
 amp:scope:create amp:scope:read amp:scope:update
 amp:agent-identity:read amp:agent-identity:create amp:agent-identity:update"
 TOKEN="$(curl -sS -u amp-api-client:amp-api-client-secret -d grant_type=client_credentials \
@@ -215,7 +215,7 @@ if ! $SKIP_MCP; then
   # The tunnel must refuse callers without the key, and let Agent Manager's key through.
   tunnel_rejects_anonymous() {
     for _ in $(seq 1 15); do
-      open=$(curl -s -o /dev/null -w '%{http_code}' "$TUNNEL_URL/cerner/mcp/" || true)
+      open=$(curl -s -o /dev/null -w '%{http_code}' "$TUNNEL_URL/ehr/mcp/" || true)
       [[ $open == 401 ]] && return 0
       sleep 2
     done
@@ -231,22 +231,22 @@ if ! $SKIP_MCP; then
     tunnel_rejects_anonymous || true
   fi
   [[ $open == 401 ]] || die "the tunnel does not reject unauthenticated calls (HTTP $open) — not using it"
-  keyed=$(curl -s -o /dev/null -w '%{http_code}' -H "X-Tunnel-Key: $TUNNEL_KEY" "$TUNNEL_URL/cerner/mcp/" || true)
+  keyed=$(curl -s -o /dev/null -w '%{http_code}' -H "X-Tunnel-Key: $TUNNEL_KEY" "$TUNNEL_URL/ehr/mcp/" || true)
   [[ $keyed != 401 && $keyed != 000 && $keyed != 5* ]] || die "the tunnel does not reach the FHIR MCP server (HTTP $keyed)"
   log "tunnel $TUNNEL_URL (gatekeeper: 401 without key, $keyed with it)"
 fi
 # The three MCP proxies: handle, path behind the gatekeeper, tools, and scopes (action=tool,tool;…).
-PROXY_HANDLES=(fhir-cerner fhir-athena pubmed)
-PROXY_PATHS=(cerner/mcp/ athena/mcp/ pubmed/mcp)
-PROXY_NAMES=("FHIR MCP — Cerner EHR" "FHIR MCP — Athena EHR" "PubMed")
+PROXY_HANDLES=(fhir-ehr fhir-lab pubmed)
+PROXY_PATHS=(ehr/mcp/ lab/mcp/ pubmed/mcp)
+PROXY_NAMES=("FHIR MCP — EHR" "FHIR MCP — Lab" "PubMed")
 PROXY_TOOLS=("get_capabilities search read create update delete" "get_capabilities search read create update delete" "search_pubmed get_abstract")
 PROXY_SCOPES=("read=get_capabilities,search,read;write=create,update,delete" "read=get_capabilities,search,read;write=create,update,delete" "search=search_pubmed,get_abstract")
 PROXY_DESCRIPTIONS=(
-  "WSO2 FHIR MCP server for the Cerner EHR. AgentID roles decide which tools an agent may call."
-  "WSO2 FHIR MCP server for the Athena EHR. AgentID roles decide which tools an agent may call."
+  "WSO2 FHIR MCP server for the clinic's EHR. AgentID roles decide which tools an agent may call."
+  "WSO2 FHIR MCP server for the reference lab's FHIR records. AgentID roles decide which tools an agent may call."
   "Literature search (NCBI E-utilities) for the agents. Holds no patient data."
 )
-# FHIR de-identification on the two FHIR MCP proxies (mcp-fhir-deidentify, config amp/fhir-deidentify.json),
+# FHIR de-identification on the two FHIR MCP proxies (EHR and lab) (mcp-fhir-deidentify, config amp/fhir-deidentify.json),
 # when the gateway offers it — it does once ./scripts/amp-gateway.sh has built it into the gateway.
 FHIR_POLICY='[]'
 if [[ ${#MCP_EHRS[@]} -gt 0 ]] && ! ${NO_FHIR_POLICY:-false}; then
@@ -334,9 +334,10 @@ log "AgentIDs issued: ${NAMES[*]}"
 # Roles carry scopes; agents get roles. Run after the proxies exist, since their scopes are what roles grant.
 # (ROLE|scopes|agent indexes)
 ROLE_DEFS=(
-  "ehr-reader|fhir-cerner:read fhir-athena:read|0 1|Read tools of the FHIR MCP proxies (both EHRs)"
+  "ehr-reader|fhir-ehr:read|0 1|Read tools of the EHR's FHIR MCP proxy"
+  "lab-reader|fhir-lab:read|1|Read tools of the lab's FHIR MCP proxy"
   "literature-searcher|pubmed:search|0 1 2|Search the literature through the PubMed MCP proxy"
-  "ehr-writer|fhir-cerner:write fhir-athena:write||Change EHR records — assigned to no agent: only workflow activities write"
+  "ehr-writer|fhir-ehr:write fhir-lab:write||Change EHR or lab records — assigned to no agent: only workflow activities write"
 )
 if ! $SKIP_MCP; then
 ROLE_PATH="/orgs/$ORG/environments/$ENV/agent-identities/roles"
@@ -374,6 +375,18 @@ for def in "${ROLE_DEFS[@]}"; do
     status=$(api POST "$ROLE_PATH/$role_id/assignments/remove" "$WORK/body"); [[ $status == 20? ]] || fail "$status" "unassigning $role"
   fi
   log "role $role [$scopes] → ${names:-no agent}"
+done
+# The proxies of the two-EHR layout, replaced by fhir-ehr and fhir-lab. Removed once no role grants them.
+# Leftovers only: a failure is reported, never fatal, so the settings below are always written.
+for old in fhir-cerner fhir-athena; do
+  status=$(api GET "/orgs/$ORG/mcp-proxies/$old")
+  [[ $status == 200 ]] || continue
+  status=$(api DELETE "/orgs/$ORG/mcp-proxies/$old")
+  if [[ $status == 20? ]]; then
+    log "MCP proxy $old removed (replaced by fhir-ehr and fhir-lab)"
+  else
+    log "could not remove the old MCP proxy $old (HTTP $status: $(head -c 200 "$WORK/resp")) — delete it in the console"
+  fi
 done
 fi
 
@@ -431,17 +444,17 @@ jq -n \
   --arg d0 "${DISPLAY[0]}" --arg d1 "${DISPLAY[1]}" --arg d2 "${DISPLAY[2]}" \
   --arg r0 "${ROLES[0]}" --arg r1 "${ROLES[1]}" --arg r2 "${ROLES[2]}" '
   def t: rtrimstr("\n");
-  def reader: {cerner: ["fhir-cerner:read"], athena: ["fhir-athena:read"], pubmed: ["pubmed:search"]};
+  def ehrReader: {ehr: ["fhir-ehr:read"], pubmed: ["pubmed:search"]};
   {
     agentManager: {
       enabled: true, consoleUrl: $console, orgName: "default", projectName: $project,
       llmGatewayUrl: $llm, tokenUrl: $tokenUrl,
-      mcpProxyUrls: (if $mcp then {cerner: ($vhost + "/fhir-cerner/mcp"), athena: ($vhost + "/fhir-athena/mcp"),
+      mcpProxyUrls: (if $mcp then {ehr: ($vhost + "/fhir-ehr/mcp"), lab: ($vhost + "/fhir-lab/mcp"),
         pubmed: ($vhost + "/pubmed/mcp")} else {} end),
-      copilot: {name: $n0, displayName: $d0, llmGatewayUrl: ($u0|t), llmApiKey: ($l0|t), clientId: ($c0|t), clientSecret: ($s0|t), mcpScopes: reader,
-        roles: ["ehr-reader", "literature-searcher"]},
-      analyst: {name: $n1, displayName: $d1, llmGatewayUrl: ($u1|t), llmApiKey: ($l1|t), clientId: ($c1|t), clientSecret: ($s1|t), mcpScopes: reader,
-        roles: ["ehr-reader", "literature-searcher"]},
+      copilot: {name: $n0, displayName: $d0, llmGatewayUrl: ($u0|t), llmApiKey: ($l0|t), clientId: ($c0|t), clientSecret: ($s0|t),
+        mcpScopes: ehrReader, roles: ["ehr-reader", "literature-searcher"]},
+      analyst: {name: $n1, displayName: $d1, llmGatewayUrl: ($u1|t), llmApiKey: ($l1|t), clientId: ($c1|t), clientSecret: ($s1|t),
+        mcpScopes: (ehrReader + {lab: ["fhir-lab:read"]}), roles: ["ehr-reader", "lab-reader", "literature-searcher"]},
       carePlanner: {name: $n2, displayName: $d2, llmGatewayUrl: ($u2|t), llmApiKey: ($l2|t), clientId: ($c2|t), clientSecret: ($s2|t),
         mcpScopes: {pubmed: ["pubmed:search"]}, roles: ["literature-searcher"]}
     },
@@ -508,7 +521,7 @@ Agent Manager is governing the agents.
   Console        $CONSOLE   (admin / admin) → project "Longevity Clinic"
   Agents         ${NAMES[*]}
   AI gateway     $([[ -n "$PROVIDER_UUID" ]] && echo "provider 'anthropic'; each agent has its own model configuration, key and budget (amp/budgets.json)" || echo "not set up — agents call Claude directly")
-  MCP proxies    $($SKIP_MCP && echo "not set up — agents reach the MCP servers directly" || echo "$VHOST/{fhir-cerner,fhir-athena,pubmed}/mcp (AgentID; roles ehr-reader, literature-searcher, ehr-writer)")
-  FHIR policy    $([[ "$FHIR_POLICY" != '[]' ]] && echo "mcp-fhir-deidentify on fhir-cerner and fhir-athena (amp/fhir-deidentify.json)" || echo "not attached (./scripts/amp-gateway.sh adds it to the gateway)")
+  MCP proxies    $($SKIP_MCP && echo "not set up — agents reach the MCP servers directly" || echo "$VHOST/{fhir-ehr,fhir-lab,pubmed}/mcp (AgentID; roles ehr-reader, lab-reader, literature-searcher, ehr-writer)")
+  FHIR policy    $([[ "$FHIR_POLICY" != '[]' ]] && echo "mcp-fhir-deidentify on fhir-ehr and fhir-lab (amp/fhir-deidentify.json)" || echo "not attached (./scripts/amp-gateway.sh adds it to the gateway)")
   Traces         $CONSOLE/org/$ORG/project/$PROJECT/agents/<agent>/environment/$ENV/observability/traces
 EOF
