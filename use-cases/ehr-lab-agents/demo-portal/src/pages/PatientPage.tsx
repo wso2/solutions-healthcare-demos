@@ -71,13 +71,13 @@ export function PatientPage() {
         </div>
       </div>
 
-      <div className="flex gap-1 border-b border-line">
+      <div className="flex gap-1 overflow-x-auto border-b border-line">
         {TABS.map(({ key, label, icon: Icon }) => (
           <button
             key={key}
             type="button"
             onClick={() => setParams({ tab: key })}
-            className={`-mb-px flex items-center gap-2 border-b-2 px-3 py-2 text-sm font-medium transition ${tab === key ? 'border-brand text-ink' : 'border-transparent text-ink-soft hover:text-ink'}`}
+            className={`-mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition ${tab === key ? 'border-brand text-ink' : 'border-transparent text-ink-soft hover:text-ink'}`}
           >
             <Icon size={15} /> {label}
             {key === 'assessments' && assessments && <span className="rounded-full bg-sunken px-1.5 text-[11px] tabular-nums text-ink-muted">{assessments.length}</span>}

@@ -13,7 +13,7 @@ export function CardHeader({ title, subtitle, action, icon }: {
   icon?: ReactNode
 }) {
   return (
-    <div className="flex items-start justify-between gap-4 border-b border-line px-5 py-4">
+    <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-line px-5 py-4">
       <div className="flex min-w-0 items-start gap-3">
         {icon && <div className="mt-0.5 text-ink-muted">{icon}</div>}
         <div className="min-w-0">
@@ -39,7 +39,7 @@ const toneClass: Record<Tone, string> = {
 
 export function Badge({ children, tone = 'neutral', className = '' }: { children: ReactNode; tone?: Tone; className?: string }) {
   return (
-    <span className={`inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium ${toneClass[tone]} ${className}`}>
+    <span className={`inline-flex max-w-full items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-xs font-medium ${toneClass[tone]} ${className}`}>
       {children}
     </span>
   )
@@ -118,7 +118,7 @@ export function Empty({ title, detail, icon }: { title: string; detail?: string;
 export function Markdown({ children }: { children: string }) {
   return (
     <div className="prose-note">
-      <ReactMarkdown>{children}</ReactMarkdown>
+      <ReactMarkdown components={{ a: ({ href, children: label }) => <a href={href} target="_blank" rel="noreferrer">{label}</a> }}>{children}</ReactMarkdown>
     </div>
   )
 }

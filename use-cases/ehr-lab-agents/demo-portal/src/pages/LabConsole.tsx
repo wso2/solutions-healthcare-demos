@@ -71,7 +71,7 @@ export function LabConsole() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((o) => (
+                {[...orders].sort((a, b) => Number(a.status === 'resulted') - Number(b.status === 'resulted')).map((o) => (
                   <tr key={o.id} className="border-b border-line align-top last:border-0">
                     <td className="px-5 py-3">
                       <p className="font-medium text-ink">{o.patientName}</p>
@@ -87,7 +87,7 @@ export function LabConsole() {
                     <td className="whitespace-nowrap px-3 py-3"><OrderStatus order={o} /></td>
                     <td className="px-5 py-3 text-right">
                       {o.status === 'resulted' ? (
-                        <Badge tone="good"><CheckCircle2 size={12} /> Resulted</Badge>
+                        <span className="text-xs text-ink-muted">{o.reportId ? `DiagnosticReport/${o.reportId.slice(0, 8)}` : 'Done'}</span>
                       ) : o.status === 'awaiting-patient' ? (
                         <button className="btn-secondary py-1.5 text-xs" disabled={!!busy} onClick={() => act(o)}>
                           {busy === o.id ? <Spinner size={13} /> : <Syringe size={13} />} Patient arrived · collect specimen

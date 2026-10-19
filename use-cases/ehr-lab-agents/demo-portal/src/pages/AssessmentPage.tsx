@@ -54,7 +54,7 @@ export function AssessmentPage() {
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           <Link to={patient ? `/physician/ehrs/${assessment.ehr}/patients/${assessment.patientId}` : '/physician'} className="btn-ghost px-2" aria-label="Back to patient">
             <ArrowLeft size={18} />
           </Link>
@@ -64,7 +64,7 @@ export function AssessmentPage() {
               <h1 className="text-lg font-semibold text-ink">{assessment.patientName}</h1>
               <EhrBadge name={assessment.ehrName} />
             </div>
-            <p className="text-xs text-ink-muted">
+            <p className="break-words text-xs text-ink-muted">
               {patient ? `${patient.age ?? '—'} y · ${titleCase(patient.gender)} · ${patient.mrn} · DOB ${formatDate(patient.birthDate)} · ` : ''}
               Longevity assessment <span className="font-mono">{assessment.id}</span>
             </p>
@@ -144,7 +144,7 @@ function ClinicalView({ assessment, catalog, refresh }: { assessment: Assessment
           <StepView step={step} assessment={assessment} catalog={catalog} onChanged={() => { setFollowCurrent(true); void refresh() }} />
         </div>
         {showTimeline && (
-          <aside className="lg:sticky lg:top-20 lg:self-start">
+          <aside className="min-w-0 lg:sticky lg:top-20 lg:self-start">
             <Card>
               <CardHeader title="Integration timeline" subtitle="Every EHR, lab, agent, patient and physician step" />
               <div className="max-h-[calc(100vh-240px)] overflow-y-auto px-4 py-4">
@@ -170,7 +170,7 @@ function StepView({ step, assessment, catalog, onChanged }: { step: StepKey; ass
       if (!summary) return <Working title="Pulling the patient record first" />
       if (assessment.stage !== 'AWAITING_PHYSICIAN') return <CopilotPanel assessment={assessment} catalog={catalog} onChanged={onChanged} />
       return (
-        <div className="grid gap-5 2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
+        <div className="grid gap-5 [&>*]:min-w-0 2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]">
           <Explorer
             ehr={assessment.ehr}
             ehrName={assessment.ehrName}

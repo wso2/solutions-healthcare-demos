@@ -3,7 +3,7 @@ import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YA
 import {
   Activity, CalendarDays, ChevronDown, ClipboardList, Database, FileJson, HeartPulse, Pill, Stethoscope, Syringe, Users, X,
 } from 'lucide-react'
-import { api, type BiomarkerSeries, type PatientSummary, type VitalTrend } from '../lib/api'
+import { api, type BiomarkerSeries, type PatientSummary, type SummaryFlag, type VitalTrend } from '../lib/api'
 import { formatDate, formatNumber, formatRange, formatShortDate, titleCase } from '../lib/format'
 import { BiomarkerChart } from './BiomarkerChart'
 import { Badge, Card, CardHeader, ErrorNote, SeverityChip, Spinner, TrendIcon } from './ui'
@@ -94,17 +94,7 @@ export function IpsSummary({ summary }: { summary: PatientSummary }) {
       <div className="grid items-start gap-5 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader title="Risk flags" subtitle="Deterministic rules over the EHR record — allergies vs. medications, trends, ranges, family history, vitals" icon={<HeartPulse size={16} />} />
-          <ul className="divide-y divide-line">
-            {summary.flags.map((flag) => (
-              <li key={flag.title} className="flex items-start gap-3 px-5 py-2.5">
-                <div className="w-20 shrink-0 pt-0.5"><SeverityChip severity={flag.severity} /></div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium text-ink">{flag.title}</p>
-                  <p className="mt-0.5 text-xs text-ink-muted">{flag.detail}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+          <RiskFlags flags={summary.flags} />
         </Card>
         <Card>
           <CardHeader title="Care gaps" subtitle="Longevity baseline never measured" />
@@ -186,6 +176,70 @@ export function IpsSummary({ summary }: { summary: PatientSummary }) {
       </Card>
 
       <Provenance summary={summary} />
+    </div>
+  )
+}
+
+// Out-of-range results grouped by body system (LOINC codes of the analytes the demo's labs report).
+const AREA_OF: Record<string, string> = {
+  '33863-2': 'Kidney', '62238-1': 'Kidney',
+  '2093-3': 'Lipids', '13457-7': 'Lipids', '2085-9': 'Lipids', '2571-8': 'Lipids', '1884-6': 'Lipids', '43583-4': 'Lipids',
+  '1558-6': 'Metabolic', '20448-7': 'Metabolic', '4548-4': 'Metabolic', '3084-1': 'Metabolic',
+  '1742-6': 'Liver', '2324-2': 'Liver',
+  '30522-7': 'Inflammation & vascular', '13965-9': 'Inflammation & vascular',
+}
+const AREAS = ['Kidney', 'Metabolic', 'Lipids', 'Liver', 'Inflammation & vascular', 'Other']
+const SEVERITY_RANK = { concern: 0, watch: 1, info: 2 }
+const isRangeFlag = (f: SummaryFlag) => f.detail.startsWith('Outside the reference range')
+
+/**
+ * Clinical rules first (an allergy against a medication must never sit at row 12), then the
+ * out-of-range results, compact and grouped by body system.
+ */
+function RiskFlags({ flags }: { flags: SummaryFlag[] }) {
+  const rules = flags.filter((f) => !isRangeFlag(f)).sort((a, b) => SEVERITY_RANK[a.severity] - SEVERITY_RANK[b.severity])
+  const ranges = flags.filter(isRangeFlag)
+  const date = ranges[0]?.detail.match(/on (\d{4}-\d{2}-\d{2})/)?.[1]
+  const groups = AREAS.map((area) => ({ area, items: ranges.filter((f) => (AREA_OF[f.codes[0]] ?? 'Other') === area) })).filter((g) => g.items.length)
+  if (flags.length === 0) return <p className="px-5 py-4 text-sm text-ink-muted">No flags raised.</p>
+  return (
+    <div>
+      <ul className="divide-y divide-line">
+        {rules.map((flag) => (
+          <li key={flag.title} className="flex items-start gap-3 px-5 py-2.5">
+            <div className="w-20 shrink-0 pt-0.5"><SeverityChip severity={flag.severity} /></div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-ink">{flag.title}</p>
+              <p className="mt-0.5 text-xs text-ink-muted">{flag.detail}</p>
+            </div>
+          </li>
+        ))}
+      </ul>
+      {ranges.length > 0 && (
+        <div className="border-t border-line px-5 py-3">
+          <p className="mb-2 flex items-center gap-2 text-sm font-medium text-ink">
+            <SeverityChip severity="concern" label={`${ranges.length}`} /> results outside the reference range{date ? ` on ${formatDate(date)}` : ''}
+          </p>
+          <div className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+            {groups.map(({ area, items }) => (
+              <div key={area}>
+                <p className="eyebrow mb-1">{area} · {items.length}</p>
+                <ul className="space-y-0.5">
+                  {items.map((f) => {
+                    const m = f.title.match(/^(.+?) (high|low) \((.+)\)$/)
+                    return (
+                      <li key={f.title} className="flex items-baseline justify-between gap-2 text-xs">
+                        <span className="truncate text-ink">{m ? m[1] : f.title}</span>
+                        {m && <span className="shrink-0 tabular-nums font-medium text-act-ink">{m[3]} {m[2] === 'high' ? 'H' : 'L'}</span>}
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

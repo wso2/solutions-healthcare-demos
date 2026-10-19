@@ -217,6 +217,7 @@ def usage(assessment=None):
             "allTime": totals(mine),
             "last24h": totals(day),
             "lastHour": totals(hour),
+            "hourly": hourly(day, now),
             "budget": budgets.get(name),
         }
     return {
@@ -229,12 +230,24 @@ def usage(assessment=None):
     }
 
 
+def hourly(runs, now):
+    """Spend and runs per hour over the last 24 hours, oldest first (bucket 23 is the current hour)."""
+    buckets = [{"costUsd": 0.0, "runs": 0, "failed": 0} for _ in range(24)]
+    for r in runs:
+        b = buckets[23 - min(23, int((now - r["startedAt"]) // 3600))]
+        b["costUsd"] = round(b["costUsd"] + (r["costUsd"] or 0), 6)
+        b["runs"] += 1
+        b["failed"] += 0 if r.get("ok", True) else 1
+    return buckets
+
+
 def totals(runs):
     return {
         "runs": len(runs),
         "inputTokens": sum(r["inputTokens"] for r in runs),
         "outputTokens": sum(r["outputTokens"] for r in runs),
         "costUsd": round(sum(r["costUsd"] or 0 for r in runs), 6),
+        "failed": sum(0 if r.get("ok", True) else 1 for r in runs),
     }
 
 

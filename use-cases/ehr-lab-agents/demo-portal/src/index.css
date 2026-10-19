@@ -163,6 +163,9 @@ body {
 .prose-note strong {
   @apply font-semibold;
 }
+.prose-note a {
+  @apply font-medium text-brand-ink underline decoration-brand/40 underline-offset-2 hover:decoration-brand;
+}
 .prose-note table {
   @apply mb-3 w-full text-sm;
 }

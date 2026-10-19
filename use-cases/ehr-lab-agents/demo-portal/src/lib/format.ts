@@ -80,3 +80,15 @@ export function formatTokens(value: number): string {
   if (value < 1_000_000) return `${(value / 1000).toFixed(value < 10_000 ? 1 : 0)}k`
   return `${(value / 1_000_000).toFixed(1)}M`
 }
+
+// Elapsed time at the scale that matters: 256 ms, 2.1 s, 2 min 7 s, 18 h 4 min.
+export function formatDuration(ms: number): string {
+  if (ms < 1000) return `${Math.max(0, Math.round(ms))} ms`
+  if (ms < 59_950) return `${(ms / 1000).toFixed(1)} s`
+  const seconds = Math.round(ms / 1000)
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes} min ${seconds % 60} s`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 48) return `${hours} h ${minutes % 60} min`
+  return `${Math.floor(hours / 24)} d ${hours % 24} h`
+}

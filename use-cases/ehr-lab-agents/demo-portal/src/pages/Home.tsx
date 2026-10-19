@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, Bot, Database, FlaskConical, GitBranch, HeartPulse, LayoutDashboard, Stethoscope } from 'lucide-react'
+import { ArrowRight, Bot, CircleDollarSign, Database, EyeOff, Fingerprint, FileLock2, FlaskConical, Gauge, GitBranch, HeartPulse, LayoutDashboard, ShieldCheck, Stethoscope } from 'lucide-react'
 
 // Landing page: what the demo is, how the pieces connect, and the three ways in.
 
@@ -7,6 +7,16 @@ const entries = [
   { to: '/physician', icon: Stethoscope, title: 'Physician workspace', text: 'Pick Cerner or Athena, open a patient’s summary, explore their records, evaluate them with the Copilot, order labs, review and release.' },
   { to: '/patient', icon: HeartPulse, title: 'Patient app', text: 'Where the patient is told to go to the lab, follows progress, and reads the report once the physician releases it.' },
   { to: '/lab', icon: FlaskConical, title: 'Lab console', text: 'Presenter tool playing the reference lab: collect the specimen, release results, and watch the workflow resume.' },
+  { to: '/agent-manager', icon: ShieldCheck, title: 'Agent Manager', text: 'How the agents are governed: identity and permissions, FHIR de-identification, budgets and cost, guardrails and evaluation.' },
+]
+
+// What WSO2 Agent Manager puts between the agents and everything they touch.
+const controls = [
+  { icon: Fingerprint, label: 'AgentID', sub: 'an identity and roles per agent' },
+  { icon: FileLock2, label: 'MCP proxies', sub: 'role-scoped tools · FHIR de-identified' },
+  { icon: CircleDollarSign, label: 'AI gateway', sub: 'per-agent budgets and cost' },
+  { icon: EyeOff, label: 'PHI guardrail', sub: 'identifiers redacted before Claude' },
+  { icon: Gauge, label: 'Traces & evaluation', sub: 'every run scored' },
 ]
 
 const flow = [
@@ -48,9 +58,25 @@ export function Home() {
             </li>
           ))}
         </ol>
+        <div className="mt-5 rounded-xl border border-ai/25 bg-ai-soft/50 px-4 py-3">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-ai-ink">
+            <ShieldCheck size={14} /> Governed by WSO2 Agent Manager — between the agents and the EHRs, PubMed and Claude
+          </p>
+          <ul className="mt-2.5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            {controls.map(({ icon: Icon, label, sub }) => (
+              <li key={label} className="flex items-start gap-2">
+                <Icon size={16} className="mt-0.5 shrink-0 text-ai-ink" />
+                <span className="min-w-0">
+                  <span className="block text-sm font-medium text-ink">{label}</span>
+                  <span className="block text-xs text-ink-muted">{sub}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {entries.map(({ to, icon: Icon, title, text }) => (
           <Link key={to} to={to} className="card group flex flex-col gap-3 p-5 transition hover:shadow-pop">
             <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-brand-soft text-brand-ink"><Icon size={19} /></span>

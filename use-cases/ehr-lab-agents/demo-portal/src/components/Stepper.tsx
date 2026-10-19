@@ -26,7 +26,7 @@ export function Stepper({ states, selected, onSelect, waitingLabel }: Props) {
         const clickable = state !== 'upcoming'
         const isSelected = selected === step.key
         return (
-          <li key={step.key}>
+          <li key={step.key} className="min-w-0">
             <button
               type="button"
               disabled={!clickable}

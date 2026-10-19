@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { CheckSquare, ChevronDown, FlaskConical, MessageSquare, Send, Sparkles, Square } from 'lucide-react'
 import { api, type Assessment, type CopilotEvaluation, type LabCatalog } from '../lib/api'
 import { formatTime } from '../lib/format'
+import { isCopilotFailure } from '../lib/agentErrors'
+import { AgentFailureNote, AgentReceipt, useAssessmentRuns } from './governance'
 import { AiBadge, Badge, Card, CardHeader, ErrorNote, Markdown, SeverityChip, Spinner, levelSeverity } from './ui'
 
 // The Diagnostic Copilot: a conversation about the records the physician selected, its evaluation and
@@ -15,6 +17,8 @@ export function CopilotPanel({ assessment, catalog, onChanged }: { assessment: A
   const thread = data.copilot?.messages ?? []
   const running = data.copilot?.status === 'running'
   const canOrder = assessment.stage === 'AWAITING_PHYSICIAN' && !!assessment.openTasks.orderLabs
+  const runs = useAssessmentRuns(assessment.id, running || assessment.stage === 'AWAITING_PHYSICIAN')
+  const lastFailure = data.copilot?.status === 'failed' ? [...thread].reverse().find((m) => m.role === 'copilot' && isCopilotFailure(m.text)) : undefined
 
   return (
     <div className="space-y-5">
@@ -32,13 +36,16 @@ export function CopilotPanel({ assessment, catalog, onChanged }: { assessment: A
               The Copilot can also query the EHR itself through the WSO2 FHIR MCP server.
             </p>
           )}
-          {thread.length > 0 && <Thread messages={thread} />}
+          {thread.length > 0 && <Thread messages={lastFailure ? thread.filter((m) => m !== lastFailure) : thread} />}
           {running && (
             <div className="flex items-center gap-2 text-sm text-ai-ink"><Spinner size={15} /> Copilot is reading the records…</div>
           )}
-          {data.copilot?.status === 'failed' && <ErrorNote message="The Copilot could not finish. Try again or ask a narrower question." />}
+          {data.copilot?.status === 'failed' && (lastFailure
+            ? <AgentFailureNote message={lastFailure.text} hint="Select records in the explorer and ask again." />
+            : <ErrorNote message="The Copilot could not finish. Try again or ask a narrower question." />)}
           {evaluation && <FollowUp assessment={assessment} disabled={running} onSent={onChanged} />}
         </div>
+        {thread.length > 0 && <AgentReceipt step="copilot" runs={runs} />}
       </Card>
 
       {evaluation && <EvaluationView evaluation={evaluation} />}
@@ -51,7 +58,14 @@ export function CopilotPanel({ assessment, catalog, onChanged }: { assessment: A
 function Thread({ messages }: { messages: { role: string; text: string; at: string; records?: number }[] }) {
   return (
     <ol className="space-y-3">
-      {messages.map((m, i) => (
+      {messages.map((m, i) => m.role === 'copilot' && isCopilotFailure(m.text) ? (
+        <li key={i} className="flex justify-start">
+          <div className="w-full max-w-[88%]">
+            <p className="mb-1 flex items-center gap-1.5 text-[11px] font-medium text-ink-muted"><Sparkles size={11} className="text-ai" /> Copilot · {formatTime(m.at)}</p>
+            <AgentFailureNote message={m.text} compact />
+          </div>
+        </li>
+      ) : (
         <li key={i} className={`flex ${m.role === 'physician' ? 'justify-end' : 'justify-start'}`}>
           <div className={`max-w-[88%] rounded-2xl px-3.5 py-2.5 text-sm ${m.role === 'physician' ? 'rounded-br-sm bg-brand-soft text-ink' : 'rounded-bl-sm border border-ai/20 bg-ai-soft/60 text-ink'}`}>
             <p className="mb-1 flex items-center gap-1.5 text-[11px] font-medium text-ink-muted">

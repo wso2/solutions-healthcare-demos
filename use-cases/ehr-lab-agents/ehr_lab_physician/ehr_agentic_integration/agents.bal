@@ -1,4 +1,5 @@
 import ballerina/ai;
+import ballerina/http;
 import ballerina/log;
 import ballerinax/ai.memory.postgresql as aimemory;
 
@@ -497,14 +498,42 @@ isolated function withCatalogTestsOnly(CopilotEvaluation evaluation) returns Cop
 isolated function compactAgentError(string agentName, error err) returns error {
     log:printError(string `${agentName} failed`, err);
     string reason = err.message();
+    string? gateway = gatewayReply(err);
     var steps = err.detail()["steps"];
     if steps is (ai:ExecutionResult|ai:ExecutionError|ai:Error)[] && steps.length() > 0 {
         ai:ExecutionResult|ai:ExecutionError|ai:Error last = steps[steps.length() - 1];
         if last is ai:Error {
             reason += ": " + last.message();
+            gateway = gateway ?: gatewayReply(last);
         } else if last is ai:ExecutionError {
             reason += ": " + last.'error.message();
+            gateway = gateway ?: gatewayReply(last.'error);
         }
     }
+    if gateway is string {
+        reason += " · " + gateway;
+    }
     return error(reason.length() > 1000 ? reason.substring(0, 1000) : reason);
+}
+
+# The HTTP reply behind a failed model call, as "AI gateway HTTP 429: <body>", from the error's cause
+# chain. The model provider reports any non-2xx as "Unexpected response format"; the status is what tells
+# a budget refusal (429) from a permission refusal (401/403) or a timeout (503/504), and the portal
+# explains each.
+#
+# + err - an agent or model-provider error
+# + return - the status and the start of the reply body, or () when no HTTP reply is in the chain
+isolated function gatewayReply(error err) returns string? {
+    error? current = err;
+    while current is error {
+        if current is http:ApplicationResponseError {
+            var detail = current.detail();
+            anydata body = detail.body;
+            string text = body is string ? body : body.toString();
+            text = re `\s+`.replaceAll(text, " ").trim();
+            return string `AI gateway HTTP ${detail.statusCode}: ${text.length() > 200 ? text.substring(0, 200) : text}`;
+        }
+        current = current.cause();
+    }
+    return ();
 }

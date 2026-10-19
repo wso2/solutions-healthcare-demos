@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { ChevronRight, ClipboardList, Database, Search, Users } from 'lucide-react'
+import { ChevronRight, ClipboardList, Database, Search, Sparkles, Users } from 'lucide-react'
 import { api, type AssessmentListItem, type PatientCard, type SystemInfo } from '../lib/api'
 import { formatDate, initials, relativeTime, titleCase } from '../lib/format'
 import { WAITING_ON, stagePosition } from '../lib/stages'
@@ -112,7 +112,8 @@ export function PhysicianHome() {
         </ul>
       </Card>
 
-      <Card className="self-start">
+      <div className="min-w-0 space-y-5 self-start">
+      <Card>
         <CardHeader title="Assessments" subtitle="Every longevity assessment, by who it is waiting on" icon={<ClipboardList size={16} />} />
         <div className="flex flex-wrap gap-1 border-b border-line px-4 py-2.5">
           {BOARD_TABS.map((t) => (
@@ -171,6 +172,33 @@ export function PhysicianHome() {
           </div>
         )}
       </Card>
+      <LatestFindings assessments={assessments} />
+      </div>
     </div>
+  )
+}
+
+/** The headline of each released assessment: what the agents found, as the physician released it. */
+function LatestFindings({ assessments }: { assessments?: AssessmentListItem[] }) {
+  const done = (assessments ?? []).filter((a) => a.stage === 'COMPLETED' && a.headline).slice(0, 4)
+  if (done.length === 0) return null
+  return (
+    <Card>
+      <CardHeader title="Latest findings" subtitle="Headlines of released assessments — AI analysis, physician reviewed" icon={<Sparkles size={16} />} />
+      <ul className="divide-y divide-line">
+        {done.map((a) => (
+          <li key={a.id}>
+            <Link to={`/physician/assessments/${a.id}`} className="flex items-start gap-3 px-5 py-3 hover:bg-sunken/60">
+              <Avatar text={initials(a.patientName)} className="h-8 w-8 text-xs" />
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-medium text-ink">{a.patientName} <span className="ml-1 text-xs font-normal text-ink-muted">{relativeTime(a.updatedAt)}</span></p>
+                <p className="mt-0.5 line-clamp-2 text-xs leading-relaxed text-ink-soft">{a.headline}</p>
+              </div>
+              <ChevronRight size={16} className="mt-1 shrink-0 text-ink-muted" />
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </Card>
   )
 }

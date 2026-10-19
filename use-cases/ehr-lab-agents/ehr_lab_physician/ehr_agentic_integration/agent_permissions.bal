@@ -3,6 +3,7 @@
 import ballerina/http;
 import ballerina/mcp;
 import ballerina/time;
+import ballerinax/health.clients.fhir;
 
 // What each agent may do, asked live of WSO2 Agent Manager rather than read from config: the access matrix
 // requests each agent's AgentID token for each permission and shows what the identity provider granted
@@ -240,3 +241,65 @@ isolated function agentToken(ManagedAgentConfig agent, Permission permission) re
 
 isolated function compact(string message) returns string =>
     message.length() > 220 ? message.substring(0, 220) + "…" : message;
+
+type DeidentifySample record {|
+    string ehr;
+    string patientId;
+    # The Patient as the FHIR server returns it.
+    json raw;
+    # The same Patient as the Diagnostic Copilot receives it through Agent Manager's MCP proxy.
+    json governed;
+    boolean allowed;
+    string detail;
+    int durationMs;
+|};
+
+# One Patient read twice: from the EHR's FHIR server directly, and with the FHIR MCP server's `read` tool as
+# the Diagnostic Copilot through Agent Manager's MCP proxy, where `mcp-fhir-deidentify` rewrites the result.
+# The portal puts the two side by side. No model is called.
+#
+# + ehr - the EHR id
+# + patientId - the Patient's id in that EHR
+# + return - both versions, or an error when the EHR, the agent or the proxy is not configured
+isolated function deidentifySample(string ehr, string patientId) returns DeidentifySample|error {
+    ManagedAgent[] copilots = managedAgents.filter(a => a.key == "copilot");
+    Permission[] permissions = PERMISSIONS.filter(p => p.key == "ehr-read-" + ehr);
+    string? proxyUrl = agentManager.mcpProxyUrls[ehr];
+    if copilots.length() == 0 || permissions.length() == 0 || proxyUrl is () || !usesMcpProxy(copilots[0].config) {
+        return error("Agent Manager MCP proxies are not configured (run scripts/amp-setup.sh)");
+    }
+    fhir:FHIRResponse direct = check (check ehrClient(ehr))->getById("Patient", patientId);
+    time:Utc started = time:utcNow();
+    DeidentifySample sample = {ehr, patientId, raw: <json>direct.'resource, governed: (), allowed: false, detail: "",
+        durationMs: 0};
+    AgentToken token = agentToken(copilots[0].config, permissions[0]);
+    if token.accessToken == "" {
+        sample.detail = string `The identity provider issued no token: ${token.'error ?: "no grant"}.`;
+        return sample;
+    }
+    mcp:StreamableHttpClient session = check new (proxyUrl, auth = {token: token.accessToken}, timeout = 30);
+    do {
+        check session->initialize({name: "deidentify-sample", version: "1.0.0"});
+        mcp:CallToolResult result = check session->callTool({name: "read", arguments: {"type": "Patient", "id": patientId}});
+        json content = result.toJson();
+        json[] items = content.content is json[] ? <json[]>(check content.content) : [];
+        foreach json item in items {
+            json text = item is map<json> ? item["text"] : ();
+            if text is string {
+                json|error parsed = text.fromJsonString();
+                sample.governed = parsed is error ? text : parsed;
+                break;
+            }
+        }
+        sample.allowed = !(content.isError is boolean && check content.isError == true);
+        sample.detail = string `read Patient/${patientId} through the ${ehr} MCP proxy as the Diagnostic Copilot.`;
+    } on fail error failure {
+        sample.detail = string `The governed read failed: ${compact(failure.message())}`;
+    }
+    error? closed = session->close();
+    if closed is error {
+        // The session may already be gone; nothing to clean up.
+    }
+    sample.durationMs = <int>(time:utcDiffSeconds(time:utcNow(), started) * 1000);
+    return sample;
+}

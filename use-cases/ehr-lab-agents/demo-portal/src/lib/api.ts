@@ -119,6 +119,14 @@ export interface UsageTotals {
   inputTokens: number
   outputTokens: number
   costUsd: number
+  failed?: number
+}
+
+/** One hour of an agent's spend; `hourly` holds the last 24, oldest first. */
+export interface UsageHour {
+  costUsd: number
+  runs: number
+  failed: number
 }
 
 // What Agent Manager enforces on the agent's model configuration (scripts/amp-budgets.sh).
@@ -133,6 +141,7 @@ export interface AgentUsage {
   allTime: UsageTotals
   last24h: UsageTotals
   lastHour: UsageTotals
+  hourly?: UsageHour[]
   budget?: AgentBudget | null
 }
 
@@ -150,6 +159,17 @@ export interface AssessmentUsage {
   assessmentId: string
   runs: AgentRun[]
   totals: UsageTotals
+}
+
+/** One Patient as the FHIR server returns it and as the Copilot receives it through the FHIR MCP proxy. */
+export interface DeidentifySample {
+  ehr: string
+  patientId: string
+  raw: unknown
+  governed: unknown
+  allowed: boolean
+  detail: string
+  durationMs: number
 }
 
 export interface AgentManagerInfo {
@@ -600,6 +620,7 @@ export const api = {
   agentAccess: () => request<AccessMatrix>('/api/agent-manager/access'),
   probeAccess: (agent: string, permission: string) => post<ProbeResult>('/api/agent-manager/probes', { agent, permission }),
   usage: () => request<UsageSummary>('/api/agent-manager/usage'),
+  deidentifySample: (ehr: string, patientId: string) => post<DeidentifySample>('/api/agent-manager/deidentify-samples', { ehr, patientId }),
   assessmentUsage: (id: string) => request<AssessmentUsage>(`/api/agent-manager/usage?assessment=${encodeURIComponent(id)}`),
 
   labOrders: () => request<LabOrder[]>('/lab-api/orders'),

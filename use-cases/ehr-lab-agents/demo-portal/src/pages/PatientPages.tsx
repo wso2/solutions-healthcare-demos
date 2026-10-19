@@ -116,7 +116,7 @@ function JourneyView({ journey }: { journey: PatientJourney }) {
               </ul>
             </Block>
             <Block title="Tests ordered">
-              <div className="flex flex-wrap gap-1.5">{a.tests.map((t) => <Badge key={t.code}>{t.name}</Badge>)}</div>
+              <div className="flex flex-wrap gap-1.5">{a.tests.map((t) => <Badge key={t.code} className="!whitespace-normal">{t.name}</Badge>)}</div>
             </Block>
             {a.orderNumber && (
               <div className="rounded-xl border border-dashed border-line px-4 py-3 text-center">
@@ -125,6 +125,12 @@ function JourneyView({ journey }: { journey: PatientJourney }) {
               </div>
             )}
           </div>
+        </section>
+      )}
+      {a.step === 'consultation' && (
+        <section className="card px-5 py-5 text-sm text-ink-soft">
+          <p className="flex items-center gap-2 font-medium text-ink"><Stethoscope size={16} className="text-brand" /> What happens next</p>
+          <p className="mt-1">Dr. Park is going through your health record and may order blood tests. If you need to visit the lab, you'll see where to go and how to prepare right here.</p>
         </section>
       )}
       {a.step === 'processing' && (

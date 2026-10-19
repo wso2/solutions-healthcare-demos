@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
-  BarChart3, Bell, CheckCircle2, ClipboardCheck, ExternalLink, FileSignature, FlaskConical, Send, Target, TestTube2, TriangleAlert, UserRound,
+  BarChart3, Bell, BookOpen, CheckCircle2, ClipboardCheck, ExternalLink, FileSignature, FlaskConical, GitBranch, Send, Siren, Target, TestTube2,
+  TriangleAlert, UserRound,
 } from 'lucide-react'
-import { api, type Assessment, type BiomarkerInsight, type BiomarkerPoint, type LabCatalog, type LabResultValue } from '../lib/api'
+import { api, type AgentRun, type Assessment, type BiomarkerInsight, type BiomarkerPoint, type LabCatalog, type LabResultValue } from '../lib/api'
 import { formatDate, formatNumber, formatRange, formatTime } from '../lib/format'
 import { BiomarkerChart } from './BiomarkerChart'
+import { AgentFailureNote, AgentReceipt, useAssessmentRuns } from './governance'
 import { AiBadge, Badge, Card, CardHeader, ErrorNote, Markdown, SeverityChip, Spinner, TrendIcon, Working, levelSeverity, type Severity } from './ui'
 
 // The journey after the order: the patient's lab visit, lab processing, the unattended AI analysis,
@@ -40,7 +42,7 @@ export function OrderStatusPanel({ assessment, catalog }: { assessment: Assessme
           ))}
         </ol>
         <div className="flex flex-wrap gap-1.5 border-t border-line px-5 py-3">
-          {order.tests.map((code) => <Badge key={code}>{testName(catalog, code)}</Badge>)}
+          {order.tests.map((code) => <Badge key={code} className="!whitespace-normal">{testName(catalog, code)}</Badge>)}
         </div>
       </Card>
 
@@ -79,21 +81,34 @@ export function ReviewPanel({ assessment, catalog, onChanged }: { assessment: As
   const { stage, data } = assessment
   const analysis = data.analysis
   const plan = data.carePlan
+  const agentsActive = stage === 'ANALYZING_RESULTS' || stage === 'GENERATING_CARE_PLAN' || stage === 'AWAITING_REVIEW'
+  const runs = useAssessmentRuns(assessment.id, agentsActive)
+  // An agent step that ran out of retries waits for operations; say so here, not only on the Workflow tab.
+  const review = Object.keys(assessment.openReviews ?? {}).length > 0
+  const agentError = review ? [...assessment.timeline].reverse().find((e) => e.actor === 'agent' && e.status === 'error') : undefined
   return (
     <div className="space-y-5">
-      {!analysis && <Working title="Results Analysis is comparing the results with the EHR history" detail="Results are filed in the EHR first. The Care Plan agent runs straight after — no clicks needed." />}
-      {analysis && !plan && <Working title="Care Plan agent is drafting the chart note and the patient report" detail="Then the draft note is filed in the EHR as preliminary and the workflow waits for your review." />}
+      {review && (
+        <div className="space-y-2">
+          <AgentFailureNote message={agentError?.detail ?? agentError?.title ?? 'An AI agent could not complete its step.'}
+            hint="The workflow has paused for operations to retry or stop it." />
+          <Link to="?view=workflow" className="btn-secondary py-1.5 text-xs"><GitBranch size={14} /> Retry or stop on the Workflow tab</Link>
+        </div>
+      )}
+      {!analysis && !review && <Working title="Results Analysis is comparing the results with the EHR history" detail="Results are filed in the EHR first. The Care Plan agent runs straight after — no clicks needed." />}
+      {analysis && !plan && !review && <Working title="Care Plan agent is drafting the chart note and the patient report" detail="Then the draft note is filed in the EHR as preliminary and the workflow waits for your review." />}
       {stage === 'AWAITING_REVIEW' && plan && assessment.openTasks.reviewAndRelease && <ReleaseForm assessment={assessment} onChanged={onChanged} />}
       {analysis && (
         <Card>
           <CardHeader title="Results analysis" icon={<BarChart3 size={16} />} action={<AiBadge label={stage === 'COMPLETED' ? 'AI draft · physician released' : undefined} />} />
           <div className="space-y-4 px-5 py-4">
             <p className="text-base font-semibold leading-snug text-ink">{analysis.headline}</p>
-            <Markdown>{analysis.updatedSummary}</Markdown>
+            <AnalysisSummary text={analysis.updatedSummary} />
           </div>
+          <AgentReceipt step="analysis" runs={runs} />
         </Card>
       )}
-      <div className="grid gap-5 xl:grid-cols-5">
+      <div className="grid gap-5 [&>*]:min-w-0 xl:grid-cols-5">
         <div className="space-y-5 xl:col-span-3">
           {data.labResults && <ResultsTable results={data.labResults.results} insights={analysis?.biomarkerInsights} issued={data.labResults.issued} />}
           <KeyTrends assessment={assessment} />
@@ -128,7 +143,55 @@ export function ReviewPanel({ assessment, catalog, onChanged }: { assessment: As
           )}
         </div>
       </div>
-      {plan && <CarePlanDraft assessment={assessment} catalog={catalog} />}
+      {plan && <CarePlanDraft assessment={assessment} catalog={catalog} runs={runs} />}
+    </div>
+  )
+}
+
+const PMID = /\[?PMID:?\s*(\d{5,9})\]?/g
+
+/** PubMed ids the agents cite, as links (the agents find them with the PubMed MCP server). */
+function linkCitations(text: string): string {
+  return text.replace(PMID, (_m, id: string) => `[PMID ${id}](https://pubmed.ncbi.nlm.nih.gov/${id}/)`)
+}
+
+/**
+ * The analysis as sections: the agent writes paragraphs that open with a bold label ("**Most urgent — …:**").
+ * The most urgent one becomes a callout, the rest a grid; anything else stays as written.
+ */
+function AnalysisSummary({ text }: { text: string }) {
+  const paragraphs = text.split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean)
+  const sections = paragraphs.map((p) => {
+    const m = p.match(/^\*\*(.+?)\*\*\s*[:—–-]?\s*([\s\S]*)$/)
+    return m ? { title: m[1].replace(/[:\s]+$/, ''), body: m[2] } : { title: '', body: p }
+  })
+  const citations = (text.match(PMID) ?? []).length
+  if (sections.filter((s) => s.title).length < 2) {
+    return <Markdown>{linkCitations(text)}</Markdown>
+  }
+  const urgent = sections.find((s) => /urgent/i.test(s.title))
+  const rest = sections.filter((s) => s !== urgent)
+  return (
+    <div className="space-y-3">
+      {urgent && (
+        <div className="rounded-lg border border-act/25 bg-act-soft/60 px-4 py-3">
+          <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-act-ink"><Siren size={13} /> {urgent.title}</p>
+          <Markdown>{linkCitations(urgent.body)}</Markdown>
+        </div>
+      )}
+      <div className="grid gap-3 md:grid-cols-2">
+        {rest.map((s, i) => (
+          <div key={s.title + i} className={`rounded-lg border border-line px-4 py-3 ${s.title ? '' : 'md:col-span-2'}`}>
+            {s.title && <p className="eyebrow mb-1">{s.title}</p>}
+            <Markdown>{linkCitations(s.body)}</Markdown>
+          </div>
+        ))}
+      </div>
+      {citations > 0 && (
+        <p className="flex items-center gap-1.5 text-[11px] text-ink-muted">
+          <BookOpen size={12} /> {citations} PubMed citation{citations === 1 ? '' : 's'}, found by the agent with the PubMed MCP server
+        </p>
+      )}
     </div>
   )
 }
@@ -170,11 +233,11 @@ function ReleaseForm({ assessment, onChanged }: { assessment: Assessment; onChan
   )
 }
 
-function CarePlanDraft({ assessment, catalog }: { assessment: Assessment; catalog?: LabCatalog }) {
+function CarePlanDraft({ assessment, catalog, runs }: { assessment: Assessment; catalog?: LabCatalog; runs: AgentRun[] }) {
   const plan = assessment.data.carePlan!
   const released = assessment.stage === 'COMPLETED'
   return (
-    <div className="grid gap-5 xl:grid-cols-2">
+    <div className="grid gap-5 [&>*]:min-w-0 xl:grid-cols-2">
       <Card>
         <CardHeader
           title={released ? 'Chart note (final)' : 'Chart note (draft)'}
@@ -182,7 +245,8 @@ function CarePlanDraft({ assessment, catalog }: { assessment: Assessment; catalo
           icon={<ClipboardCheck size={16} />}
           action={<AiBadge label={released ? 'AI draft · physician released' : undefined} />}
         />
-        <div className="max-h-[520px] overflow-y-auto px-5 py-4"><Markdown>{plan.physicianNote}</Markdown></div>
+        <div className="max-h-[520px] overflow-y-auto px-5 py-4"><Markdown>{linkCitations(plan.physicianNote)}</Markdown></div>
+        <AgentReceipt step="care-plan" runs={runs} />
       </Card>
       <div className="space-y-5">
         <Card>
@@ -197,7 +261,7 @@ function CarePlanDraft({ assessment, catalog }: { assessment: Assessment; catalo
           </ul>
           {plan.followUpLabs.length > 0 && (
             <div className="flex flex-wrap gap-1.5 border-t border-line px-5 py-3">
-              {plan.followUpLabs.map((f) => <Badge key={f.testCode}>{testName(catalog, f.testCode)} · {f.timing}</Badge>)}
+              {plan.followUpLabs.map((f) => <Badge key={f.testCode} className="!whitespace-normal">{testName(catalog, f.testCode)} · {f.timing}</Badge>)}
             </div>
           )}
         </Card>
@@ -231,7 +295,7 @@ export function ConclusionPanel({ assessment, catalog }: { assessment: Assessmen
     <div className="space-y-5">
       <Card className="border-good/30">
         <div className="flex flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-start gap-3">
+          <div className="flex min-w-0 items-start gap-3">
             <CheckCircle2 size={22} className="mt-0.5 shrink-0 text-good" />
             <div>
               <p className="font-semibold text-ink">Released to the patient</p>
@@ -273,7 +337,7 @@ function ResultsTable({ results, insights, issued }: { results: LabResultValue[]
                 <tr key={r.code} className="border-b border-line align-top last:border-0">
                   <td className="px-5 py-2.5">
                     <p className="font-medium text-ink">{r.name}</p>
-                    {insight && <p className="mt-0.5 line-clamp-3 max-w-md text-xs leading-snug text-ink-muted" title={insight.interpretation}>{insight.interpretation}</p>}
+                    {insight && <Interpretation text={insight.interpretation} />}
                   </td>
                   <td className="whitespace-nowrap px-3 py-2.5 text-right tabular-nums">
                     <span className={`font-semibold ${flagged ? 'text-act-ink' : 'text-ink'}`}>{formatNumber(r.value)}</span>
@@ -296,6 +360,17 @@ function ResultsTable({ results, insights, issued }: { results: LabResultValue[]
         </table>
       </div>
     </Card>
+  )
+}
+
+/** The agent's reading of one result: three lines, the rest on click. */
+function Interpretation({ text }: { text: string }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <button type="button" onClick={() => setOpen(!open)} aria-expanded={open}
+      className={`mt-0.5 block max-w-md text-left text-xs leading-snug text-ink-muted hover:text-ink-soft ${open ? '' : 'line-clamp-3'}`}>
+      {text}
+    </button>
   )
 }
 

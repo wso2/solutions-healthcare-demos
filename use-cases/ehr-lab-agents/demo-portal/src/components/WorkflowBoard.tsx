@@ -1,25 +1,20 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
-  AlertOctagon, Bot, Check, Clock, Cog, ExternalLink, FlaskConical, Hand, History, RotateCcw, Square, Stethoscope, User, Wrench, Zap,
+  AlertOctagon, BarChartHorizontal, Bot, Check, CheckCircle2, Clock, Cog, Columns3, ExternalLink, Hand, History, RotateCcw, Square, Wrench, Zap,
   type LucideIcon,
 } from 'lucide-react'
 import { api, type AgentRun, type AssessmentUsage, type WorkflowStep, type WorkflowView } from '../lib/api'
-import { formatTime, formatTokens, formatUsd, parseTimestamp } from '../lib/format'
+import { classifyAgentFailure } from '../lib/agentErrors'
+import { formatDuration, formatTime, formatTokens, formatUsd, parseTimestamp } from '../lib/format'
+import { LANES, STEP_OF_RUN, laneOf } from '../lib/lanes'
 import { usePolling } from '../lib/usePolling'
 import { Badge, Card, CardHeader, ErrorNote, Spinner } from './ui'
 import { SimulatePanel } from './SimulatePanel'
 import { AgentManagerPanel } from './AgentManagerPanel'
+import { WorkflowTimeline, useNow } from './WorkflowTimeline'
 
 // The workflow made visible: the assessment's Temporal workflow as swimlanes, one per actor, read live
 // from ballerina/workflow's management API (activity tree, human tasks, reviews).
-
-const LANES: { key: string; label: string; icon: LucideIcon; color: string }[] = [
-  { key: 'physician', label: 'Physician', icon: Stethoscope, color: 'rgb(var(--physician))' },
-  { key: 'patient', label: 'Patient', icon: User, color: 'rgb(var(--ink-soft))' },
-  { key: 'lab', label: 'Lab', icon: FlaskConical, color: 'rgb(var(--lab))' },
-  { key: 'system', label: 'Integration', icon: Cog, color: 'rgb(var(--ehr))' },
-  { key: 'ai', label: 'AI agents', icon: Bot, color: 'rgb(var(--ai))' },
-]
 
 const KIND_LABEL: Record<WorkflowStep['kind'], string> = {
   activity: 'Activity',
@@ -29,17 +24,27 @@ const KIND_LABEL: Record<WorkflowStep['kind'], string> = {
   review: 'Review',
 }
 
-function laneOf(step: WorkflowStep): string {
-  if (step.actor === 'operations') return 'system'
-  return LANES.some((l) => l.key === step.actor) ? step.actor : 'system'
-}
+type Mode = 'timeline' | 'lanes'
 
-// The workflow step each agent run belongs to (the Copilot runs inside the physician's ordering task).
-const STEP_OF_RUN: Record<string, string> = { copilot: 'orderLabs', analysis: 'analyseResults', 'care-plan': 'writeCarePlan' }
+function savedMode(): Mode {
+  try {
+    return localStorage.getItem('workflow-view') === 'lanes' ? 'lanes' : 'timeline'
+  } catch {
+    return 'timeline'
+  }
+}
 
 export function WorkflowBoard({ assessmentId }: { assessmentId: string }) {
   const { data: view, error, refresh } = usePolling(() => api.workflow(assessmentId), 2000, true, [assessmentId])
   const { data: usage } = usePolling(() => api.assessmentUsage(assessmentId).catch(() => undefined), 5000, true, [assessmentId])
+  const [mode, setMode] = useState<Mode>(savedMode)
+  useEffect(() => {
+    try {
+      localStorage.setItem('workflow-view', mode)
+    } catch {
+      /* storage unavailable */
+    }
+  }, [mode])
   if (error && !view) return <ErrorNote message={`Workflow engine unreachable: ${error}`} />
   if (!view) return <div className="flex justify-center py-20 text-ink-muted"><Spinner size={22} /></div>
 
@@ -51,16 +56,17 @@ export function WorkflowBoard({ assessmentId }: { assessmentId: string }) {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-4">
             <div>
               <h2 className="text-sm font-semibold text-ink">Temporal workflow <span className="font-mono text-xs text-ink-muted">longevityAssessment · {view.workflowId}</span></h2>
-              <p className="mt-0.5 text-xs text-ink-muted">
-                {view.status === 'RUNNING' && current ? currentText(current) : view.status === 'COMPLETED' ? 'Completed — every step recorded in Temporal' : view.status}
-              </p>
               {usage && usage.totals.runs > 0 && (
                 <p className="mt-0.5 text-xs text-ink-soft" title="Tokens from the agents' model calls, priced with Agent Manager's AI gateway price list">
                   AI so far: <strong className="font-medium text-ink">{formatUsd(usage.totals.costUsd)}</strong> · {formatTokens(usage.totals.inputTokens + usage.totals.outputTokens)} tokens · {usage.totals.runs} agent run{usage.totals.runs === 1 ? '' : 's'}
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="flex rounded-lg border border-line bg-sunken p-0.5" role="tablist" aria-label="Workflow view">
+                <ModeTab active={mode === 'timeline'} onClick={() => setMode('timeline')} icon={<BarChartHorizontal size={13} />}>Timeline</ModeTab>
+                <ModeTab active={mode === 'lanes'} onClick={() => setMode('lanes')} icon={<Columns3 size={13} />}>Swimlanes</ModeTab>
+              </div>
               <Badge tone={view.status === 'COMPLETED' ? 'good' : view.status === 'RUNNING' ? 'brand' : 'act'}>
                 {view.status === 'RUNNING' && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-brand" />}
                 {view.status}
@@ -68,8 +74,20 @@ export function WorkflowBoard({ assessmentId }: { assessmentId: string }) {
               <a className="btn-secondary py-1.5 text-xs" href={view.temporalUrl} target="_blank" rel="noreferrer">Temporal UI <ExternalLink size={12} /></a>
             </div>
           </div>
-          <Legend />
-          <Swimlanes view={view} assessmentId={assessmentId} onChanged={refresh} usage={usage} />
+          <NowBanner view={view} current={current} />
+          {mode === 'timeline' ? (
+            <>
+              <WorkflowTimeline view={view} runs={usage?.runs ?? []} />
+              {current?.state === 'attention' && current.taskId && (
+                <div className="border-t border-line px-5 py-3"><StepCard step={current} assessmentId={assessmentId} onChanged={refresh} runs={[]} /></div>
+              )}
+            </>
+          ) : (
+            <>
+              <Legend />
+              <Swimlanes view={view} assessmentId={assessmentId} onChanged={refresh} usage={usage} />
+            </>
+          )}
         </Card>
       </div>
       <aside className="space-y-4">
@@ -77,6 +95,53 @@ export function WorkflowBoard({ assessmentId }: { assessmentId: string }) {
         <AgentManagerPanel />
         <HistoryFeed view={view} />
       </aside>
+    </div>
+  )
+}
+
+function ModeTab({ active, onClick, icon, children }: { active: boolean; onClick: () => void; icon: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <button type="button" role="tab" aria-selected={active} onClick={onClick}
+      className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold transition ${active ? 'bg-surface text-ink shadow-card' : 'text-ink-soft hover:text-ink'}`}>
+      {icon} {children}
+    </button>
+  )
+}
+
+/** Where the workflow is right now, in one line a presenter can point at, with a live clock. */
+function NowBanner({ view, current }: { view: WorkflowView; current?: WorkflowStep }) {
+  const live = view.status === 'RUNNING' && !!current
+  const now = useNow(live)
+  if (view.status === 'COMPLETED') {
+    const first = view.steps.find((s) => s.startedAt)?.startedAt
+    const last = [...view.steps].reverse().find((s) => s.endedAt)?.endedAt
+    const took = first && last ? formatDuration(parseTimestamp(last).getTime() - parseTimestamp(first).getTime()) : undefined
+    return (
+      <div className="flex items-center gap-3 border-b border-line bg-good-soft/50 px-5 py-3">
+        <CheckCircle2 size={20} className="shrink-0 text-good-ink" />
+        <p className="text-sm font-medium text-ink">Completed{took ? ` in ${took}` : ''} — every step recorded in Temporal</p>
+      </div>
+    )
+  }
+  if (!live || !current) {
+    return <div className="border-b border-line px-5 py-3 text-sm text-ink-soft">{view.status}</div>
+  }
+  const since = current.startedAt ? formatDuration(now - parseTimestamp(current.startedAt).getTime()) : undefined
+  const tone = current.state === 'attention' ? 'bg-act-soft text-act-ink' : current.state === 'waiting' || current.state === 'retrying' ? 'bg-watch-soft/70 text-watch-ink' : 'bg-ai-soft/60 text-ai-ink'
+  const failure = current.kind === 'agent' && current.failure ? classifyAgentFailure(current.failure) : undefined
+  return (
+    <div className={`flex items-start gap-3 border-b border-line px-5 py-3 ${tone}`}>
+      <span className="mt-0.5"><StateIcon step={current} /></span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-semibold">
+          <span className="mr-1.5 rounded bg-surface/70 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider">Now</span>
+          {currentText(current)}
+        </p>
+        <p className="mt-0.5 text-xs text-ink-soft">
+          {since && <>for {since} · </>}{LANES.find((l) => l.key === laneOf(current))?.label}
+          {failure && <> · {failure.title}</>}
+        </p>
+      </div>
     </div>
   )
 }
@@ -170,7 +235,9 @@ function StepCard({ step, assessmentId, onChanged, runs }: { step: WorkflowStep;
       </div>
       {step.detail && step.state !== 'pending' && <p className="mt-1 text-[11px] leading-snug text-ink-soft">{step.detail}</p>}
       {step.failure && (step.state === 'retrying' || step.state === 'attention' || step.state === 'failed' || step.attempts > 1) && (
-        <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-act-ink" title={step.failure}>{step.failure}</p>
+        <p className="mt-1 line-clamp-2 text-[11px] leading-snug text-act-ink" title={step.failure}>
+          {step.kind === 'agent' ? classifyAgentFailure(step.failure).title : step.failure}
+        </p>
       )}
       {runs.length > 0 && <RunUsage runs={runs} />}
       {step.state === 'attention' && step.taskId && <ReviewActions assessmentId={assessmentId} taskId={step.taskId} onChanged={onChanged} />}

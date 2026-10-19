@@ -333,11 +333,15 @@ are available. An LLM-judge evaluator is a prompt template with `{trace.output}`
 
 ## 6. A ten-minute demo
 
+The portal's **Demo guide** (bottom right) walks through these steps and ticks them off from what the workflow
+reaches.
+
 1. **Identity** (portal → Agent Manager): three AgentIDs, their roles, and the live permission matrix. Try
    *Read the Cerner EHR* as the Copilot (allowed), then as the Care Plan agent (refused by Agent Manager).
    Assign `ehr-reader` to Care Plan in the console, Re-check, Try again: allowed.
-2. **FHIR de-identification** (console → MCP proxies → fhir-cerner → policies: `mcp-fhir-deidentify`). Show
-   the table on the Agent Manager page; for proof, `./scripts/amp-setup.sh --no-fhir-policy` and back.
+2. **FHIR de-identification** (console → MCP proxies → fhir-cerner → policies: `mcp-fhir-deidentify`). On the
+   Agent Manager page, **Try it live** reads one Patient from the FHIR server and, as the Copilot, through the MCP
+   proxy, and puts the two side by side (an MCP call; no model is involved); for proof, `./scripts/amp-setup.sh --no-fhir-policy` and back.
 3. **Run an assessment** (Physician → Sofia Alvarez → AI overview & evaluation), then follow it on the
    **Workflow** tab: every stage live from Temporal, with tokens and cost on the AI steps and the assessment's
    AI total in the header. The Copilot reads the EHR through the FHIR MCP proxy and cites PubMed.
