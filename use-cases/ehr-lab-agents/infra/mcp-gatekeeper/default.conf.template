@@ -6,8 +6,8 @@
 # scripts/amp-setup.sh into the proxy's upstream auth). Per-agent, per-tool authorization happens in
 # Agent Manager, before a request ever reaches the tunnel.
 #
-#   /cerner/mcp/  →  fhir-mcp-cerner:8000/mcp/
-#   /athena/mcp/  →  fhir-mcp-athena:8000/mcp/
+#   /ehr/mcp/     →  fhir-mcp-ehr:8000/mcp/
+#   /lab/mcp/     →  fhir-mcp-lab:8000/mcp/
 #   /pubmed/mcp   →  pubmed-mcp:8000/mcp
 
 # The key is 64 hex characters, longer than nginx's default map bucket (64 bytes with overhead).
@@ -32,14 +32,14 @@ server {
     proxy_set_header Host $proxy_host;
     proxy_set_header X-Tunnel-Key "";
 
-    location /cerner/ {
+    location /ehr/ {
         if ($tunnel_key_ok = 0) { return 401; }
-        proxy_pass http://fhir-mcp-cerner:8000/;
+        proxy_pass http://fhir-mcp-ehr:8000/;
     }
 
-    location /athena/ {
+    location /lab/ {
         if ($tunnel_key_ok = 0) { return 401; }
-        proxy_pass http://fhir-mcp-athena:8000/;
+        proxy_pass http://fhir-mcp-lab:8000/;
     }
 
     location /pubmed/ {

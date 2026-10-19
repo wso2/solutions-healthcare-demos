@@ -2,9 +2,9 @@
 
     python3 transform.py --synthea seed/synthea/.cache --out seed
 
-For each EHR (Cerner, Athena) it writes seed/<ehr>/00-directory.json (organizations, locations,
-practitioners) and one transaction bundle per patient. Every entry is a PUT with a fixed id, so
-loading is idempotent.
+It writes the clinic's EHR: seed/ehr/00-directory.json (organizations, locations, practitioners) and one
+transaction bundle per patient. Every entry is a PUT with a fixed id, so loading is idempotent. The patients
+come from two Synthea runs (two towns, see generate.sh), so the population is varied.
 
 What it does to Synthea's output, and why:
   - keeps the clinical record (patients, encounters, conditions, observations, lab reports, medications,
@@ -17,7 +17,7 @@ What it does to Synthea's output, and why:
   - resolves Synthea's conditional references (Practitioner?identifier=...) and urn:uuid references to
     plain Type/id references, so any FHIR server can load the bundles
   - adds typical adult reference ranges and H/L flags to common lab results (Synthea leaves them out)
-  - picks the patients: the personas from storyline.py plus a few others per EHR, so patient search
+  - picks the patients: the personas from storyline.py plus a few others per Synthea run, so patient search
     looks like a real clinic
   - overlays the personas' storyline (see storyline.py)
 """
@@ -48,18 +48,14 @@ UCUM = "http://unitsofmeasure.org"
 OBS_CAT = "http://terminology.hl7.org/CodeSystem/observation-category"
 INTERP = "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation"
 
-# Background patients' MRNs start well away from the personas' (MRN-100234…, ATH-40912…).
-EHRS = {
-    "cerner": {
-        "display": "Oracle Health (Cerner)",
-        "mrn_system": "urn:oid:2.16.840.1.113883.3.787.0.0",
-        "mrn_prefix": "MRN-20",
-    },
-    "athena": {
-        "display": "athenahealth",
-        "mrn_system": "urn:demo:athenahealth:mrn",
-        "mrn_prefix": "ATH-6",
-    },
+# The clinic's EHR: one MRN system for every patient.
+EHR_MRN_SYSTEM = "urn:demo:longview-clinic:mrn"
+
+# The Synthea runs the patients come from (generate.sh writes .cache/out-<run>/). Background patients' MRNs
+# start well away from the personas' (MRN-100234…, MRN-140912…), and each run has its own range.
+SOURCES = {
+    "boston": {"mrn_prefix": "MRN-20"},
+    "worcester": {"mrn_prefix": "MRN-26"},
 }
 
 CLINIC_ORG = {
@@ -437,7 +433,7 @@ def persona_keeps(r, dropped_condition_refs):
     return True
 
 
-def curated_resources(persona, ehr):
+def curated_resources(persona):
     """The storyline's resources: anchor visits with their labs, vitals and notes; problems,
     medications, allergies and family history."""
     pid = persona["id"]
@@ -598,8 +594,7 @@ def curated_resources(persona, ehr):
 
 # ── Per-patient build ───────────────────────────────────────────────────────────────────────────
 
-def build_patient(p, ehr_key, persona, mrn, directory_index):
-    ehr = EHRS[ehr_key]
+def build_patient(p, persona, mrn, directory_index):
     synthea_pid = p["id"]
     new_pid = persona["id"] if persona else synthea_pid
     female = (persona["gender"] if persona else p["patient"]["gender"]) == "female"
@@ -633,7 +628,7 @@ def build_patient(p, ehr_key, persona, mrn, directory_index):
     patient["id"] = new_pid
     mr = {"use": "usual", "type": {"coding": [{"system": "http://terminology.hl7.org/CodeSystem/v2-0203", "code": "MR",
                                                "display": "Medical record number"}]},
-          "system": ehr["mrn_system"], "value": mrn}
+          "system": EHR_MRN_SYSTEM, "value": mrn}
     patient["identifier"] = [mr] + [i for i in patient.get("identifier", []) if first_code(i.get("type"))[0] != "MR"]
 
     if persona:
@@ -659,7 +654,7 @@ def build_patient(p, ehr_key, persona, mrn, directory_index):
                 if not r["reasonCode"]:
                     del r["reasonCode"]
             overlaid.append(r)
-        resources = overlaid + curated_resources(persona, ehr_key)
+        resources = overlaid + curated_resources(persona)
 
     for r in resources:
         if r["resourceType"] == "Observation":
@@ -703,34 +698,40 @@ def slug_of(patient):
     return re.sub(r"[^a-z0-9]+", "-", f"{given} {name.get('family', '')}".lower()).strip("-")
 
 
-def build_ehr(ehr_key, synthea_dir, out_dir):
-    ehr = EHRS[ehr_key]
-    index, directory = load_directory(synthea_dir)
+def choose_patients(source_key, synthea_dir):
+    """One Synthea run's patients for the seed: its personas, then a few background patients."""
+    source = SOURCES[source_key]
     patients = load_patients(synthea_dir)
-    personas = [p for p in story.PERSONAS if p["ehr"] == ehr_key]
-
     chosen = []   # (synthea patient, persona or None, MRN)
-    for persona in personas:
+    for persona in [p for p in story.PERSONAS if p["source"] == source_key]:
         base = [p for p in patients if p["id"].startswith(persona["synthea_base"])]
         if len(base) != 1:
-            sys.exit(f"{ehr_key}: Synthea base {persona['synthea_base']} for {persona['id']} not found. "
+            sys.exit(f"{source_key}: Synthea base {persona['synthea_base']} for {persona['id']} not found. "
                      f"Was the population regenerated with a different version or seed? Pick a new base in storyline.py.")
         chosen.append((base[0], persona, persona["mrn"]))
     persona_ids = {c[0]["id"] for c in chosen}
     background = [p for p in patients if p["id"] not in persona_ids
                   and not unsuitable_background(p)][:BACKGROUND_PATIENTS]
     for i, p in enumerate(background):
-        chosen.append((p, None, f"{ehr['mrn_prefix']}{1300 + i * 37:04d}"))
+        chosen.append((p, None, f"{source['mrn_prefix']}{1300 + i * 37:04d}"))
+    return chosen
 
+
+def build_ehr(synthea_root, out_dir):
+    """The EHR's seed: every Synthea run's patients in one directory, sharing one MRN system."""
     os.makedirs(out_dir, exist_ok=True)
     for old in glob.glob(os.path.join(out_dir, "*.json")):
         os.remove(old)
 
-    patient_bundles, used_directory = [], set()
-    for p, persona, mrn in chosen:
-        resources = build_patient(p, ehr_key, persona, mrn, index)
-        used_directory |= referenced_directory(resources, directory)
-        patient_bundles.append((resources, persona))
+    patient_bundles, directory, used_directory = [], {}, set()
+    for source_key in SOURCES:
+        synthea_dir = os.path.join(synthea_root, f"out-{source_key}")
+        index, source_directory = load_directory(synthea_dir)
+        directory.update(source_directory)
+        for p, persona, mrn in choose_patients(source_key, synthea_dir):
+            resources = build_patient(p, persona, mrn, index)
+            used_directory |= referenced_directory(resources, source_directory)
+            patient_bundles.append((resources, persona))
 
     directory_resources = [CLINIC_ORG, LAB_ORG, PHYSICIAN] + [directory[k] for k in sorted(used_directory)]
     write(os.path.join(out_dir, "00-directory.json"), bundle(directory_resources))
@@ -740,7 +741,7 @@ def build_ehr(ehr_key, synthea_dir, out_dir):
         name = f"{i:02d}-{slug_of(patient)}.json"
         write(os.path.join(out_dir, name), bundle(resources))
         summary.append((name, len(resources), "persona" if persona else "synthea"))
-    print(f"{ehr['display']}: {len(directory_resources)} directory entries")
+    print(f"EHR: {len(directory_resources)} directory entries")
     for name, count, kind in summary:
         print(f"  {name:36} {count:5} resources  ({kind})")
 
@@ -752,11 +753,10 @@ def write(path, data):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    parser.add_argument("--synthea", required=True, help="directory holding out-cerner/ and out-athena/")
-    parser.add_argument("--out", required=True, help="seed directory to write cerner/ and athena/ into")
+    parser.add_argument("--synthea", required=True, help="directory holding the Synthea runs (out-<run>/)")
+    parser.add_argument("--out", required=True, help="seed directory to write ehr/ into")
     args = parser.parse_args()
-    for ehr_key in EHRS:
-        build_ehr(ehr_key, os.path.join(args.synthea, f"out-{ehr_key}"), os.path.join(args.out, ehr_key))
+    build_ehr(args.synthea, os.path.join(args.out, "ehr"))
 
 
 if __name__ == "__main__":

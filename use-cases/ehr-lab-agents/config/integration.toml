@@ -1,7 +1,7 @@
 # Integration settings for the docker compose network. Secrets live in ../secrets.toml.
 #
-# Each EHR is reached through Toxiproxy (toxiproxy:<port>), which forwards to its FHIR server. That is
-# what lets the presenter's outage switches cut the network for real.
+# The EHR is reached through Toxiproxy (toxiproxy:8081), which forwards to its FHIR server. That is what
+# lets the presenter's outage switch cut the network for real.
 
 labFhirBaseUrl = "http://fhir-lab:9090/fhir/r4"
 labDisplayName = "Quest Diagnostics"
@@ -35,23 +35,17 @@ labWebhookProxy = "lab-webhook"
 # MCP proxy with their AgentID instead.
 pubmedMcpUrl = "http://pubmed-mcp:8000/mcp"
 
-[[ehrSystems]]
-id = "cerner"
-displayName = "Oracle Health (Cerner)"
-vendor = "cerner"
-fhirBaseUrl = "http://toxiproxy:8081/fhir/r4"
-mcpServerUrl = "http://fhir-mcp-cerner:8000/mcp/"
-mrnSystem = "urn:oid:2.16.840.1.113883.3.787.0.0"
-outageProxy = "cerner"
+# The lab's FHIR server as MCP tools for the results agent (under Agent Manager, through its MCP proxy).
+labMcpServerUrl = "http://fhir-mcp-lab:8000/mcp/"
 
 [[ehrSystems]]
-id = "athena"
-displayName = "athenahealth"
-vendor = "athena"
-fhirBaseUrl = "http://toxiproxy:8083/fhir/r4"
-mcpServerUrl = "http://fhir-mcp-athena:8000/mcp/"
-mrnSystem = "urn:demo:athenahealth:mrn"
-outageProxy = "athena"
+id = "ehr"
+displayName = "EHR"
+vendor = "fhir"
+fhirBaseUrl = "http://toxiproxy:8081/fhir/r4"
+mcpServerUrl = "http://fhir-mcp-ehr:8000/mcp/"
+mrnSystem = "urn:demo:longview-clinic:mrn"
+outageProxy = "ehr"
 
 # Traces go to infra/trace-router, which forwards agent runs to WSO2 Agent Manager under each agent's
 # own key once scripts/amp-setup.sh has registered them (and drops them before that).

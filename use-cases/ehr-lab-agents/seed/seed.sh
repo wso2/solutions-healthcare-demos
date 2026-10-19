@@ -1,15 +1,13 @@
 #!/usr/bin/env bash
 # Loads the demo data into the FHIR servers. Safe to re-run: every entry is a PUT with a fixed id.
 #
-#   seed/cerner/  the Cerner EHR's clinic: directory + one bundle per patient (Synthea + storyline)
-#   seed/athena/  the Athena EHR's clinic, same layout
+#   seed/ehr/  the clinic's EHR: directory + one bundle per patient (Synthea + storyline)
 #   seed/lab-seed.json  the reference lab's own organization (orders arrive through the integration)
 #
-# Regenerate cerner/ and athena/ with seed/synthea/generate.sh.
+# Regenerate ehr/ with seed/synthea/generate.sh.
 set -euo pipefail
 
-CERNER_URL="${CERNER_URL:-http://localhost:8081/fhir/r4}"
-ATHENA_URL="${ATHENA_URL:-http://localhost:8083/fhir/r4}"
+EHR_URL="${EHR_URL:-http://localhost:8081/fhir/r4}"
 LAB_URL="${LAB_URL:-http://localhost:8082/fhir/r4}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 RESPONSE="$(mktemp)"
@@ -46,10 +44,8 @@ load_ehr() {
   done
 }
 
-wait_ready "$CERNER_URL"
-wait_ready "$ATHENA_URL"
+wait_ready "$EHR_URL"
 wait_ready "$LAB_URL"
-load_ehr "$CERNER_URL" "$DIR/cerner" "Cerner EHR"
-load_ehr "$ATHENA_URL" "$DIR/athena" "Athena EHR"
+load_ehr "$EHR_URL" "$DIR/ehr" "EHR"
 echo "Lab ($LAB_URL)"
 post_bundle "$LAB_URL" "$DIR/lab-seed.json" "Lab"

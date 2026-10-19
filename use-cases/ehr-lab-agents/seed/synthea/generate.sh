@@ -3,12 +3,12 @@
 #
 #   ./seed/synthea/generate.sh
 #
-# Synthea gives each EHR a realistic clinic population: years of encounters, conditions, medications,
+# Synthea gives the EHR a realistic clinic population: years of encounters, conditions, medications,
 # immunizations, procedures, vitals, labs and clinical notes, coded in SNOMED CT, LOINC, RxNorm and CVX.
 # transform.py then trims that to what an EHR integration needs and overlays the demo personas'
 # storyline (storyline.py), so the clinical story the agents find is the same on every run.
 #
-# The output (seed/cerner/, seed/athena/) is committed, so a normal reset never needs Java or Synthea.
+# The output (seed/ehr/) is committed, so a normal reset never needs Java or Synthea.
 # Run this only to change the population. Same Synthea version + same seeds = same output.
 set -euo pipefail
 
@@ -17,7 +17,7 @@ DIR="$(cd "$(dirname "$0")" && pwd)"
 CACHE="$DIR/.cache"
 JAR="$CACHE/synthea-$SYNTHEA_VERSION.jar"
 REFERENCE_DATE="20261017"   # "today" for the generated histories
-POPULATION=40               # per EHR; transform.py keeps the personas plus a handful of others
+POPULATION=40               # per run; transform.py keeps the personas plus a handful of others
 
 mkdir -p "$CACHE"
 if [[ ! -f "$JAR" ]]; then
@@ -27,7 +27,7 @@ if [[ ! -f "$JAR" ]]; then
   mv "$JAR.part" "$JAR"
 fi
 
-# One run per EHR: <name> <seed> <city>. Different seeds and towns give each EHR its own patients.
+# Two runs: <name> <seed> <city>. Different seeds and towns give the clinic a varied population.
 run_synthea() {
   local name="$1" seed="$2" city="$3" out="$CACHE/out-$1"
   rm -rf "$out"
@@ -47,8 +47,8 @@ run_synthea() {
     Massachusetts "$city" >/dev/null)
 }
 
-run_synthea cerner 20261 Boston
-run_synthea athena 20262 Worcester
+run_synthea boston 20261 Boston
+run_synthea worcester 20262 Worcester
 
 # SKIP_TRANSFORM=1 stops here, to inspect the raw Synthea output in .cache/out-*.
 [[ "${SKIP_TRANSFORM:-0}" == 1 ]] && exit 0

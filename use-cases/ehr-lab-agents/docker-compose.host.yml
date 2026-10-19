@@ -5,8 +5,8 @@
 #
 # Containers reach the Mac as host.docker.internal (colima maps it to the Mac's loopback); the Mac reaches
 # containers on their published ports. Extra host ports, all on 127.0.0.1:
-#   18081 / 18083  Toxiproxy → Cerner / Athena FHIR   (the integration's EHR traffic still crosses the proxy,
-#                                                      so the outage switches cut it for real)
+#   18081          Toxiproxy → EHR FHIR               (the integration's EHR traffic still crosses the proxy,
+#                                                      so the outage switch cuts it for real)
 #   19091          Toxiproxy → integration webhook    (lab simulator → integration, as in the container setup)
 #   8015           LLM auth adapter                   (the agents' OpenRouter calls into Agent Manager)
 
@@ -30,7 +30,6 @@ services:
       - "integration:host-gateway"
     ports:
       - "127.0.0.1:18081:8081"
-      - "127.0.0.1:18083:8083"
       - "127.0.0.1:19091:9091"
 
   llm-auth-adapter:

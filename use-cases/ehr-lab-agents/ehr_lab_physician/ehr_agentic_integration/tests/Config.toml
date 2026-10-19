@@ -7,23 +7,16 @@ labFhirBaseUrl = "http://localhost:8082/fhir/r4"
 apiPort = 19090
 toxiproxyUrl = "http://localhost:8474"
 
-[[ehrSystems]]
-id = "cerner"
-displayName = "Oracle Health (Cerner)"
-vendor = "cerner"
-fhirBaseUrl = "http://localhost:8081/fhir/r4"
-mcpServerUrl = "http://localhost:8010/mcp/"
-mrnSystem = "urn:oid:2.16.840.1.113883.3.787.0.0"
-outageProxy = "cerner"
+labMcpServerUrl = "http://localhost:8011/mcp/"
 
 [[ehrSystems]]
-id = "athena"
-displayName = "athenahealth"
-vendor = "athena"
-fhirBaseUrl = "http://localhost:8083/fhir/r4"
-mcpServerUrl = "http://localhost:8011/mcp/"
-mrnSystem = "urn:demo:athenahealth:mrn"
-outageProxy = "athena"
+id = "ehr"
+displayName = "EHR"
+vendor = "fhir"
+fhirBaseUrl = "http://localhost:8081/fhir/r4"
+mcpServerUrl = "http://localhost:8010/mcp/"
+mrnSystem = "urn:demo:longview-clinic:mrn"
+outageProxy = "ehr"
 
 [ballerina.workflow]
 mode = "IN_MEMORY"

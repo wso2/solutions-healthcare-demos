@@ -2,13 +2,13 @@
 # Drives one full assessment through the API, exactly as the portal does, and prints each step.
 # Calls the model provider three times or more (Copilot, Results Analysis, Care Plan).
 #
-#   ./scripts/smoke-test.sh [ehr] [patientId]        # default: athena p-sofia-alvarez
-#   ./scripts/smoke-test.sh cerner p-daniel-reyes
+#   ./scripts/smoke-test.sh [ehr] [patientId]        # default: ehr p-sofia-alvarez
+#   ./scripts/smoke-test.sh ehr p-daniel-reyes
 set -euo pipefail
 
 API="${API:-http://localhost:9090/api}"
 LAB="${LAB:-http://localhost:9093/lab}"
-EHR="${1:-athena}"
+EHR="${1:-ehr}"
 PATIENT="${2:-p-sofia-alvarez}"
 SINCE="${SINCE:-2023-01-01}"
 

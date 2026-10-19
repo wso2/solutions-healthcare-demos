@@ -60,6 +60,11 @@ case "$MODE" in
     if $first_run; then
       echo "First run — loading the saved demo state."
       ./seed/restore-snapshot.sh
+    elif [[ -z "$(docker compose exec -T postgres psql -U demo -d postgres -Atc \
+        "SELECT 1 FROM pg_database WHERE datname = 'fhir_ehr'")" ]]; then
+      echo "This data is from the two-EHR layout (no fhir_ehr database). Run ./scripts/up.sh --restore to" >&2
+      echo "replace it with the saved demo state, or --clean for only the seed patients." >&2
+      exit 1
     else
       echo "Keeping the existing demo data (use --restore or --clean to replace it)."
     fi

@@ -12,12 +12,12 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 OUT="${1:-seed/snapshot}"
-DATABASES=(fhir_cerner fhir_athena fhir_lab longevity temporal temporal_visibility)
+DATABASES=(fhir_ehr fhir_lab longevity temporal temporal_visibility)
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
 docker compose stop portal integration lab-simulator temporal-ui temporal \
-  fhir-mcp-cerner fhir-mcp-athena toxiproxy fhir-cerner fhir-athena fhir-lab >/dev/null
+  fhir-mcp-ehr fhir-mcp-lab toxiproxy fhir-ehr fhir-lab >/dev/null
 
 for db in "${DATABASES[@]}"; do
   docker compose exec -T postgres pg_dump -U demo -Fc -Z 9 --no-owner --no-acl -d "$db" > "$TMP/$db.dump"

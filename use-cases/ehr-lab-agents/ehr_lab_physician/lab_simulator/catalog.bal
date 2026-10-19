@@ -80,22 +80,22 @@ final readonly & map<string[]> TEST_ANALYTES = {
 
 # Results per patient MRN, by analyte key. Other patients get DEFAULT_PROFILE, varied per patient.
 final readonly & map<map<decimal>> PATIENT_PROFILES = {
-    // Daniel Reyes (Cerner): atherogenic particles, inherited Lp(a), inflammation and insulin resistance
+    // Daniel Reyes: atherogenic particles, inherited Lp(a), inflammation and insulin resistance
     // hiding behind a "normal" insulin and a borderline glucose.
     "MRN-100234": {tc: 236, ldl: 149, hdl: 40, tg: 205, apob: 128, lpa: 168, hscrp: 3.4, glu: 108, insulin: 18.2,
         a1c: 6.0, hcy: 13.8, vitd: 22, alt: 44, ggt: 52, uric: 7.4, cysc: 0.98, egfr: 85, tsh: 2.1, ferr: 180,
         hgb: 15.1, testo: 380},
-    // Priya Nair (Cerner): iron deficiency developing under treated hypothyroidism.
+    // Priya Nair: iron deficiency developing under treated hypothyroidism.
     "MRN-100587": {tc: 198, ldl: 122, hdl: 60, tg: 100, apob: 88, lpa: 40, hscrp: 0.8, glu: 90, insulin: 6.1,
         a1c: 5.4, hcy: 9.2, vitd: 33, alt: 18, ggt: 14, uric: 4.1, cysc: 0.82, egfr: 97, tsh: 2.2, ferr: 12,
         hgb: 11.6, testo: 28},
-    // Marcus Bell (Athena): healthy control.
-    "ATH-40912": {tc: 182, ldl: 104, hdl: 58, tg: 101, apob: 82, lpa: 38, hscrp: 0.6, glu: 92, insulin: 5.6,
+    // Marcus Bell: healthy control.
+    "MRN-140912": {tc: 182, ldl: 104, hdl: 58, tg: 101, apob: 82, lpa: 38, hscrp: 0.6, glu: 92, insulin: 5.6,
         a1c: 5.4, hcy: 9.4, vitd: 38, alt: 22, ggt: 19, uric: 5.6, cysc: 0.94, egfr: 84, tsh: 1.9, ferr: 140,
         hgb: 14.8, testo: 560},
-    // Sofia Alvarez (Athena): kidney function falling (cystatin C confirms it), metabolic liver pattern,
+    // Sofia Alvarez: kidney function falling (cystatin C confirms it), metabolic liver pattern,
     // insulin resistance and high uric acid — on daily ibuprofen and a thiazide.
-    "ATH-41377": {tc: 229, ldl: 139, hdl: 46, tg: 189, apob: 104, lpa: 52, hscrp: 3.1, glu: 104, insulin: 16.4,
+    "MRN-141377": {tc: 229, ldl: 139, hdl: 46, tg: 189, apob: 104, lpa: 52, hscrp: 3.1, glu: 104, insulin: 16.4,
         a1c: 5.9, hcy: 12.6, vitd: 21, alt: 47, ggt: 58, uric: 7.4, cysc: 1.24, egfr: 66, tsh: 2.6, ferr: 96,
         hgb: 12.9, testo: 31}
 };

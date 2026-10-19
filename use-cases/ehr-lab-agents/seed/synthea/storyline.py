@@ -72,9 +72,9 @@ RXNORM = "http://www.nlm.nih.gov/research/umls/rxnorm"
 ICD10 = "http://hl7.org/fhir/sid/icd-10-cm"
 
 PERSONAS = [
-    # ── Cerner ────────────────────────────────────────────────────────────────────────────────
+    # ── Boston run ────────────────────────────────────────────────────────────────────────────
     {
-        "ehr": "cerner",
+        "source": "boston",
         "synthea_base": "304a8be5",           # Synthea patient id prefix (seed 20261, v4.0.0)
         "id": "p-daniel-reyes",
         "mrn": "MRN-100234",
@@ -140,7 +140,7 @@ PERSONAS = [
         ],
     },
     {
-        "ehr": "cerner",
+        "source": "boston",
         "synthea_base": "e3e8044a",
         "id": "p-priya-nair",
         "mrn": "MRN-100587",
@@ -194,12 +194,12 @@ PERSONAS = [
              "conditions": [("40930008", "Hypothyroidism (disorder)", 38)]},
         ],
     },
-    # ── Athena ────────────────────────────────────────────────────────────────────────────────
+    # ── Worcester run ─────────────────────────────────────────────────────────────────────────
     {
-        "ehr": "athena",
+        "source": "worcester",
         "synthea_base": "0dba3c9a",
         "id": "p-marcus-bell",
-        "mrn": "ATH-40912",
+        "mrn": "MRN-140912",
         "given": ["Marcus"], "family": "Bell", "gender": "male", "birthDate": "1961-01-05",
         "smoking": ("266919005", "Never smoked tobacco (finding)"),
         "baseline": {"hgb": 14.8},
@@ -221,10 +221,10 @@ PERSONAS = [
         "family_history": [],
     },
     {
-        "ehr": "athena",
+        "source": "worcester",
         "synthea_base": "64d00bd1",
         "id": "p-sofia-alvarez",
-        "mrn": "ATH-41377",
+        "mrn": "MRN-141377",
         "given": ["Sofia", "M."], "family": "Alvarez", "gender": "female", "birthDate": "1968-02-09",
         "smoking": ("266919005", "Never smoked tobacco (finding)"),
         "baseline": {"hgb": 13.3},

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Restores the demo's saved state from seed/snapshot/: the three FHIR stores, the integration's
+# Restores the demo's saved state from seed/snapshot/: the two FHIR stores (EHR and lab), the integration's
 # database (assessments, agent memory, longevity records) and Temporal's history, so finished
 # assessments still open in the portal with their workflow view.
 #
@@ -13,7 +13,7 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 SNAPSHOT="${1:-seed/snapshot}"
-DATABASES=(fhir_cerner fhir_athena fhir_lab longevity temporal temporal_visibility)
+DATABASES=(fhir_ehr fhir_lab longevity temporal temporal_visibility)
 psql() { docker compose exec -T postgres psql -U demo -d postgres -v ON_ERROR_STOP=1 -qAt "$@"; }
 
 for db in "${DATABASES[@]}"; do
@@ -22,7 +22,7 @@ done
 
 echo "Stopping everything except Postgres..."
 docker compose stop portal integration lab-simulator temporal-ui temporal \
-  fhir-mcp-cerner fhir-mcp-athena toxiproxy fhir-cerner fhir-athena fhir-lab >/dev/null 2>&1 || true
+  fhir-mcp-ehr fhir-mcp-lab toxiproxy fhir-ehr fhir-lab >/dev/null 2>&1 || true
 docker compose up -d --wait postgres >/dev/null
 
 for db in "${DATABASES[@]}"; do

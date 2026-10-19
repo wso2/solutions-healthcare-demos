@@ -5,8 +5,8 @@
 # Host ports
 #   5433  Postgres (5432 is often taken by a local install)
 #   7233  Temporal gRPC            8233  Temporal UI
-#   8081  FHIR server "Cerner"     8083  FHIR server "Athena"     8082  FHIR server "Lab"
-#   8010  FHIR MCP server (Cerner) 8011  FHIR MCP server (Athena)
+#   8081  FHIR server "EHR"        8082  FHIR server "Lab"
+#   8010  FHIR MCP server (EHR)    8011  FHIR MCP server (Lab)
 #   8474  Toxiproxy API (EHR outage simulation)
 #   9090  Integration API          9093  Lab simulator             5173  Demo portal
 #   4318  Trace router (OTLP → WSO2 Agent Manager)
@@ -52,15 +52,14 @@ services:
       retries: 20
 
   # ── Systems of record ───────────────────────────────────────────────────────
-  # Three independent FHIR R4 servers, so every arrow in the demo crosses a real system boundary:
-  # two EHRs (standing in for Oracle Health/Cerner and athenahealth, each with its own patients)
-  # and the reference lab. None of them knows the others exist.
+  # Two independent FHIR R4 servers, so every arrow in the demo crosses a real system boundary: the
+  # clinic's EHR and the reference lab, each with its own patient ids. Neither knows the other exists.
   # BASE_URL is the address the integration uses (through Toxiproxy), so paging links resolve.
 
-  fhir-cerner:
+  fhir-ehr:
     <<: *fhir-server
     environment:
-      DATABASE_URL: postgres://demo:demo@postgres:5432/fhir_cerner?sslmode=disable&pool_max_conns=20
+      DATABASE_URL: postgres://demo:demo@postgres:5432/fhir_ehr?sslmode=disable&pool_max_conns=20
       FHIR_CREATE_TABLES: "true"
       SERVER_PORT: "9090"
       BASE_URL: http://toxiproxy:8081/fhir/r4
@@ -69,21 +68,7 @@ services:
     ports:
       - "8081:9090"
     volumes:
-      - igcache-cerner:/data/fhir-ig-cache
-
-  fhir-athena:
-    <<: *fhir-server
-    environment:
-      DATABASE_URL: postgres://demo:demo@postgres:5432/fhir_athena?sslmode=disable&pool_max_conns=20
-      FHIR_CREATE_TABLES: "true"
-      SERVER_PORT: "9090"
-      BASE_URL: http://toxiproxy:8083/fhir/r4
-      LOG_LEVEL: info
-      IG_CACHE_DIR: /data/fhir-ig-cache
-    ports:
-      - "8083:9090"
-    volumes:
-      - igcache-athena:/data/fhir-ig-cache
+      - igcache-ehr:/data/fhir-ig-cache
 
   fhir-lab:
     <<: *fhir-server
@@ -107,17 +92,16 @@ services:
     restart: unless-stopped
     command: ["-host=0.0.0.0", "-config=/config/toxiproxy.json"]
     depends_on:
-      - fhir-cerner
-      - fhir-athena
+      - fhir-ehr
     volumes:
       - ./infra/toxiproxy/toxiproxy.json:/config/toxiproxy.json:ro
     ports:
       - "8474:8474"
 
-  # WSO2 FHIR MCP server, one per EHR. Gives the agents open-ended, read-only access to the patient's
+  # WSO2 FHIR MCP server over the EHR. Gives the agents open-ended, read-only access to the patient's
   # record (search/read) as MCP tools, instead of one hand-written tool per question.
   # The local FHIR servers have no auth; for a real EHR set FHIR_SERVER_CLIENT_ID/SECRET/SCOPES.
-  fhir-mcp-cerner:
+  fhir-mcp-ehr:
     <<: *fhir-mcp-server
     environment:
       FHIR_SERVER_BASE_URL: http://toxiproxy:8081/fhir/r4
@@ -127,10 +111,14 @@ services:
     ports:
       - "8010:8000"
 
-  fhir-mcp-athena:
+  # The lab's FHIR server as MCP tools, so the results agent can read the lab's report, observations and
+  # specimen in FHIR form. Not behind Toxiproxy: the outage switches cut the EHR only.
+  fhir-mcp-lab:
     <<: *fhir-mcp-server
+    depends_on:
+      - fhir-lab
     environment:
-      FHIR_SERVER_BASE_URL: http://toxiproxy:8083/fhir/r4
+      FHIR_SERVER_BASE_URL: http://fhir-lab:9090/fhir/r4
       FHIR_SERVER_DISABLE_AUTHORIZATION: "True"
       FHIR_MCP_HOST: 0.0.0.0
       FHIR_MCP_PORT: "8000"
@@ -192,9 +180,9 @@ services:
         condition: service_started
       fhir-lab:
         condition: service_started
-      fhir-mcp-cerner:
+      fhir-mcp-ehr:
         condition: service_started
-      fhir-mcp-athena:
+      fhir-mcp-lab:
         condition: service_started
       pubmed-mcp:
         condition: service_started
@@ -275,8 +263,8 @@ services:
     profiles: [amp-tunnel]
     restart: unless-stopped
     depends_on:
-      - fhir-mcp-cerner
-      - fhir-mcp-athena
+      - fhir-mcp-ehr
+      - fhir-mcp-lab
       - pubmed-mcp
     env_file:
       - path: ./.amp/tunnel.env
@@ -320,6 +308,5 @@ services:
 volumes:
   pgdata:
   usage-ledger:
-  igcache-cerner:
-  igcache-athena:
+  igcache-ehr:
   igcache-lab:
