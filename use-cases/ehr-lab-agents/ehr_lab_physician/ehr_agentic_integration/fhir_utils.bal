@@ -321,12 +321,13 @@ isolated function describeError(error err) returns string {
 # runs one attempt at a time, so search-then-create is safe here.
 #
 # + connector - the system to write to
-# + resourceJson - the resource, which must carry the identifier
+# + resourceValue - the resource (a typed FHIR resource, or json), which must carry the identifier
 # + system - identifier system
 # + value - identifier value
 # + return - the id of the created or existing resource
-isolated function createOnce(fhir:FHIRConnector connector, json resourceJson, string system, string value)
+isolated function createOnce(fhir:FHIRConnector connector, anydata resourceValue, string system, string value)
         returns string|error {
+    json resourceJson = resourceValue.toJson();
     string resourceType = (check resourceJson.resourceType).toString();
     json[] matches = check searchResources(connector, resourceType, {"identifier": [string `${system}|${value}`]});
     if matches.length() > 0 {

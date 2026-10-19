@@ -1,4 +1,3 @@
-import ballerina/http;
 import ballerina/log;
 import ballerina/time;
 import ballerinax/health.clients.fhir;
@@ -60,7 +59,7 @@ isolated function recentOrders() returns LabOrder[]|error {
 }
 
 # The patient arrived and gave a sample: files a Specimen for the order, links it from the order, and
-# tells the integration (which completes the patient's lab-visit task).
+# sends the integration a FHIR message with both (it completes the patient's lab-visit task).
 #
 # + serviceRequestId - the lab's ServiceRequest id
 # + return - what was filed, `WrongOrderState` if the specimen was already collected or the order is
@@ -94,12 +93,15 @@ isolated function collectSpecimen(string serviceRequestId) returns CollectionRes
     fhir:FHIRResponse response = check labFhir->'transaction({resourceType: "Bundle", 'type: "transaction", entry: entries});
     string specimenId = check idAtEntry(<json>response.'resource, 0, "Specimen");
     log:printInfo("Specimen collected", serviceRequestId = serviceRequestId, specimenId = specimenId);
-    boolean notified = notifyIntegration({event: "specimen-collected", serviceRequestId, specimenId});
+    json message = labMessage(EVENT_SPECIMEN_COLLECTED, "Specimen collected", string `Specimen/${specimenId}`,
+            [check readResource("Specimen", specimenId), check readResource("ServiceRequest", serviceRequestId)]);
+    boolean notified = notifyIntegration(EVENT_SPECIMEN_COLLECTED, message);
     return {serviceRequestId, specimenId, collectedAt, integrationNotified: notified};
 }
 
 # Runs an order: files a result for every analyte of every ordered test, a final report, and the order
-# marked completed, all in one transaction; then notifies the integration.
+# marked completed, all in one transaction; then sends the integration a FHIR message with the report, its
+# Observations and the order.
 #
 # + serviceRequestId - the lab's ServiceRequest id
 # + return - what was filed, `AlreadyResulted` if the order is already completed, `WrongOrderState` if
@@ -170,8 +172,19 @@ isolated function releaseOrder(string serviceRequestId) returns ReleaseResult|Al
     log:printInfo("Lab order resulted", serviceRequestId = serviceRequestId, diagnosticReportId = reportId,
             observations = resultRefs.length());
 
-    boolean notified = notifyIntegration({event: "results-ready", serviceRequestId, diagnosticReportId: reportId,
-        status: "final"});
+    // The Observations are the transaction's first entries; the message carries them as the server stored them.
+    string[] observationIds = [];
+    foreach int i in 0 ..< resultRefs.length() {
+        observationIds.push(check idAtEntry(<json>response.'resource, i, "Observation"));
+    }
+    fhir:FHIRResponse observationPage = check labFhir->search("Observation",
+            searchParameters = {"_id": [string:'join(",", ...observationIds)], "_count": [observationIds.length().toString()]});
+    json message = labMessage(EVENT_RESULTS_READY, "Results ready", string `DiagnosticReport/${reportId}`, [
+        check readResource("DiagnosticReport", reportId),
+        ...resourcesOfType(<json>observationPage.'resource, "Observation"),
+        check readResource("ServiceRequest", serviceRequestId)
+    ]);
+    boolean notified = notifyIntegration(EVENT_RESULTS_READY, message);
     return {serviceRequestId, diagnosticReportId: reportId, observations: resultRefs.length(), integrationNotified: notified};
 }
 
@@ -213,26 +226,6 @@ isolated function observationFor(LabAnalyte analyte, decimal value, boolean fema
         interpretation: [{coding: [{system: "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation", code: flag, display: flagDisplay}]}],
         referenceRange: [range]
     };
-}
-
-# Tells the integration something happened to an order (specimen collected, results ready). A failure
-# is logged, not raised: the lab's records are already filed, and the integration's fallback poller
-# will find them.
-#
-# + notification - the event and the order it is about
-# + return - whether the integration accepted the notification
-isolated function notifyIntegration(map<json> notification) returns boolean {
-    http:Response|error response = integrationClient->post("", notification, {"X-Lab-Api-Key": integrationWebhookApiKey});
-    if response is error {
-        log:printWarn("Could not notify the integration; its fallback poller will pick this up", response,
-                event = notification["event"].toString());
-        return false;
-    }
-    if response.statusCode >= 300 {
-        log:printWarn("Integration refused the notification", statusCode = response.statusCode);
-        return false;
-    }
-    return true;
 }
 
 # The specimen collected for an order, read from the order's `specimen` reference.

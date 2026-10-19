@@ -5,7 +5,7 @@ import ballerinax/postgresql.driver as _;
 
 // ── FHIR systems of record ──
 // One generic FHIR connector per system (the same pattern as pa-policy-analyzer). Auth is
-// optional: the local wso2/fhir-server needs none, a Cerner or athenahealth tenant needs client credentials.
+// optional: the local wso2/fhir-server needs none, a hosted EHR tenant needs client credentials.
 
 # Connectors to every configured EHR, by EHR id.
 isolated map<fhir:FHIRConnector> ehrConnectors = check createEhrConnectors();

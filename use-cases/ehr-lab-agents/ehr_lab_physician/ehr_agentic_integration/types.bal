@@ -477,17 +477,26 @@ type PhysicianRelease record {|
     string comment = "";
 |};
 
-# Notice from the lab that its report is ready (a system event, not a person).
+# Notice from the lab that its report is ready (a system event, not a person). It carries the lab's FHIR
+# resources — as the lab sent them in its message, or as the fallback poller read them from the lab — so the
+# results step works from exactly what the lab reported. They were read as FHIR R4 types when they arrived
+# and are read as such again in the results step; in between they travel as FHIR JSON, because the workflow
+# compiler describes every type that crosses the workflow boundary and FHIR's recursive types are too large
+# to describe.
 #
 # + serviceRequestId - the lab's order
 # + diagnosticReportId - the lab's report
 # + status - the report's status
 # + via - which path noticed it (lab webhook or fallback poll)
+# + report - the lab's DiagnosticReport, as FHIR JSON
+# + observations - the Observations the report references, as FHIR JSON
 type LabResultNotice record {|
     string serviceRequestId;
     string diagnosticReportId;
     string status;
     string via;
+    json report;
+    json[] observations;
 |};
 
 // ── Agent outputs ──

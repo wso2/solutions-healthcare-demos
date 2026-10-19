@@ -2,7 +2,7 @@
 // Defaults target a local run against `docker compose` (host ports); the container
 // overrides them through config/integration.toml. Secrets come from secrets.toml, never from here.
 
-# OAuth2 client-credentials settings for an EHR that needs them (e.g. a Cerner or athenahealth tenant).
+# OAuth2 client-credentials settings for an EHR that needs them (e.g. a hosted EHR tenant).
 #
 # + tokenUrl - token endpoint
 # + clientId - client id registered with the EHR
@@ -15,12 +15,12 @@ type OAuthClientConfig record {|
     string[] scopes = [];
 |};
 
-# An EHR the integration is connected to. Every EHR is reached through the same generic FHIR
-# connector; pointing one at a real tenant is a change of `fhirBaseUrl` and `auth`.
+# The clinic's EHR. It is reached through the generic FHIR connector; pointing it at a real tenant is a
+# change of `fhirBaseUrl` and `auth`. The integration takes a list, but the demo runs one EHR.
 #
-# + id - short id used in API paths and stored on each assessment (`cerner`, `athena`)
+# + id - short id used in API paths and stored on each assessment (`ehr`)
 # + displayName - name shown in the portal and on the timeline
-# + vendor - which product this is, for the portal's badge (`cerner`, `athena`, `epic`, `fhir`)
+# + vendor - which product this is, for the portal's badge (`fhir`, or a product such as `epic`)
 # + fhirBaseUrl - FHIR R4 base URL
 # + auth - client credentials, when the EHR needs them
 # + mcpServerUrl - the WSO2 FHIR MCP server in front of this EHR (trailing slash matters: `/mcp` answers 307)
@@ -41,17 +41,12 @@ type EhrSystemConfig record {|
 
 // ── Systems of record ──
 
-# The EHRs the physician can pull patients from.
+# The EHR the physician pulls patients from.
 configurable EhrSystemConfig[] ehrSystems = [
     {
-        id: "cerner", displayName: "Oracle Health (Cerner)", vendor: "cerner",
+        id: "ehr", displayName: "EHR", vendor: "fhir",
         fhirBaseUrl: "http://localhost:8081/fhir/r4", mcpServerUrl: "http://localhost:8010/mcp/",
-        mrnSystem: "urn:oid:2.16.840.1.113883.3.787.0.0", outageProxy: "cerner"
-    },
-    {
-        id: "athena", displayName: "athenahealth", vendor: "athena",
-        fhirBaseUrl: "http://localhost:8083/fhir/r4", mcpServerUrl: "http://localhost:8011/mcp/",
-        mrnSystem: "urn:demo:athenahealth:mrn", outageProxy: "athena"
+        mrnSystem: "urn:demo:longview-clinic:mrn", outageProxy: "ehr"
     }
 ];
 
@@ -74,9 +69,13 @@ configurable int labResultTimeoutHours = 72;
 # Years of EHR history pulled into the patient summary's trends.
 configurable int summaryLookbackYears = 3;
 
-// ── WSO2 FHIR MCP server (the agents' read-only window onto the EHR) ──
-# Only read tools. Every write to an EHR goes through a workflow activity, never through an agent.
-configurable string[] ehrMcpPermittedTools = ["search", "read", "get_capabilities"];
+// ── WSO2 FHIR MCP servers (the agents' read-only window onto the EHR and the lab) ──
+# Only read tools. Every write to the EHR or the lab goes through a workflow activity, never through an agent.
+configurable string[] fhirMcpPermittedTools = ["search", "read", "get_capabilities"];
+
+# The WSO2 FHIR MCP server in front of the lab's FHIR server (the results agent reads the lab's report,
+# observations and specimen through it); empty to leave it out. Trailing slash matters: `/mcp` answers 307.
+configurable string labMcpServerUrl = "http://localhost:8011/mcp/";
 
 # The PubMed MCP server (literature search for all three agents); empty to leave it out.
 configurable string pubmedMcpUrl = "http://localhost:8012/mcp";

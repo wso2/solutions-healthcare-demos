@@ -5,9 +5,9 @@ import ballerinax/health.clients.fhir;
 import ballerinax/health.fhir.r4 as r4;
 import ballerinax/health.fhir.r4.international401;
 
-// Everything the integration reads from or writes to an EHR goes through this file. Each function
-// names the EHR it talks to: the physician picks Cerner or Athena, and every write for an assessment
-// goes back to the EHR the patient's record came from.
+// Everything the integration reads from or writes to the EHR goes through this file. Each function names
+// the EHR it talks to (the configuration lists one), and every write for an assessment goes back to the EHR
+// the patient's record came from.
 
 # The patient record as pulled from an EHR, before it is summarised.
 #
@@ -121,7 +121,7 @@ isolated function ehrReachable(string ehr) returns boolean {
 # query lists the clinic's patients.
 #
 # + ehr - the EHR id
-# + query - an MRN (e.g. `MRN-100234`, `ATH-41377`) or part of a name
+# + query - an MRN (e.g. `MRN-100234`) or part of a name
 # + birthDate - optional birth date filter
 # + return - the matching patients, or an error if the EHR search fails
 isolated function searchEhrPatients(string ehr, string query, string? birthDate) returns PatientCard[]|error {
@@ -406,11 +406,10 @@ isolated function hasIdentifier(json resourceJson, string system, string value) 
 # + return - the EHR ServiceRequest id, or an error if the EHR rejects it
 isolated function createEhrServiceRequest(string ehr, string patientId, string encounterId, string practitionerId,
         string placerOrderId, string[] testCodes, string note) returns string|error {
-    json serviceRequest = labServiceRequest(string `Patient/${patientId}`, placerOrderId, testCodes,
-            {reference: string `Practitioner/${practitionerId}`}, note);
-    map<json> withEncounter = <map<json>>serviceRequest.clone();
-    withEncounter["encounter"] = {reference: string `Encounter/${encounterId}`};
-    return createOnce(check ehrClient(ehr), withEncounter, PLACER_ORDER_SYSTEM, placerOrderId);
+    international401:ServiceRequest serviceRequest = labServiceRequest(string `Patient/${patientId}`, placerOrderId,
+            testCodes, {reference: string `Practitioner/${practitionerId}`}, note);
+    serviceRequest.encounter = {reference: string `Encounter/${encounterId}`};
+    return createOnce(check ehrClient(ehr), serviceRequest, PLACER_ORDER_SYSTEM, placerOrderId);
 }
 
 # Tells the patient what to do, as a FHIR Communication in their chart: the record that they were
@@ -455,37 +454,42 @@ isolated function createEhrCommunication(string assessmentId, string ehr, string
 # + labObservations - the lab's Observations as json
 # + return - the EHR DiagnosticReport id, or an error if the transaction fails
 isolated function fileLabResultsInEhr(string ehr, string patientId, string encounterId, string ehrServiceRequestId,
-        json labReport, json[] labObservations) returns string|error {
+        international401:DiagnosticReport labReport, international401:Observation[] labObservations)
+        returns string|error {
+    // In the EHR the results belong to the EHR's patient, visit and order, not the lab's; the lab's ids
+    // become identifiers, which also make a retried filing find what it filed before.
+    r4:Reference[] subject = [{reference: string `Patient/${patientId}`}];
+    r4:Reference encounter = {reference: string `Encounter/${encounterId}`};
+    r4:Reference[] basedOn = [{reference: string `ServiceRequest/${ehrServiceRequestId}`}];
     json[] entries = [];
-    json[] resultRefs = [];
+    r4:Reference[] resultRefs = [];
     foreach int i in 0 ..< labObservations.length() {
-        map<json> observation = <map<json>>labObservations[i].clone();
-        string labId = observation["id"].toString();
+        international401:Observation observation = labObservations[i].clone();
+        string labId = observation.id ?: i.toString();
         _ = observation.removeIfHasKey("id");
         _ = observation.removeIfHasKey("meta");
-        observation["subject"] = {reference: string `Patient/${patientId}`};
-        observation["encounter"] = {reference: string `Encounter/${encounterId}`};
-        // The lab's Observation points at the lab's own order; in the EHR it must point at the EHR's.
-        observation["basedOn"] = [{reference: string `ServiceRequest/${ehrServiceRequestId}`}];
-        observation["identifier"] = [{system: LAB_RESULT_ID_SYSTEM, value: labId}];
         _ = observation.removeIfHasKey("specimen");
+        observation.subject = subject[0];
+        observation.encounter = encounter;
+        observation.basedOn = basedOn;
+        observation.identifier = [{system: LAB_RESULT_ID_SYSTEM, value: labId}];
         string fullUrl = string `urn:uuid:obs-${i}-${labId}`;
-        entries.push({fullUrl, 'resource: observation, request: {method: "POST", url: "Observation",
+        entries.push({fullUrl, 'resource: observation.toJson(), request: {method: "POST", url: "Observation",
             ifNoneExist: string `identifier=${LAB_RESULT_ID_SYSTEM}|${labId}`}});
         resultRefs.push({reference: fullUrl});
     }
-    map<json> report = <map<json>>labReport.clone();
-    string labReportId = report["id"].toString();
+    international401:DiagnosticReport report = labReport.clone();
+    string labReportId = report.id ?: "";
     _ = report.removeIfHasKey("id");
     _ = report.removeIfHasKey("meta");
     _ = report.removeIfHasKey("specimen");
-    report["subject"] = {reference: string `Patient/${patientId}`};
-    report["encounter"] = {reference: string `Encounter/${encounterId}`};
-    report["basedOn"] = [{reference: string `ServiceRequest/${ehrServiceRequestId}`}];
-    report["identifier"] = [{system: LAB_RESULT_ID_SYSTEM, value: labReportId}];
-    report["result"] = resultRefs;
-    entries.push({fullUrl: "urn:uuid:report", 'resource: report, request: {method: "POST", url: "DiagnosticReport",
-        ifNoneExist: string `identifier=${LAB_RESULT_ID_SYSTEM}|${labReportId}`}});
+    report.subject = subject[0];
+    report.encounter = encounter;
+    report.basedOn = basedOn;
+    report.identifier = [{system: LAB_RESULT_ID_SYSTEM, value: labReportId}];
+    report.result = resultRefs;
+    entries.push({fullUrl: "urn:uuid:report", 'resource: report.toJson(), request: {method: "POST",
+        url: "DiagnosticReport", ifNoneExist: string `identifier=${LAB_RESULT_ID_SYSTEM}|${labReportId}`}});
 
     fhir:FHIRResponse response = check (check ehrClient(ehr))->'transaction(
             {resourceType: "Bundle", 'type: "transaction", entry: entries});
@@ -580,25 +584,24 @@ isolated function finishEhrEncounter(string ehr, string encounterId) returns err
 # + note - order note; omitted when blank
 # + return - the ServiceRequest as json
 isolated function labServiceRequest(string subjectReference, string placerOrderId, string[] testCodes,
-        json requester, string note) returns json {
-    json[] orderDetail = from string code in testCodes
+        r4:Reference requester, string note) returns international401:ServiceRequest {
+    r4:CodeableConcept[] orderDetail = from string code in testCodes
         let OrderableTest? test = orderableByCode(code)
         select {coding: [{system: LAB_TEST_CODE_SYSTEM, code: code, display: test is OrderableTest ? test.name : code}]};
-    map<json> serviceRequest = {
-        resourceType: "ServiceRequest",
+    international401:ServiceRequest serviceRequest = {
         identifier: [{system: PLACER_ORDER_SYSTEM, value: placerOrderId}],
         status: "active",
         intent: "order",
         category: [{coding: [{system: "http://snomed.info/sct", code: "108252007", display: "Laboratory procedure"}]}],
         code: {text: "Biomarker panel"},
-        orderDetail: orderDetail,
+        orderDetail,
         subject: {reference: subjectReference},
         authoredOn: nowIso(),
-        requester: requester,
+        requester,
         performer: [{reference: string `Organization/${labOrganizationId}`, display: labDisplayName}]
     };
     if note.trim().length() > 0 {
-        serviceRequest["note"] = [{text: note}];
+        serviceRequest.note = [{text: note}];
     }
     return serviceRequest;
 }

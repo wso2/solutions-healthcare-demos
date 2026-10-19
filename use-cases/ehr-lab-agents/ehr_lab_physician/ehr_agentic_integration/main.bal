@@ -44,21 +44,6 @@ type FaultRequest record {|
     boolean active;
 |};
 
-# A notification from the lab.
-#
-# + event - `specimen-collected` or `results-ready` (the default)
-# + serviceRequestId - the lab's order
-# + diagnosticReportId - the report, for `results-ready`
-# + specimenId - the specimen, for `specimen-collected`
-# + status - the report's status
-type LabNotification record {
-    string event = "results-ready";
-    string serviceRequestId;
-    string? diagnosticReportId = ();
-    string? specimenId = ();
-    string? status = ();
-};
-
 # Body of an error response.
 #
 # + message - what went wrong
@@ -513,22 +498,30 @@ service /api on new http:Listener(apiPort) {
 
     // ── Inbound from the lab ──
 
-    # A notification from the lab: specimen collected, or report ready.
+    # A FHIR message from the lab: specimen collected, or report ready, with the resources it is about
+    # (see lab_messages.bal).
     #
     # + apiKey - the shared secret the lab sends in `X-Lab-Api-Key`
-    # + notification - the event and the order it is about
-    # + return - 202 with whether the workflow moved on, 401 for a wrong key, or 500
+    # + message - the FHIR message Bundle
+    # + return - 202 with whether the workflow moved on, 400 for a message that is not a lab message,
+    # 401 for a wrong key, or 500
     resource function post lab/notifications(@http:Header {name: "X-Lab-Api-Key"} string? apiKey,
-            LabNotification notification) returns http:Accepted|http:Unauthorized|http:InternalServerError {
+            @http:Payload {mediaType: ["application/fhir+json", "application/json"]} json message)
+            returns http:Accepted|http:BadRequest|http:Unauthorized|http:InternalServerError {
         if apiKey != labWebhookApiKey {
             return <http:Unauthorized>{body: <ErrorBody>{message: "Invalid lab API key"}};
         }
-        boolean|error handled = notification.event == "specimen-collected"
-            ? completeLabVisitIfCollected(notification.serviceRequestId, "lab webhook")
-            : signalLabResultIfReady(notification.serviceRequestId, "lab webhook");
+        SpecimenCollectedMessage|ResultsReadyMessage|error parsed = parseLabMessage(message);
+        if parsed is error {
+            log:printWarn("Refused a lab message", parsed);
+            return <http:BadRequest>{body: <ErrorBody>{message: parsed.message()}};
+        }
+        boolean|error handled = parsed is SpecimenCollectedMessage
+            ? completeLabVisit(parsed.serviceRequestId, parsed.specimen, "lab webhook")
+            : signalLabResult(parsed.serviceRequestId, parsed.report, parsed.observations, "lab webhook");
         if handled is error {
-            log:printError("Lab notification could not be processed", handled,
-                    serviceRequestId = notification.serviceRequestId, event = notification.event);
+            log:printError("Lab message could not be processed", handled, serviceRequestId = parsed.serviceRequestId,
+                    event = parsed is SpecimenCollectedMessage ? EVENT_SPECIMEN_COLLECTED : EVENT_RESULTS_READY);
             return <http:InternalServerError>{body: <ErrorBody>{message: handled.message()}};
         }
         return <http:Accepted>{body: {handled}};

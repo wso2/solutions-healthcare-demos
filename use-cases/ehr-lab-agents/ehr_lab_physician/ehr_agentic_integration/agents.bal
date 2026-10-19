@@ -46,10 +46,18 @@ final string CLINICAL_GUARDRAILS = string `
 
 final string EHR_ACCESS = string `
 ## EHR access
-You can query the patient's EHR directly with the FHIR tools "search" and "read" (read-only). Use them only
+You can query the patient's EHR directly with the FHIR tools "ehr_search" and "ehr_read" (read-only). Use them only
 for context you were not given — for example an encounter's reason, a medication's history, or a resource
 type the selection leaves out. Always filter by the patient (patient=Patient/<id>) and keep searches narrow
 (code, category, date, _count). Do not re-fetch what you were already given.`;
+
+final string LAB_ACCESS = string `
+## Lab access
+The results come from the reference lab, which keeps them as FHIR resources on its own server. You can read
+them with "lab_search" and "lab_read" (read-only): the DiagnosticReport, its Observations, the Specimen and the
+ServiceRequest. The lab has its own patient ids — start from the lab report and order ids you were given, never
+from an EHR patient id. Use them only for detail you were not given, such as a report's conclusion, an
+observation's note or method, or the specimen's collection details.`;
 
 final string LITERATURE = string `
 ## Literature
@@ -136,10 +144,11 @@ function createEhrAgents() returns boolean|error {
             verbose = agentVerbose
         );
         ai:Agent analyst = check new (
-            systemPrompt = {role: ANALYST_ROLE, instructions: ANALYST_INSTRUCTIONS + EHR_ACCESS + LITERATURE + CLINICAL_GUARDRAILS},
+            systemPrompt = {role: ANALYST_ROLE,
+                instructions: ANALYST_INSTRUCTIONS + EHR_ACCESS + LAB_ACCESS + LITERATURE + CLINICAL_GUARDRAILS},
             model = analystModel,
             tools = [getLabCatalog, getBiomarkerHistory, ...connectEhrMcp(ehr, agentManager.analyst),
-                ...connectPubmedMcp(agentManager.analyst)],
+                ...connectLabMcp(agentManager.analyst), ...connectPubmedMcp(agentManager.analyst)],
             memory = agentMemory,
             maxIter = agentMaxIter,
             verbose = agentVerbose
@@ -166,13 +175,23 @@ function createEhrAgents() returns boolean|error {
     return true;
 }
 
-# Connects an agent to an EHR's FHIR MCP server, read tools only.
+# Connects an agent to the EHR's FHIR MCP server, read tools only, published as `ehr_search`, `ehr_read`….
 #
 # + ehr - the EHR
 # + agent - what Agent Manager issued to the agent
 # + return - the connected MCP toolkit, or an empty list when the server is unreachable
-function connectEhrMcp(EhrSystemConfig ehr, ManagedAgentConfig agent) returns ai:McpToolKit[] =>
-    connectMcp(ehr.id, "FHIR MCP server", ehr.mcpServerUrl, ehrMcpPermittedTools, agent);
+function connectEhrMcp(EhrSystemConfig ehr, ManagedAgentConfig agent) returns PrefixedMcpToolKit[] =>
+    from ai:McpToolKit server in connectMcp(ehr.id, "EHR FHIR MCP server", ehr.mcpServerUrl, fhirMcpPermittedTools, agent)
+    select new PrefixedMcpToolKit("ehr", "EHR", server);
+
+# Connects an agent to the lab's FHIR MCP server, read tools only, published as `lab_search`, `lab_read`….
+#
+# + agent - what Agent Manager issued to the agent
+# + return - the connected MCP toolkit, or an empty list when the server is unreachable or not configured
+function connectLabMcp(ManagedAgentConfig agent) returns PrefixedMcpToolKit[] =>
+    labMcpServerUrl == "" ? [] :
+        from ai:McpToolKit server in connectMcp("lab", "Lab FHIR MCP server", labMcpServerUrl, fhirMcpPermittedTools, agent)
+        select new PrefixedMcpToolKit("lab", "Lab", server);
 
 # Connects an agent to the PubMed MCP server (literature search).
 #
@@ -188,7 +207,7 @@ function connectPubmedMcp(ManagedAgentConfig agent) returns ai:McpToolKit[] =>
 # directly. If the server is unreachable the agent still runs, with its other tools (the same
 # degradation the PA platform agents use).
 #
-# + target - the proxy key in `agentManager.mcpProxyUrls` (an EHR id, or `pubmed`)
+# + target - the proxy key in `agentManager.mcpProxyUrls` (the EHR id, `lab` or `pubmed`)
 # + label - what the server is, for the log
 # + directUrl - the server's own URL, used without Agent Manager
 # + permittedTools - tools the agent may see (nil for all the server offers)

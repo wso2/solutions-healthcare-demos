@@ -121,21 +121,24 @@ isolated function collectLabResults(string assessmentId, string ehr, string pati
     addEvent(assessmentId, LAB, string `${labDisplayName}: lab report ready (via ${readyNotice.via})`,
             string `DiagnosticReport/${readyNotice.diagnosticReportId} — ${readyNotice.status}`);
 
-    [json, json[]] [report, observations] = check readLabReport(readyNotice.diagnosticReportId);
-    LabResultValue[] values = check labResultValues(observations);
-    addEvent(assessmentId, LAB, string `${labDisplayName}: ${values.length()} results retrieved`);
+    // The lab's own FHIR resources, as its message carried them (or the fallback poller read them).
+    international401:DiagnosticReport report = check readyNotice.report.cloneWithType();
+    international401:Observation[] observations =
+        <international401:Observation[]>check typedResources(readyNotice.observations, ObservationList);
+    LabResultValue[] values = labResultValues(observations);
+    addEvent(assessmentId, LAB, string `${labDisplayName}: ${values.length()} results received`,
+            string `DiagnosticReport + ${observations.length()} Observations (FHIR R4)`);
 
     string ehrReportId = check fileLabResultsInEhr(ehr, patientId, encounterId, placedOrder.ehrServiceRequestId,
             report, observations);
     addEvent(assessmentId, EHR, string `${ehrName(ehr)}: results filed as DiagnosticReport/${ehrReportId}`,
             string `${observations.length()} Observations + report, one transaction`);
 
-    json|error issued = report.issued;
     LabResults results = {
         diagnosticReportId: readyNotice.diagnosticReportId,
         ehrDiagnosticReportId: ehrReportId,
         status: readyNotice.status,
-        issued: issued is string ? issued : nowIso(),
+        issued: report.issued ?: nowIso(),
         results: values
     };
     check putData(assessmentId, "labResults", results.toJson());

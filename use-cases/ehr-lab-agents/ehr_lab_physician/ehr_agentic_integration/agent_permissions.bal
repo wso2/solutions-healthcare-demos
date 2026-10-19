@@ -28,9 +28,9 @@ type Permission record {|
 |};
 
 final readonly & Permission[] PERMISSIONS = [
-    {key: "ehr-read-cerner", label: "Read the Cerner EHR", target: "cerner", scope: "fhir-cerner:read", probeTool: "get_capabilities"},
-    {key: "ehr-read-athena", label: "Read the Athena EHR", target: "athena", scope: "fhir-athena:read", probeTool: "get_capabilities"},
-    {key: "ehr-write", label: "Change EHR records", target: "cerner", scope: "fhir-cerner:write", probeTool: ()},
+    {key: "ehr-read", label: "Read the EHR", target: "ehr", scope: "fhir-ehr:read", probeTool: "get_capabilities"},
+    {key: "lab-read", label: "Read the lab's FHIR records", target: "lab", scope: "fhir-lab:read", probeTool: "get_capabilities"},
+    {key: "ehr-write", label: "Change EHR records", target: "ehr", scope: "fhir-ehr:write", probeTool: ()},
     {key: "literature", label: "Search PubMed", target: "pubmed", scope: "pubmed:search", probeTool: "search_pubmed",
         probeArgs: {"query": "lipoprotein(a) cardiovascular risk", "maxResults": 1}}
 ];

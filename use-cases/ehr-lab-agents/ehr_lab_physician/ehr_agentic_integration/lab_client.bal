@@ -2,12 +2,14 @@ import ballerinax/health.clients.fhir;
 import ballerinax/health.fhir.r4 as r4;
 import ballerinax/health.fhir.r4.international401;
 
-// Everything the integration exchanges with the reference lab goes through this file.
-// The lab is a separate FHIR system: it has its own patient ids, so the EHR patient is matched to
-// (or registered with) the lab by MRN before an order is placed.
+// Everything the integration exchanges with the reference lab goes through this file, as typed FHIR R4
+// resources (Patient, ServiceRequest, Specimen, DiagnosticReport, Observation): what is built is checked
+// against the resource's structure at compile time, and what the lab returns is checked when it is read.
+// The lab is a separate FHIR system: it has its own patient ids, so the EHR patient is matched to (or
+// registered with) the lab by MRN before an order is placed.
 
 # Finds the patient in the lab by MRN, registering them if the lab has never seen them. The MRN keeps
-# its EHR's identifier system, so patients from two EHRs never collide in the lab. Safe to retry.
+# the EHR's identifier system, so the lab can tell which clinic the patient belongs to. Safe to retry.
 #
 # + ehrPatient - the patient as read from the EHR
 # + mrnSystem - the EHR's MRN identifier system
@@ -17,13 +19,19 @@ isolated function ensureLabPatient(international401:Patient ehrPatient, string m
     if mrn is () {
         return error("The EHR patient has no MRN, so it cannot be matched with the lab");
     }
-    json labPatient = {
-        resourceType: "Patient",
-        identifier: [{system: mrnSystem, value: mrn}],
-        name: ehrPatient.name.toJson(),
-        gender: ehrPatient.gender,
-        birthDate: ehrPatient.birthDate
-    };
+    international401:Patient labPatient = {identifier: [{system: mrnSystem, value: mrn}]};
+    r4:HumanName[]? name = ehrPatient.name;
+    if name is r4:HumanName[] {
+        labPatient.name = name;
+    }
+    international401:PatientGender? gender = ehrPatient.gender;
+    if gender is international401:PatientGender {
+        labPatient.gender = gender;
+    }
+    r4:date? birthDate = ehrPatient.birthDate;
+    if birthDate is r4:date {
+        labPatient.birthDate = birthDate;
+    }
     return createOnce(labFhir, labPatient, mrnSystem, mrn);
 }
 
@@ -31,19 +39,18 @@ isolated function ensureLabPatient(international401:Patient ehrPatient, string m
 # from its ServiceRequest, so this is two reads rather than a search.
 #
 # + labServiceRequestId - the lab's ServiceRequest id
-# + return - the specimen id and its collection time, nil while the patient has not been to the lab,
-# or an error if the lab cannot be read
-isolated function findSpecimen(string labServiceRequestId) returns [string, string]?|error {
-    fhir:FHIRResponse response = check labFhir->getById("ServiceRequest", labServiceRequestId);
-    json serviceRequest = <json>response.'resource;
-    string? specimenRef = jsonText(serviceRequest, "specimen", 0, "reference");
+# + return - the Specimen, nil while the patient has not been to the lab, or an error if the lab cannot be read
+isolated function findSpecimen(string labServiceRequestId) returns international401:Specimen?|error {
+    international401:ServiceRequest serviceRequest = check (check readLabResource("ServiceRequest", labServiceRequestId))
+        .cloneWithType();
+    r4:Reference[] specimens = serviceRequest.specimen ?: [];
+    string? specimenRef = specimens.length() > 0 ? specimens[0].reference : ();
     if specimenRef is () {
         return ();
     }
     string specimenId = check idFromLocation(specimenRef);
-    fhir:FHIRResponse specimenResponse = check labFhir->getById("Specimen", specimenId);
-    json specimen = <json>specimenResponse.'resource;
-    return [specimenId, jsonText(specimen, "collection", "collectedDateTime") ?: nowIso()];
+    international401:Specimen specimen = check (check readLabResource("Specimen", specimenId)).cloneWithType();
+    return specimen;
 }
 
 # Places the order with the lab. Identified by the placer-order id, so a retry cannot order twice.
@@ -56,8 +63,8 @@ isolated function findSpecimen(string labServiceRequestId) returns [string, stri
 # + return - the lab's ServiceRequest id
 isolated function submitLabOrder(string labPatientId, string placerOrderId, string[] testCodes,
         string practitionerName, string note) returns string|error {
-    json serviceRequest = labServiceRequest(string `Patient/${labPatientId}`, placerOrderId, testCodes,
-            {display: practitionerName}, note);
+    international401:ServiceRequest serviceRequest = labServiceRequest(string `Patient/${labPatientId}`,
+            placerOrderId, testCodes, {display: practitionerName}, note);
     return createOnce(labFhir, serviceRequest, PLACER_ORDER_SYSTEM, placerOrderId);
 }
 
@@ -65,45 +72,40 @@ isolated function submitLabOrder(string labPatientId, string placerOrderId, stri
 # `based-on=ServiceRequest/{id}` (the `:identifier` modifier is not supported by every server).
 #
 # + labServiceRequestId - the lab's ServiceRequest id
-# + return - the report as json, or nil when the lab has no report yet
-isolated function findLabReport(string labServiceRequestId) returns json?|error {
+# + return - the report, or nil when the lab has no report yet
+isolated function findLabReport(string labServiceRequestId) returns international401:DiagnosticReport?|error {
     json[] reports = check searchResources(labFhir, "DiagnosticReport",
             {"based-on": [string `ServiceRequest/${labServiceRequestId}`]});
-    return reports.length() > 0 ? reports[0] : ();
+    return reports.length() > 0 ? check reports[0].cloneWithType() : ();
 }
 
 isolated function isFinalReportStatus(string? status) returns boolean =>
     status == "final" || status == "amended" || status == "corrected";
 
-# Reads a lab report and the Observations it references.
+# Reads the Observations a lab report references.
 #
-# + diagnosticReportId - the lab's DiagnosticReport id
-# + return - the report json and its observations' json
-isolated function readLabReport(string diagnosticReportId) returns [json, json[]]|error {
-    fhir:FHIRResponse response = check labFhir->getById("DiagnosticReport", diagnosticReportId);
-    json report = <json>response.'resource;
-    international401:DiagnosticReport typed = check report.cloneWithType();
-    string[] observationIds = from r4:Reference ref in typed.result ?: []
+# + report - the lab's DiagnosticReport
+# + return - its Observations
+isolated function reportObservations(international401:DiagnosticReport report)
+        returns international401:Observation[]|error {
+    string[] observationIds = from r4:Reference ref in report.result ?: []
         let string? reference = ref.reference
         where reference is string
         select check idFromLocation(reference);
     if observationIds.length() == 0 {
-        return [report, []];
+        return [];
     }
     json[] observations = check searchResources(labFhir, "Observation", {"_id": [string:'join(",", ...observationIds)]});
-    return [report, observations];
+    return <international401:Observation[]>check typedResources(observations, ObservationList);
 }
 
 # Flattens lab Observations into result values, including the lab's own reference ranges.
 #
-# + observations - the lab's Observations as json
-# + return - one value per Observation that has a LOINC code and a numeric value, or an error if the
-# Observations cannot be read as FHIR resources
-isolated function labResultValues(json[] observations) returns LabResultValue[]|error {
-    international401:Observation[] typed =
-        <international401:Observation[]>check typedResources(observations, ObservationList);
+# + observations - the lab's Observations
+# + return - one value per Observation that has a LOINC code and a numeric value
+isolated function labResultValues(international401:Observation[] observations) returns LabResultValue[] {
     LabResultValue[] values = [];
-    foreach international401:Observation observation in typed {
+    foreach international401:Observation observation in observations {
         decimal? value = observation.valueQuantity?.value;
         string? code = codingCode(observation.code, LOINC);
         if value is () || code is () {
@@ -123,4 +125,14 @@ isolated function labResultValues(json[] observations) returns LabResultValue[]|
         });
     }
     return values;
+}
+
+# Reads one resource from the lab.
+#
+# + resourceType - the resource type
+# + id - the resource's id in the lab
+# + return - the resource as the lab returned it, ready to be read as its FHIR type
+isolated function readLabResource(string resourceType, string id) returns json|error {
+    fhir:FHIRResponse response = check labFhir->getById(resourceType, id);
+    return <json>response.'resource;
 }

@@ -2,7 +2,7 @@ import ballerina/workflow;
 
 // One durable workflow per longevity assessment:
 //
-//   pull the record from Cerner/Athena ─▶ open the visit in the EHR
+//   pull the record from the EHR ─▶ open the visit in the EHR
 //   ⏸ physician  (human task)   evaluate with the Copilot, order labs
 //   ─▶ order of record in the EHR ─▶ order with the lab ─▶ notify the patient
 //   ⏸ patient    (human task)   visit the lab — completed when the lab collects the specimen
