@@ -14,8 +14,14 @@ dbUser = "demo"
 dbPassword = "demo"
 dbName = "longevity"
 
-modelProvider = "anthropic"
+# "anthropic" or "openrouter" — switch with ./scripts/amp-models.sh (it also points the agents at the
+# matching model configurations in Agent Manager).
+modelProvider = "openrouter"
 anthropicModelName = "claude-sonnet-4-6"
+openrouterModelName = "deepseek/deepseek-v4.1-flash"
+# Output cap per model call. Reasoning models (GLM 5.3) spend part of it thinking before they answer;
+# 8192 cut GLM off mid-answer on the Copilot's larger requests.
+maxTokens = 32768
 
 apiPort = 9090
 corsAllowOrigins = ["http://localhost:5173", "http://localhost:5174"]

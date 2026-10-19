@@ -489,6 +489,11 @@ log "wrote the agentManager block in secrets.toml and .amp/trace-routes.json"
 if [[ -n "$PROVIDER_UUID" ]]; then
   ./scripts/amp-budgets.sh
 fi
+# The block above holds the agents' Claude keys; when the agents run on OpenRouter (amp-models.sh), point
+# them back at their OpenRouter model configurations.
+if grep -q '^modelProvider *= *"openrouter"' config/integration.toml; then
+  ./scripts/amp-models.sh openrouter --no-restart
+fi
 
 # ── Apply: the integration reads its config at start; the router re-reads routes on every flush ──
 if docker compose ps --status running --services 2>/dev/null | grep -qx integration; then

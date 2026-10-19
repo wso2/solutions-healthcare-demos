@@ -295,6 +295,16 @@ services:
       - mcp-gatekeeper
     command: ["tunnel", "--no-autoupdate", "--url", "http://mcp-gatekeeper:8080"]
 
+  # In front of Agent Manager's AI gateway for the agents on OpenRouter (scripts/amp-models.sh openrouter):
+  # moves the OpenRouter client's "Authorization: Bearer <agent key>" to x-api-key, where the gateway checks
+  # each agent's key, and drops JSON null fields that Mistral's API rejects (infra/llm-auth-adapter).
+  llm-auth-adapter:
+    build:
+      context: ./infra/llm-auth-adapter
+    restart: unless-stopped
+    extra_hosts:
+      - "default-default.gateway.localhost:host-gateway"
+
   # ── Demo portal (React) ─────────────────────────────────────────────────────
   # Physician workspace, patient app and lab console. nginx proxies /api and /lab-api.
   portal:

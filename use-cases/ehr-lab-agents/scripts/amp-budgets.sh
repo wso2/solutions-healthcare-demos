@@ -13,6 +13,8 @@
 #   ./scripts/amp-budgets.sh --exhaust care-planner    # demo: shrink one agent's budget to $0.0001 — its next
 #                                                      # model call is refused (run without flags to restore)
 #   ./scripts/amp-budgets.sh --off                     # no budgets
+#   ./scripts/amp-budgets.sh --config openrouter       # the agents' OpenRouter model configurations instead
+#                                                      # of their Claude ones (amp-openrouter.sh)
 #
 # Also writes .amp/budgets.json (the budgets in force) and .amp/model-prices.json (the gateway's prices for
 # the model in use), which the trace router uses to show spend against budget.
@@ -32,7 +34,8 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --exhaust) MODE=exhaust; EXHAUST="${2:-}"; shift ;;
     --off) MODE=off ;;
-    -h|--help) sed -n '2,19p' "$0"; exit 0 ;;
+    --config) CONFIG_NAME="${2:?--config needs a model configuration name}"; shift ;;
+    -h|--help) sed -n '2,21p' "$0"; exit 0 ;;
     *) echo "unknown option: $1 (see --help)" >&2; exit 1 ;;
   esac
   shift
@@ -78,15 +81,25 @@ for name in "${NAMES[@]}"; do
   [[ -n "$config" ]] || die "$name has no '$CONFIG_NAME' model configuration — run ./scripts/amp-setup.sh"
   [[ $(api GET "/orgs/$ORG/projects/$PROJECT/agents/$name/model-configs/$config") == 200 ]] || die "cannot read $name's model configuration"
   proxy_uuid=$(jq -r '.envMappings.default.configuration.proxyUuid // empty' "$WORK/resp")
+  # The provider follows from the configuration's name; what Agent Manager reports is used for any other name.
+  case "$CONFIG_NAME" in
+    claude) provider=anthropic ;;
+    openrouter) provider=openrouter ;;
+    *) provider=$(jq -r '.envMappings.default.configuration.providerName // empty' "$WORK/resp") ;;
+  esac
+  [[ -n "$provider" ]] || die "cannot tell which provider $name's $CONFIG_NAME configuration uses"
 
-  # Agent Manager creates the proxy with an "API-Key" header; the Anthropic client sends x-api-key. The
-  # proxy is read and updated by name (with providerUuid in the body), and the change is deployed by the
-  # model-configuration update below (ISSUES_TO_REPORT.md D9).
+  # Agent Manager creates the proxy with an "API-Key" header; the agents' keys arrive in x-api-key — from the
+  # Anthropic client directly, and from the OpenRouter client through infra/llm-auth-adapter, which moves
+  # its "Authorization: Bearer …" there (Agent Manager drops the api-key-auth valuePrefix that would strip
+  # "Bearer ", ISSUES_TO_REPORT.md D14). The proxy is read and updated by name (with providerUuid in the
+  # body), and the change is deployed by the model-configuration update below (D9).
+  security='{enabled: true, apiKey: {enabled: true, key: "x-api-key", in: "header"}}'
   proxy=$(jq -r --arg u "$proxy_uuid" '[.proxies[]? | select(.uuid == $u)][0].configuration.name // empty' "$WORK/proxies")
   [[ -n "$proxy" ]] || die "cannot find $name's LLM proxy"
   [[ $(api GET "/orgs/$ORG/projects/$PROJECT/llm-proxies/$proxy") == 200 ]] || die "cannot read $name's LLM proxy"
-  if [[ $(jq -r '.configuration.security.apiKey.key // empty' "$WORK/resp") != x-api-key ]]; then
-    jq '{providerUuid, description, configuration: (.configuration | .security = {enabled: true, apiKey: {enabled: true, key: "x-api-key", in: "header"}})}' \
+  if ! jq -e "(.configuration.security // {}) == $security" "$WORK/resp" >/dev/null; then
+    jq "{providerUuid, description, configuration: (.configuration | .security = $security)}" \
       "$WORK/resp" > "$WORK/body"
     status=$(api PUT "/orgs/$ORG/projects/$PROJECT/llm-proxies/$proxy" "$WORK/body")
     [[ $status == 200 ]] || die "updating $name's LLM proxy (HTTP $status): $(head -c 200 "$WORK/resp")"
@@ -95,10 +108,10 @@ for name in "${NAMES[@]}"; do
   # llm-cost runs first in the response phase (response policies run in reverse order), so it is listed last.
   # The proxy does not inherit the provider's 300 s timeout (it defaults to 60 s, too short for the agents'
   # long structured answers), so it is set here too.
-  jq -n --arg mode "$MODE" --argjson usd "$usd" --argjson tokens "$tokens" \
+  jq -n --arg mode "$MODE" --argjson usd "$usd" --argjson tokens "$tokens" --arg provider "$provider" \
     --arg vc "$V_COST" --arg vb "$V_BUDGET" --arg vt "$V_TOKENS" '
     def path(p): [{path: "/*", methods: ["*"], params: p}];
-    {envMappings: {default: {providerName: "anthropic", configuration: {
+    {envMappings: {default: {providerName: $provider, configuration: {
       resilience: {timeout: "300s", idleTimeout: "300s"},
       policies: (if $mode == "off" then [] else [
       {name: "llm-cost-based-ratelimit", version: $vb, paths: path({budgetLimits: [{amount: $usd, duration: "24h"}]})},
@@ -111,7 +124,7 @@ for name in "${NAMES[@]}"; do
   if [[ $MODE == off ]]; then
     log "$name: no budget"
   else
-    log "$name: \$$usd per day, $tokens tokens per hour"
+    log "$name ($CONFIG_NAME): \$$usd per day, $tokens tokens per hour"
     jq --arg n "$name" --argjson usd "$usd" --argjson tokens "$tokens" --arg ex "$([[ $name == "$EXHAUST" ]] && echo true || echo false)" \
       '.[$n] = {usdPerDay: $usd, tokensPerHour: $tokens, exhausted: ($ex == "true")}' "$WORK/in-force" > "$WORK/next"
     mv "$WORK/next" "$WORK/in-force"
@@ -121,11 +134,15 @@ done
 mkdir -p .amp
 cp "$WORK/in-force" .amp/budgets.json
 
-# The gateway's prices for the model the agents use, so spend shown in the portal matches what it enforces.
-MODEL=$(sed -n 's/^anthropicModelName *= *"\(.*\)"/\1/p' config/integration.toml)
+# The gateway's prices for the models the agents use (Claude and, when set up, OpenRouter's), so spend shown
+# in the portal matches what it enforces, for runs on either.
+CLAUDE_MODEL=$(sed -n 's/^anthropicModelName *= *"\(.*\)"/\1/p' config/integration.toml)
+OPENROUTER_MODEL=$(sed -n 's/^openrouterModelName *= *"\(.*\)"/\1/p' config/integration.toml)
 docker exec -i k3d-amp-local-server-0 kubectl -n default-default get cm api-platform-default-default-gw-gateway-llm-pricing \
-  -o jsonpath='{.data.model_prices\.json}' | jq --arg m "$MODEL" '{($m): .[$m]}' > .amp/model-prices.json
+  -o jsonpath='{.data.model_prices\.json}' | jq --arg c "$CLAUDE_MODEL" --arg o "${OPENROUTER_MODEL:-none}" \
+  'with_entries(select(.key == $c or .key == $o or (.key | startswith($o + "-"))))' > .amp/model-prices.json
 chmod 644 .amp/budgets.json .amp/model-prices.json   # read by the trace router (runs as nobody); no secrets
-log "prices for $MODEL from the gateway: \$$(jq -r --arg m "$MODEL" '.[$m].input_cost_per_token * 1000000' .amp/model-prices.json)/M input, \$$(jq -r --arg m "$MODEL" '.[$m].output_cost_per_token * 1000000' .amp/model-prices.json)/M output tokens"
+jq -r 'to_entries[] | "prices for \(.key) from the gateway: $\(.value.input_cost_per_token * 1000000)/M input, $\(.value.output_cost_per_token * 1000000)/M output tokens"' \
+  .amp/model-prices.json | while read -r line; do log "$line"; done
 [[ $MODE == exhaust ]] && log "$EXHAUST's next model call will be refused (429) — run ./scripts/amp-budgets.sh to restore"
 exit 0

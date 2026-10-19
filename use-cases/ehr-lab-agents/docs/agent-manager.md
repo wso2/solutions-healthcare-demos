@@ -237,6 +237,64 @@ Choices and limits, learned the hard way:
 - **Traces are recorded agent-side**, so the traces in AMP still contain PHI. Protect the console
   accordingly.
 
+### Cheaper models through OpenRouter
+
+The agents can also run on **DeepSeek V4.1 Flash** (`deepseek/deepseek-v4.1-flash`, $0.047 / $0.12 per M tokens
+in / out against Claude Sonnet 4.6's $3 / $15), through the same AI gateway. Nothing about the Anthropic setup
+changes: OpenRouter is added next to it, and one command switches the agents between the two.
+
+```bash
+# secrets.toml: openrouterApiKey = "sk-or-v1-…"
+./scripts/amp-openrouter.sh            # provider + PHI guardrail, per-agent "openrouter" model configs, budgets, prices
+./scripts/amp-models.sh openrouter     # point the agents at them (back: ./scripts/amp-models.sh claude)
+```
+
+- **Provider `openrouter`:** OpenAI template, upstream `https://openrouter.ai/api/v1`; holds the OpenRouter key and
+  carries the same `pii-masking-regex` guardrail as `anthropic`.
+- **Model configuration `openrouter` per agent:** its own LLM proxy, key and budget, beside the agent's `claude`
+  configuration. `amp-models.sh` issues the agent a key for the chosen one, writes it and the gateway URL into
+  `secrets.toml`, sets `modelProvider` in `config/integration.toml` and restarts the integration.
+- **Prices:** the gateway's price list has neither model, so `amp-openrouter.sh` adds both from OpenRouter's
+  catalogue (under the name OpenRouter answers with). `llm-cost` then prices the calls, and the dollar budgets and
+  the portal's spend work as for Claude.
+- **The integration** uses Ballerina's `ai.openrouter` provider (`modelProvider = "openrouter"`).
+
+Measured on one full assessment (Copilot, Results Analysis, Care Plan): **$0.0072** in all, about 112k tokens.
+
+Getting OpenRouter through Agent Manager 1.0.0 needed three workarounds:
+- **Bearer keys.** The OpenAI-style client can only send `Authorization: Bearer <key>`, and Agent Manager drops the
+  gateway's `valuePrefix` option that would strip `Bearer ` (`ISSUES_TO_REPORT.md` D14). `infra/llm-auth-adapter`,
+  a small Python service, moves the key to `x-api-key` on the way to the gateway (and drops JSON null fields some
+  providers reject), so the OpenRouter proxies check
+  keys exactly as the Claude ones do.
+- **The provider checks `x-api-key`.** Each proxy calls its provider with an internal key in a header fixed when
+  the proxy is created, and `Authorization` does not work for that hop (D16). The provider's upstream auth to
+  OpenRouter is still `Authorization: Bearer <OpenRouter key>`.
+- **Fresh key names.** The gateway drops a re-issued key whose name it already holds (D15), so `amp-models.sh`
+  revokes an agent's old keys and issues a new one under a timestamped name.
+
+DeepSeek sometimes answers a structured-output request in plain text instead of the tool call the Ballerina
+provider asks for ("did not return a tool call"). The workflow's agent retries absorb it.
+
+**Other models.** `./scripts/amp-models.sh openrouter --model <id>` switches to any OpenRouter model (its price is
+added to the gateway first). One assessment each (Sofia Alvarez, same question, all tools), judged by GPT-6 Luna
+(`./scripts/amp-scores.sh deepseek-v4-1-flash glm-5-3 claude-haiku-5-5`):
+
+| | DeepSeek V4.1 Flash | GLM 5.3 | Claude Haiku 5.5 |
+|---|---|---|---|
+| Whole journey, first try | yes | yes, with `maxTokens = 32768` | no: one tool loop; proposed no orderable tests |
+| Cost per assessment | $0.018 | $0.111 | $0.033 |
+| Agent time | ~2.5 min | ~6.5 min | ~2 min |
+| Copilot: helpfulness / instruction following | 0.75 / 0.65 | 0.75 / 0.92 | 0.87 / 0.25 |
+| Analysis: completeness / reasoning / clinical grounding | 0.90 / 0.70 / 0.75 | 0.98 / 0.70 / 0 | 1 / 0.82 / 1 |
+| Care plan: clarity / tone / medication safety | 0.86 / 0.66 / 0.75 | 0.75 / 0.56 / 0.75 | 0.90 / 0.73 / 1 |
+| Code checks (PHI, read-only, orderable tests, citations) | all pass | all pass | orderable tests 0; no citations |
+
+One run each, so read it as an indication. The demo uses DeepSeek: the only model that completed every step first
+time with its tools, at the lowest cost. GLM 5.3 reasons at length (raise `maxTokens`; 8192 cut it off). Mistral
+Large 4 rejects the client's `"strict": null` tool field (422); `infra/llm-auth-adapter` now drops null fields, but
+it was not re-tested.
+
 ## 4. Monitoring
 
 `ballerina/ai` 1.15+ emits GenAI spans for every agent run (`invoke_agent`, `chat`, `execute_tool`).

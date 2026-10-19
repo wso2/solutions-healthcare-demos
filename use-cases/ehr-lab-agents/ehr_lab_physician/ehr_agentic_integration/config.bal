@@ -94,7 +94,7 @@ configurable string dbPassword = "demo";
 configurable string dbName = "longevity";
 
 // ── Model provider ──
-# "anthropic" | "wso2" (the WSO2 Integrator default provider).
+# "anthropic" | "openrouter" | "wso2" (the WSO2 Integrator default provider).
 configurable string modelProvider = "anthropic";
 # Anthropic API key; set in secrets.toml.
 configurable string anthropicApiKey = "";
@@ -102,6 +102,12 @@ configurable string anthropicApiKey = "";
 configurable string anthropicModelName = "claude-sonnet-4-6";
 # Anthropic API base URL.
 configurable string anthropicServiceUrl = "https://api.anthropic.com/v1";
+# OpenRouter API key, for calls without Agent Manager; set in secrets.toml.
+configurable string openrouterApiKey = "";
+# OpenRouter model id (provider/model, as OpenRouter lists it).
+configurable string openrouterModelName = "deepseek/deepseek-v4.1-flash";
+# OpenRouter API base URL (OpenAI-compatible).
+configurable string openrouterServiceUrl = "https://openrouter.ai/api/v1";
 # Output token limit per model call.
 configurable int maxTokens = 8192;
 # Timeout for one model call.

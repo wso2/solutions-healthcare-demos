@@ -5,8 +5,9 @@
 # address the EHR by FHIR resource id (Patient/p-…), which is not PHI and is left alone.
 #
 #   ./scripts/amp-guardrails.sh            # apply (idempotent; after amp-setup.sh)
-#   ./scripts/amp-guardrails.sh --verify   # also show what Claude saw, through the Copilot's gateway key
+#   ./scripts/amp-guardrails.sh --verify   # also show what the model saw, through the Copilot's gateway key
 #   ./scripts/amp-guardrails.sh --remove   # take the guardrail off again (for a before/after demo)
+#   ./scripts/amp-guardrails.sh --provider openrouter   # the same on the OpenRouter provider (amp-openrouter.sh)
 #
 # Redacted: medical record numbers (MRN-…, ATH-…), SSNs, US phone numbers — structured identifiers a regex
 # finds reliably. Not emails: the policy matches on the raw JSON text, and the email pattern can start
@@ -25,13 +26,15 @@ PROVIDER=anthropic
 POLICY=pii-masking-regex
 
 MODE=apply
-for arg in "$@"; do
-  case "$arg" in
+while [[ $# -gt 0 ]]; do
+  case "$1" in
     --verify) VERIFY=true ;;
     --remove) MODE=remove ;;
-    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
-    *) echo "unknown option: $arg (see --help)" >&2; exit 1 ;;
+    --provider) PROVIDER="${2:?--provider needs a provider name}"; shift ;;
+    -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
+    *) echo "unknown option: $1 (see --help)" >&2; exit 1 ;;
   esac
+  shift
 done
 VERIFY="${VERIFY:-false}"
 
@@ -80,7 +83,7 @@ status=$(curl -sS -o "$WORK/resp" -w '%{http_code}' -X PUT "${auth[@]}" -H 'Cont
   --data-binary "@$WORK/body" "$API/orgs/$ORG/llm-providers/$UUID")
 [[ $status == 20? ]] || die "updating $PROVIDER failed (HTTP $status): $(head -c 400 "$WORK/resp")"
 if [[ $MODE == apply ]]; then
-  log "$POLICY $VERSION on provider $PROVIDER: MRNs, SSNs and phone numbers redacted before anything reaches Claude"
+  log "$POLICY $VERSION on provider $PROVIDER: MRNs, SSNs and phone numbers redacted before anything reaches the model"
 else
   log "$POLICY removed from provider $PROVIDER"
 fi
@@ -92,12 +95,25 @@ if $VERIFY; then
   # The Copilot's own model configuration (its LLM proxy inherits the provider's guardrail).
   URL=$(awk '/^\[wso2healthcare.ehr_agentic_integration.agentManager.copilot\]/{f=1;next} /^\[/{f=0} f && /^llmGatewayUrl/{gsub(/.*= *"|"$/,"");print;exit}' secrets.toml)
   [[ -n "$KEY" && -n "$URL" ]] || die "no gateway key in secrets.toml — run ./scripts/amp-setup.sh"
-  jq -n '{model: "claude-sonnet-4-6", max_tokens: 200, messages: [{role: "user", content:
-    "Patient record number MRN-100234, SSN 123-45-6789, phone 617-555-0142. Repeat the record number, the SSN and the phone number exactly as you received them, one per line, nothing else."}]}' > "$WORK/msg"
-  curl -sS "$URL/messages" -H "x-api-key: $KEY" -H 'anthropic-version: 2023-06-01' -H 'Content-Type: application/json' \
-    --data-binary "@$WORK/msg" -o "$WORK/reply"
+  ASK="Patient record number MRN-100234, SSN 123-45-6789, phone 617-555-0142. Repeat the record number, the SSN and the phone number exactly as you received them, one per line, nothing else."
+  # The agents' active model (config/integration.toml): Claude speaks the Messages API, OpenRouter the OpenAI one.
+  if grep -q '^modelProvider *= *"openrouter"' config/integration.toml; then
+    MODEL=$(sed -n 's/^openrouterModelName *= *"\(.*\)"/\1/p' config/integration.toml)
+    jq -n --arg m "$MODEL" --arg q "$ASK" '{model: $m, max_tokens: 200, messages: [{role: "user", content: $q}]}' > "$WORK/msg"
+    # From the host, straight to the gateway with the key in x-api-key (what infra/llm-auth-adapter does).
+    URL="http://default-default.gateway.localhost:19080/${URL#http*://*/}"
+    printf 'x-api-key: %s\n' "$KEY" > "$WORK/auth"
+    curl -sS "$URL/chat/completions" -H @"$WORK/auth" -H 'Content-Type: application/json' --data-binary "@$WORK/msg" -o "$WORK/reply"
+    TEXT='.choices[0].message.content // .error.message // .'
+  else
+    MODEL=claude-sonnet-4-6
+    jq -n --arg m "$MODEL" --arg q "$ASK" '{model: $m, max_tokens: 200, messages: [{role: "user", content: $q}]}' > "$WORK/msg"
+    curl -sS "$URL/messages" -H "x-api-key: $KEY" -H 'anthropic-version: 2023-06-01' -H 'Content-Type: application/json' \
+      --data-binary "@$WORK/msg" -o "$WORK/reply"
+    TEXT='.content[0].text // .error.message // .'
+  fi
   echo "Sent:   MRN-100234 · SSN 123-45-6789 · 617-555-0142"
-  echo "Claude repeats what it received:"
-  jq -r '.content[0].text // .error.message // .' "$WORK/reply" | sed 's/^/  /'
+  echo "$MODEL repeats what it received:"
+  jq -r "$TEXT" "$WORK/reply" | sed 's/^/  /'
   echo "Usage: $(jq -c '.usage // {}' "$WORK/reply")"
 fi

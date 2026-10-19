@@ -1,7 +1,9 @@
 import ballerina/ai;
+import ballerina/http;
 import ballerinax/ai.anthropic;
+import ballerinax/ai.openrouter;
 
-// Same provider switch as the PA platform agents, trimmed to the two providers this demo uses.
+// Same provider switch as the PA platform agents, trimmed to the providers this demo uses.
 // Each agent gets its own provider: under Agent Manager each one calls the AI gateway with its own
 // key, so the gateway can meter, limit and guard the agents separately.
 
@@ -25,11 +27,20 @@ isolated function initModelProvider(ManagedAgentConfig agent) returns ai:ModelPr
                     serviceUrl = viaGateway ? llmGatewayUrlOf(agent) : anthropicServiceUrl,
                     maxTokens = maxTokens, timeout = modelTimeoutSeconds);
         }
+        "openrouter" => {
+            // OpenRouter speaks the OpenAI chat-completions API with a Bearer key. Through Agent Manager,
+            // the agent's OpenRouter model configuration takes the agent's key from the same header
+            // (valuePrefix "Bearer ") and swaps it for the OpenRouter key upstream.
+            boolean viaGateway = usesLlmGateway(agent);
+            return new openrouter:ModelProvider(viaGateway ? agent.llmApiKey : openrouterApiKey, openrouterModelName,
+                    serviceUrl = viaGateway ? llmGatewayUrlOf(agent) : openrouterServiceUrl,
+                    maxTokens = maxTokens, timeout = modelTimeoutSeconds, httpVersion = http:HTTP_1_1);
+        }
         "wso2" => {
             return ai:getDefaultModelProvider();
         }
         _ => {
-            return error(string `Unknown modelProvider "${modelProvider}". Valid values: anthropic, wso2.`);
+            return error(string `Unknown modelProvider "${modelProvider}". Valid values: anthropic, openrouter, wso2.`);
         }
     }
 }
@@ -39,13 +50,18 @@ isolated function initModelProvider(ManagedAgentConfig agent) returns ai:ModelPr
 #
 # + return - an error describing the missing setting, or nil when the provider is usable
 isolated function checkModelConfigured() returns error? {
-    if modelProvider != "anthropic" {
-        return;
-    }
+    string key = modelProvider == "anthropic" ? anthropicApiKey : modelProvider == "openrouter" ? openrouterApiKey : "n/a";
+    string setting = modelProvider == "anthropic" ? "anthropicApiKey" : "openrouterApiKey";
     foreach ManagedAgent agent in managedAgents {
-        if !usesLlmGateway(agent.config) && anthropicApiKey.trim().length() == 0 {
-            return error(string `${agent.role} has no model key: add anthropicApiKey to secrets.toml `
+        if !usesLlmGateway(agent.config) && key.trim().length() == 0 {
+            return error(string `${agent.role} has no model key: add ${setting} to secrets.toml `
                 + "(see secrets.example.toml), or register the agents with scripts/amp-setup.sh.");
         }
     }
 }
+
+# The model the agents use, as the portal shows it.
+#
+# + return - the model name of the configured provider
+isolated function activeModelName() returns string =>
+    modelProvider == "openrouter" ? openrouterModelName : modelProvider == "anthropic" ? anthropicModelName : "default";

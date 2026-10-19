@@ -90,7 +90,7 @@ service /api on new http:Listener(apiPort) {
         return {
             ehrs,
             lab: {name: labDisplayName, baseUrl: labFhirBaseUrl},
-            model: {provider: modelProvider, name: anthropicModelName, configured: checkModelConfigured() is ()},
+            model: {provider: modelProvider, name: activeModelName(), configured: checkModelConfigured() is ()},
             workflow: {engine: "Temporal", uiUrl: temporalUiUrl},
             agents: ["Diagnostic Copilot", "Results Analysis", "Care Plan"],
             agentManager: agentManagerView().toJson()
