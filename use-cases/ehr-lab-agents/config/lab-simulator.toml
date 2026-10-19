@@ -1,0 +1,10 @@
+# Lab simulator settings for the docker compose network.
+
+port = 9093
+labFhirBaseUrl = "http://fhir-lab:9090/fhir/r4"
+labDisplayName = "Quest Diagnostics"
+integrationWebhookUrl = "http://toxiproxy:9091/api/lab/notifications"
+integrationWebhookApiKey = "demo-lab-webhook-key"
+# 0 = results wait for the presenter to release them from the lab console.
+autoReleaseSeconds = 0
+corsAllowOrigins = ["http://localhost:5173", "http://localhost:5174"]

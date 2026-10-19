@@ -1,0 +1,172 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * Design tokens as RGB triplets (consumed by tailwind.config.js). Status colours follow the dataviz
+ * reference status palette; the four identity colours (EHR, lab, agent, physician) are categorical
+ * slots validated together for colour-vision deficiency in both modes, and always ship with an icon
+ * and a label.
+ */
+:root {
+  color-scheme: light;
+  --canvas: 246 247 249;
+  --surface: 255 255 255;
+  --sunken: 242 244 247;
+  --line: 228 231 236;
+  --ink: 16 24 40;
+  --ink-soft: 71 84 103;
+  --ink-muted: 102 112 133;
+
+  --brand: 15 118 110;
+  --brand-soft: 230 244 242;
+  --brand-ink: 17 94 89;
+
+  --good: 12 163 12;
+  --good-soft: 231 246 231;
+  --good-ink: 17 107 17;
+  --watch: 250 178 25;
+  --watch-soft: 254 244 220;
+  --watch-ink: 138 90 0;
+  --act: 208 59 59;
+  --act-soft: 251 233 233;
+  --act-ink: 163 36 36;
+
+  --ai: 98 80 214;
+  --ai-soft: 239 237 251;
+  --ai-ink: 74 58 167;
+
+  --ehr: 42 120 214;
+  --lab: 235 104 52;
+  --physician: 0 131 0;
+
+  /* charts */
+  --series: 42 120 214;
+  --band: 12 163 12;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --canvas: 15 17 21;
+    --surface: 26 27 30;
+    --sunken: 33 35 40;
+    --line: 48 51 58;
+    --ink: 240 239 236;
+    --ink-soft: 195 194 183;
+    --ink-muted: 150 150 145;
+
+    --brand: 45 212 191;
+    --brand-soft: 19 52 50;
+    --brand-ink: 153 246 228;
+
+    --good-soft: 18 48 18;
+    --good-ink: 134 239 134;
+    --watch-soft: 58 44 10;
+    --watch-ink: 252 211 77;
+    --act-soft: 64 22 22;
+    --act-ink: 252 165 165;
+
+    --ai: 144 133 233;
+    --ai-soft: 36 32 66;
+    --ai-ink: 196 189 255;
+
+    --ehr: 57 135 229;
+    --lab: 217 89 38;
+
+    --series: 57 135 229;
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --canvas: 15 17 21;
+  --surface: 26 27 30;
+  --sunken: 33 35 40;
+  --line: 48 51 58;
+  --ink: 240 239 236;
+  --ink-soft: 195 194 183;
+  --ink-muted: 150 150 145;
+  --brand: 45 212 191;
+  --brand-soft: 19 52 50;
+  --brand-ink: 153 246 228;
+  --good-soft: 18 48 18;
+  --good-ink: 134 239 134;
+  --watch-soft: 58 44 10;
+  --watch-ink: 252 211 77;
+  --act-soft: 64 22 22;
+  --act-ink: 252 165 165;
+  --ai: 144 133 233;
+  --ai-soft: 36 32 66;
+  --ai-ink: 196 189 255;
+  --ehr: 57 135 229;
+  --lab: 217 89 38;
+  --series: 57 135 229;
+}
+
+html,
+body {
+  background: rgb(var(--canvas));
+  color: rgb(var(--ink));
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+@layer components {
+  .card {
+    @apply rounded-xl border border-line bg-surface shadow-card;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2 text-sm font-medium transition
+      disabled:cursor-not-allowed disabled:opacity-50;
+  }
+  .btn-primary {
+    @apply btn bg-brand text-white hover:opacity-90 dark:text-canvas;
+  }
+  .btn-secondary {
+    @apply btn border border-line bg-surface text-ink hover:bg-sunken;
+  }
+  .btn-ghost {
+    @apply btn text-ink-soft hover:bg-sunken hover:text-ink;
+  }
+  .field {
+    @apply w-full rounded-lg border border-line bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-muted
+      focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/20;
+  }
+  .label {
+    @apply mb-1.5 block text-xs font-medium uppercase tracking-wide text-ink-muted;
+  }
+  .eyebrow {
+    @apply text-xs font-semibold uppercase tracking-wider text-ink-muted;
+  }
+}
+
+/* Markdown rendered from agents and notes */
+.prose-note h1,
+.prose-note h2,
+.prose-note h3 {
+  @apply mb-2 mt-5 text-sm font-semibold uppercase tracking-wide text-ink-soft first:mt-0;
+}
+.prose-note p {
+  @apply mb-3 text-sm leading-relaxed text-ink;
+}
+.prose-note ul,
+.prose-note ol {
+  @apply mb-3 ml-5 space-y-1 text-sm text-ink;
+}
+.prose-note ul {
+  @apply list-disc;
+}
+.prose-note ol {
+  @apply list-decimal;
+}
+.prose-note strong {
+  @apply font-semibold;
+}
+.prose-note table {
+  @apply mb-3 w-full text-sm;
+}
+.prose-note th,
+.prose-note td {
+  @apply border-b border-line py-1.5 pr-3 text-left;
+}

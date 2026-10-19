@@ -1,0 +1,149 @@
+name: mcp-fhir-deidentify
+version: v0.1.0
+description: |
+  De-identifies FHIR data in MCP tool results before the AI agent sees it. Finds FHIR JSON in
+  tools/call and resources/read results (content[].text, embedded resources, structuredContent; JSON and
+  event-stream responses), and applies per-resource-type rules to every resource it contains — Bundle
+  entries, _include'd and contained resources too: redact, mask, hash (keyed, stable pseudonym) or
+  generalize (dates to year or month) elements selected by FHIRPath, keep only an allowlist of elements,
+  or deny a resource type outright. Narrative text and Reference.display are removed by default, changed
+  resources are tagged in meta.security, and tool calls that search on guarded fields (family=Doe) are
+  refused before they reach the server. Fails closed: a result that cannot be processed is replaced by an
+  error result, never passed through.
+
+parameters:
+  type: object
+  additionalProperties: false
+  properties:
+    tools:
+      type: array
+      x-wso2-policy-advanced-param: false
+      description: Tools whose results are de-identified. "*" means every tool.
+      default: ["*"]
+      items:
+        type: string
+        minLength: 1
+        maxLength: 256
+    resources:
+      type: array
+      x-wso2-policy-advanced-param: false
+      description: Rules per FHIR resource type.
+      items:
+        type: object
+        additionalProperties: false
+        required:
+          - type
+        properties:
+          type:
+            type: string
+            description: FHIR resource type, e.g. Patient.
+            pattern: "^[A-Z][A-Za-z]+$"
+          access:
+            type: string
+            description: deny suppresses the resource wherever it appears (a Bundle entry is removed).
+            enum: [allow, deny]
+            default: allow
+          include:
+            type: array
+            description: |
+              Allowlist of FHIRPath expressions. When set, only these elements are kept (plus resourceType,
+              id and meta). Choice elements match every type, e.g. Observation.value keeps valueQuantity.
+            items:
+              type: string
+              minLength: 1
+          rules:
+            type: array
+            items:
+              type: object
+              additionalProperties: false
+              required:
+                - fhirPaths
+                - operation
+              properties:
+                fhirPaths:
+                  type: array
+                  minItems: 1
+                  description: |
+                    FHIRPath subset: Type.element.element, where(path = 'value' [and|or ...]), where(path != 'value'),
+                    where(path.exists()), extension('url'), ofType(Type), first(), [n].
+                  items:
+                    type: string
+                    minLength: 1
+                operation:
+                  type: string
+                  description: |
+                    redact removes the element; mask keeps the last keepLast characters; hash replaces the value
+                    with a keyed HMAC-SHA256 pseudonym (h_ + 16 hex); generalize truncates dates to precision.
+                    Elements that mask, hash or generalize cannot handle are redacted.
+                  enum: [redact, mask, hash, generalize]
+                keepLast:
+                  type: integer
+                  description: mask only — characters left visible at the end.
+                  minimum: 0
+                  maximum: 8
+                  default: 4
+                precision:
+                  type: string
+                  description: generalize only.
+                  enum: [year, month]
+                  default: year
+          denySearchParams:
+            type: array
+            description: |
+              Search parameters on this type that tool calls may not use — also as modifiers (family:exact),
+              chained (subject:Patient.name, patient.family) or reverse-chained (_has:...) parameters. When set,
+              the free-text parameters _text and _content are refused for this type as well.
+            items:
+              type: string
+              minLength: 1
+    defaultAccess:
+      type: string
+      x-wso2-policy-advanced-param: true
+      description: Access for resource types not listed in resources.
+      enum: [allow, deny]
+      default: allow
+    redactNarrative:
+      type: boolean
+      x-wso2-policy-advanced-param: true
+      description: Remove the narrative (text) of every resource — it repeats names and identifiers.
+      default: true
+    redactReferenceDisplay:
+      type: boolean
+      x-wso2-policy-advanced-param: true
+      description: Remove Reference.display everywhere — it usually carries the patient's or practitioner's name.
+      default: true
+    securityLabels:
+      type: boolean
+      x-wso2-policy-advanced-param: true
+      description: Tag changed resources in meta.security (v3-ObservationValue REDACTED, MASKED, PSEUDED, ABSTRED).
+      default: true
+    nonJsonContent:
+      type: string
+      x-wso2-policy-advanced-param: true
+      description: |
+        What to do with tool-result content that is not JSON (plain text, binary blobs) and so cannot be
+        inspected as FHIR. allow passes it through; block withholds it.
+      enum: [allow, block]
+      default: allow
+    searchArguments:
+      type: object
+      x-wso2-policy-advanced-param: true
+      additionalProperties: false
+      description: Tool argument names that carry the resource type and the search parameters (object or query string).
+      properties:
+        resourceType:
+          type: string
+          default: type
+        searchParams:
+          type: string
+          default: searchParam
+
+systemParameters:
+  type: object
+  additionalProperties: false
+  properties:
+    hashKey:
+      type: string
+      description: Secret key for the hash operation. Required when any rule uses hash.
+      default: ""
+      "wso2/defaultValue": "${config.policy_configurations.mcpfhirdeidentify_v0.hash_key}"

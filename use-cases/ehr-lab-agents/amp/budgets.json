@@ -1,0 +1,8 @@
+{
+  "_comment": "Per-agent AI budgets, enforced by WSO2 Agent Manager's AI gateway on each agent's model configuration (scripts/amp-budgets.sh). usdPerDay: llm-cost-based-ratelimit, priced by llm-cost from the gateway's price list. tokensPerHour: token-based-ratelimit (input + output).",
+  "agents": {
+    "diagnostic-copilot": { "usdPerDay": 5, "tokensPerHour": 1000000 },
+    "results-analyst": { "usdPerDay": 5, "tokensPerHour": 1000000 },
+    "care-planner": { "usdPerDay": 3, "tokensPerHour": 500000 }
+  }
+}

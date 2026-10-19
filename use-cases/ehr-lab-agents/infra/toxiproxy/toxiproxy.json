@@ -1,0 +1,5 @@
+[
+  {"name": "cerner", "listen": "0.0.0.0:8081", "upstream": "fhir-cerner:9090", "enabled": true},
+  {"name": "athena", "listen": "0.0.0.0:8083", "upstream": "fhir-athena:9090", "enabled": true},
+  {"name": "lab-webhook", "listen": "0.0.0.0:9091", "upstream": "integration:9090", "enabled": true}
+]

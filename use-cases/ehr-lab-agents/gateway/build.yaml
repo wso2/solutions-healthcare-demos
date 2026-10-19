@@ -1,0 +1,118 @@
+# Custom WSO2 API Platform gateway for the demo: the stock 1.2.1 policy set — every policy pinned to
+# the version gateway 1.2.1 ships (generated from its /app/build-manifest.yaml) — plus mcp-fhir-deidentify.
+# Built by scripts/amp-gateway.sh with ghcr.io/wso2/api-platform/gateway-builder:1.2.1.
+version: v1
+gateway:
+  version: 1.2.1
+policies:
+  - name: advanced-ratelimit
+    gomodule: github.com/wso2/gateway-controllers/policies/advanced-ratelimit@v1.1.2
+  - name: analytics-header-filter
+    gomodule: github.com/wso2/gateway-controllers/policies/analytics-header-filter@v1.0.1
+  - name: api-key-auth
+    gomodule: github.com/wso2/gateway-controllers/policies/api-key-auth@v1.2.1
+  - name: aws-authentication
+    gomodule: github.com/wso2/gateway-controllers/policies/aws-authentication@v0.10.0
+  - name: aws-bedrock-guardrail
+    gomodule: github.com/wso2/gateway-controllers/policies/aws-bedrock-guardrail@v1.2.0
+  - name: azure-content-safety-content-moderation
+    gomodule: github.com/wso2/gateway-controllers/policies/azure-content-safety-content-moderation@v1.0.2
+  - name: backend-jwt
+    gomodule: github.com/wso2/gateway-controllers/policies/backend-jwt@v1.0.1
+  - name: basic-auth
+    gomodule: github.com/wso2/gateway-controllers/policies/basic-auth@v1.0.3
+  - name: basic-ratelimit
+    gomodule: github.com/wso2/gateway-controllers/policies/basic-ratelimit@v1.1.1
+  - name: content-length-guardrail
+    gomodule: github.com/wso2/gateway-controllers/policies/content-length-guardrail@v1.0.1
+  - name: cors
+    gomodule: github.com/wso2/gateway-controllers/policies/cors@v1.0.2
+  - name: dynamic-endpoint
+    gomodule: github.com/wso2/gateway-controllers/policies/dynamic-endpoint@v1.0.1
+  - name: granite-guardian-prompt-injection
+    pipPackage: git+https://github.com/wso2/gateway-controllers.git@policies/granite-guardian-prompt-injection/v0.9.0#subdirectory=policies/granite-guardian-prompt-injection
+  - name: host-rewrite
+    gomodule: github.com/wso2/gateway-controllers/policies/host-rewrite@v1.0.1
+  - name: interceptor-service
+    gomodule: github.com/wso2/gateway-controllers/policies/interceptor-service@v1.0.1
+  - name: json-schema-guardrail
+    gomodule: github.com/wso2/gateway-controllers/policies/json-schema-guardrail@v1.0.1
+  - name: json-xml-mediator
+    gomodule: github.com/wso2/gateway-controllers/policies/json-xml-mediator@v1.0.4
+  - name: jwt-auth
+    gomodule: github.com/wso2/gateway-controllers/policies/jwt-auth@v1.3.0
+  - name: llm-cost
+    gomodule: github.com/wso2/gateway-controllers/policies/llm-cost@v1.1.0
+  - name: llm-cost-based-ratelimit
+    gomodule: github.com/wso2/gateway-controllers/policies/llm-cost-based-ratelimit@v1.1.1
+  - name: llm-header-router
+    gomodule: github.com/wso2/gateway-controllers/policies/llm-header-router@v0.9.0
+  - name: log-message
+    gomodule: github.com/wso2/gateway-controllers/policies/log-message@v1.0.3
+  - name: mcp-acl-list
+    gomodule: github.com/wso2/gateway-controllers/policies/mcp-acl-list@v1.0.3
+  - name: mcp-auth
+    gomodule: github.com/wso2/gateway-controllers/policies/mcp-auth@v1.2.1
+  - name: mcp-authz
+    gomodule: github.com/wso2/gateway-controllers/policies/mcp-authz@v1.1.1
+  - name: mcp-ratelimit
+    gomodule: github.com/wso2/gateway-controllers/policies/mcp-ratelimit@v1.1.2
+  - name: mcp-rewrite
+    gomodule: github.com/wso2/gateway-controllers/policies/mcp-rewrite@v1.0.3
+  - name: model-round-robin
+    gomodule: github.com/wso2/gateway-controllers/policies/model-round-robin@v1.1.1
+  - name: model-weighted-round-robin
+    gomodule: github.com/wso2/gateway-controllers/policies/model-weighted-round-robin@v1.1.1
+  - name: nvidia-nemoguard-content-safety
+    pipPackage: git+https://github.com/wso2/gateway-controllers.git@policies/nvidia-nemoguard-content-safety/v0.9.0#subdirectory=policies/nvidia-nemoguard-content-safety
+  - name: opaque-token-auth
+    gomodule: github.com/wso2/gateway-controllers/policies/opaque-token-auth@v1.0.1
+  - name: openai-to-anthropic-transformer
+    gomodule: github.com/wso2/gateway-controllers/policies/openai-to-anthropic-transformer@v0.9.1
+  - name: openai-to-azure-openai-transformer
+    gomodule: github.com/wso2/gateway-controllers/policies/openai-to-azure-openai-transformer@v0.9.0
+  - name: openai-to-bedrock-transformer
+    gomodule: github.com/wso2/gateway-controllers/policies/openai-to-bedrock-transformer@v0.9.1
+  - name: openai-to-gemini-transformer
+    gomodule: github.com/wso2/gateway-controllers/policies/openai-to-gemini-transformer@v0.9.1
+  - name: openai-to-mistral-transformer
+    gomodule: github.com/wso2/gateway-controllers/policies/openai-to-mistral-transformer@v0.9.0
+  - name: pii-masking-regex
+    gomodule: github.com/wso2/gateway-controllers/policies/pii-masking-regex@v1.0.4
+  - name: prompt-compressor
+    pipPackage: git+https://github.com/wso2/gateway-controllers.git@policies/prompt-compressor/v0.9.0#subdirectory=policies/prompt-compressor
+  - name: prompt-decorator
+    gomodule: github.com/wso2/gateway-controllers/policies/prompt-decorator@v1.0.2
+  - name: prompt-template
+    gomodule: github.com/wso2/gateway-controllers/policies/prompt-template@v1.0.1
+  - name: redirect
+    gomodule: github.com/wso2/gateway-controllers/policies/redirect@v0.9.1
+  - name: regex-guardrail
+    gomodule: github.com/wso2/gateway-controllers/policies/regex-guardrail@v1.0.1
+  - name: remove-headers
+    gomodule: github.com/wso2/gateway-controllers/policies/remove-headers@v1.0.1
+  - name: request-rewrite
+    gomodule: github.com/wso2/gateway-controllers/policies/request-rewrite@v1.0.2
+  - name: respond
+    gomodule: github.com/wso2/gateway-controllers/policies/respond@v1.0.1
+  - name: semantic-cache
+    gomodule: github.com/wso2/gateway-controllers/policies/semantic-cache@v1.1.0
+  - name: semantic-prompt-guard
+    gomodule: github.com/wso2/gateway-controllers/policies/semantic-prompt-guard@v1.0.1
+  - name: semantic-tool-filtering
+    gomodule: github.com/wso2/gateway-controllers/policies/semantic-tool-filtering@v1.0.2
+  - name: sentence-count-guardrail
+    gomodule: github.com/wso2/gateway-controllers/policies/sentence-count-guardrail@v1.0.2
+  - name: set-headers
+    gomodule: github.com/wso2/gateway-controllers/policies/set-headers@v1.1.0
+  - name: subscription-validation
+    gomodule: github.com/wso2/gateway-controllers/policies/subscription-validation@v1.0.3
+  - name: token-based-ratelimit
+    gomodule: github.com/wso2/gateway-controllers/policies/token-based-ratelimit@v1.1.1
+  - name: url-guardrail
+    gomodule: github.com/wso2/gateway-controllers/policies/url-guardrail@v1.0.1
+  - name: word-count-guardrail
+    gomodule: github.com/wso2/gateway-controllers/policies/word-count-guardrail@v1.0.2
+  # FHIR-aware de-identification of MCP tool results (this repo).
+  - name: mcp-fhir-deidentify
+    filePath: ./policies/mcp-fhir-deidentify

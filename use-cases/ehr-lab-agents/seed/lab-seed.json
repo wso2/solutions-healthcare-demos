@@ -1,0 +1,30 @@
+{
+  "resourceType": "Bundle",
+  "type": "transaction",
+  "entry": [
+    {
+      "fullUrl": "Organization/org-quest-lab",
+      "resource": {
+        "resourceType": "Organization",
+        "id": "org-quest-lab",
+        "active": true,
+        "name": "Quest Diagnostics (simulated)",
+        "type": [
+          {
+            "coding": [
+              {
+                "system": "http://terminology.hl7.org/CodeSystem/organization-type",
+                "code": "prov"
+              }
+            ],
+            "text": "Reference laboratory"
+          }
+        ]
+      },
+      "request": {
+        "method": "PUT",
+        "url": "Organization/org-quest-lab"
+      }
+    }
+  ]
+}

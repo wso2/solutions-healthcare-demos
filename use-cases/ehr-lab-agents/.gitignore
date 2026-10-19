@@ -1,0 +1,23 @@
+# Secrets — never commit. See secrets.example.toml.
+secrets.toml
+# Credentials WSO2 Agent Manager issued to the agents (scripts/amp-setup.sh)
+.amp/
+
+# Ballerina lock files are regenerated on every build (see scripts/bal.sh for why)
+Dependencies.toml
+
+# Ballerina build output
+target/
+generated/
+
+# Portal
+node_modules/
+dist/
+*.local
+
+# Synthea jar and raw output (seed/synthea/generate.sh)
+seed/synthea/.cache/
+
+# gateway-builder output (scripts/amp-gateway.sh)
+gateway/output/
+gateway/build-manifest.yaml

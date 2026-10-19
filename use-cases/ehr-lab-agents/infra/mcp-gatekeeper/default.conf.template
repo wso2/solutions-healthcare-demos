@@ -1,0 +1,53 @@
+# Gatekeeper between the public tunnel and the WSO2 FHIR MCP servers (compose profile `amp-tunnel`).
+#
+# WSO2 Agent Manager only proxies MCP upstreams with a public address, so its gateway reaches the
+# local FHIR MCP servers through a Cloudflare quick tunnel. The tunnel URL is public; this gatekeeper
+# makes it useless to anyone but Agent Manager's MCP proxy, which sends X-Tunnel-Key (written by
+# scripts/amp-setup.sh into the proxy's upstream auth). Per-agent, per-tool authorization happens in
+# Agent Manager, before a request ever reaches the tunnel.
+#
+#   /cerner/mcp/  →  fhir-mcp-cerner:8000/mcp/
+#   /athena/mcp/  →  fhir-mcp-athena:8000/mcp/
+#   /pubmed/mcp   →  pubmed-mcp:8000/mcp
+
+# The key is 64 hex characters, longer than nginx's default map bucket (64 bytes with overhead).
+map_hash_bucket_size 128;
+
+map $http_x_tunnel_key $tunnel_key_ok {
+    default 0;
+    "${MCP_TUNNEL_KEY}" 1;
+}
+
+server {
+    listen 8080;
+    server_tokens off;
+
+    # MCP streamable HTTP: responses may be event streams, so nothing is buffered.
+    proxy_http_version 1.1;
+    proxy_buffering off;
+    proxy_cache off;
+    proxy_read_timeout 300s;
+    proxy_set_header Connection "";
+    # The MCP servers see the same Host as when the integration calls them directly.
+    proxy_set_header Host $proxy_host;
+    proxy_set_header X-Tunnel-Key "";
+
+    location /cerner/ {
+        if ($tunnel_key_ok = 0) { return 401; }
+        proxy_pass http://fhir-mcp-cerner:8000/;
+    }
+
+    location /athena/ {
+        if ($tunnel_key_ok = 0) { return 401; }
+        proxy_pass http://fhir-mcp-athena:8000/;
+    }
+
+    location /pubmed/ {
+        if ($tunnel_key_ok = 0) { return 401; }
+        proxy_pass http://pubmed-mcp:8000/;
+    }
+
+    location / {
+        return 404;
+    }
+}

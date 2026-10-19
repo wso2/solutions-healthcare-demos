@@ -1,0 +1,315 @@
+# EHR + Lab agentic integration demo.
+#
+#   ./scripts/reset.sh              # build, start and seed everything (clean slate)
+#
+# Host ports
+#   5433  Postgres (5432 is often taken by a local install)
+#   7233  Temporal gRPC            8233  Temporal UI
+#   8081  FHIR server "Cerner"     8083  FHIR server "Athena"     8082  FHIR server "Lab"
+#   8010  FHIR MCP server (Cerner) 8011  FHIR MCP server (Athena)
+#   8474  Toxiproxy API (EHR outage simulation)
+#   9090  Integration API          9093  Lab simulator             5173  Demo portal
+#   4318  Trace router (OTLP → WSO2 Agent Manager)
+#   8012  PubMed MCP server (literature search tool for the agents)
+#   8014  Judge adapter (Agent Manager's evaluation judge → Claude; see infra/judge-adapter)
+#
+# WSO2 Agent Manager runs next to this stack as the k3d cluster `amp-local` in the same colima VM
+# (scripts/amp-install.sh); its gateway and identity provider are reached by hostname through the VM.
+
+name: ehr-lab-agents
+
+# Images are pinned by digest: seed/snapshot holds databases these exact versions wrote.
+x-fhir-server: &fhir-server
+  image: ghcr.io/wso2/fhir-server:latest@sha256:529856d299f5b78a376e66cb4f49710efede6bf107325a16e83c736547aaf38a
+  restart: unless-stopped
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+x-fhir-mcp-server: &fhir-mcp-server
+  image: wso2/fhir-mcp-server:latest@sha256:2028481e78580416cf31ee50e769fe981e9ecbf1f91419ea6e0aeed88cf03e79
+  restart: unless-stopped
+  depends_on:
+    - toxiproxy
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: demo
+      POSTGRES_PASSWORD: demo
+      POSTGRES_DB: demo
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./infra/postgres/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U demo -d demo"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  # ── Systems of record ───────────────────────────────────────────────────────
+  # Three independent FHIR R4 servers, so every arrow in the demo crosses a real system boundary:
+  # two EHRs (standing in for Oracle Health/Cerner and athenahealth, each with its own patients)
+  # and the reference lab. None of them knows the others exist.
+  # BASE_URL is the address the integration uses (through Toxiproxy), so paging links resolve.
+
+  fhir-cerner:
+    <<: *fhir-server
+    environment:
+      DATABASE_URL: postgres://demo:demo@postgres:5432/fhir_cerner?sslmode=disable&pool_max_conns=20
+      FHIR_CREATE_TABLES: "true"
+      SERVER_PORT: "9090"
+      BASE_URL: http://toxiproxy:8081/fhir/r4
+      LOG_LEVEL: info
+      IG_CACHE_DIR: /data/fhir-ig-cache
+    ports:
+      - "8081:9090"
+    volumes:
+      - igcache-cerner:/data/fhir-ig-cache
+
+  fhir-athena:
+    <<: *fhir-server
+    environment:
+      DATABASE_URL: postgres://demo:demo@postgres:5432/fhir_athena?sslmode=disable&pool_max_conns=20
+      FHIR_CREATE_TABLES: "true"
+      SERVER_PORT: "9090"
+      BASE_URL: http://toxiproxy:8083/fhir/r4
+      LOG_LEVEL: info
+      IG_CACHE_DIR: /data/fhir-ig-cache
+    ports:
+      - "8083:9090"
+    volumes:
+      - igcache-athena:/data/fhir-ig-cache
+
+  fhir-lab:
+    <<: *fhir-server
+    environment:
+      DATABASE_URL: postgres://demo:demo@postgres:5432/fhir_lab?sslmode=disable&pool_max_conns=20
+      FHIR_CREATE_TABLES: "true"
+      SERVER_PORT: "9090"
+      BASE_URL: http://localhost:8082/fhir/r4
+      LOG_LEVEL: info
+      IG_CACHE_DIR: /data/fhir-ig-cache
+    ports:
+      - "8082:9090"
+    volumes:
+      - igcache-lab:/data/fhir-ig-cache
+
+  # Everything that talks to an EHR (the integration and the MCP servers) goes through Toxiproxy.
+  # The presenter's "EHR outage" switch disables a proxy, so callers get real connection errors and
+  # Temporal's retries are real, with no fault-injection code in the integration.
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.12.0
+    restart: unless-stopped
+    command: ["-host=0.0.0.0", "-config=/config/toxiproxy.json"]
+    depends_on:
+      - fhir-cerner
+      - fhir-athena
+    volumes:
+      - ./infra/toxiproxy/toxiproxy.json:/config/toxiproxy.json:ro
+    ports:
+      - "8474:8474"
+
+  # WSO2 FHIR MCP server, one per EHR. Gives the agents open-ended, read-only access to the patient's
+  # record (search/read) as MCP tools, instead of one hand-written tool per question.
+  # The local FHIR servers have no auth; for a real EHR set FHIR_SERVER_CLIENT_ID/SECRET/SCOPES.
+  fhir-mcp-cerner:
+    <<: *fhir-mcp-server
+    environment:
+      FHIR_SERVER_BASE_URL: http://toxiproxy:8081/fhir/r4
+      FHIR_SERVER_DISABLE_AUTHORIZATION: "True"
+      FHIR_MCP_HOST: 0.0.0.0
+      FHIR_MCP_PORT: "8000"
+    ports:
+      - "8010:8000"
+
+  fhir-mcp-athena:
+    <<: *fhir-mcp-server
+    environment:
+      FHIR_SERVER_BASE_URL: http://toxiproxy:8083/fhir/r4
+      FHIR_SERVER_DISABLE_AUTHORIZATION: "True"
+      FHIR_MCP_HOST: 0.0.0.0
+      FHIR_MCP_PORT: "8000"
+    ports:
+      - "8011:8000"
+
+  # ── Durable execution ───────────────────────────────────────────────────────
+  # Temporal persists every workflow step in Postgres, so an assessment that is
+  # waiting days for lab results survives restarts of the integration.
+
+  temporal:
+    image: temporalio/auto-setup:1.28.1
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB: postgres12
+      DB_PORT: "5432"
+      POSTGRES_SEEDS: postgres
+      POSTGRES_USER: demo
+      POSTGRES_PWD: demo
+    ports:
+      - "7233:7233"
+    healthcheck:
+      test: ["CMD-SHELL", "tctl --address temporal:7233 cluster health | grep -q SERVING"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 20s
+
+  temporal-ui:
+    image: temporalio/ui:2.42.1
+    restart: unless-stopped
+    depends_on:
+      - temporal
+    environment:
+      TEMPORAL_ADDRESS: temporal:7233
+      TEMPORAL_CORS_ORIGINS: http://localhost:3000
+    ports:
+      - "8233:8080"
+
+  # ── Integration (Ballerina) ─────────────────────────────────────────────────
+  # Workflow + activities + agents + the portal API, in one service. Agents run as Temporal
+  # activities, so they need no separate deployment, queue or callback endpoints.
+
+  integration:
+    build:
+      context: ./ehr_lab_physician
+      args:
+        PACKAGE: ehr_agentic_integration
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      temporal:
+        condition: service_healthy
+      toxiproxy:
+        condition: service_started
+      fhir-lab:
+        condition: service_started
+      fhir-mcp-cerner:
+        condition: service_started
+      fhir-mcp-athena:
+        condition: service_started
+      pubmed-mcp:
+        condition: service_started
+      trace-router:
+        condition: service_started
+    environment:
+      BAL_CONFIG_FILES: /config/integration.toml:/config/secrets.toml
+    volumes:
+      - ./config/integration.toml:/config/integration.toml:ro
+      - ./secrets.toml:/config/secrets.toml:ro
+    # Agent Manager's AI gateway and AgentID token endpoint route by hostname; both are published by
+    # the k3d load balancer on the VM, which containers reach as host-gateway.
+    extra_hosts:
+      - "default-default.gateway.localhost:host-gateway"
+      - "default-idp.amp.localhost:host-gateway"
+    ports:
+      - "9090:9090"
+
+  # Sends each agent run's trace to WSO2 Agent Manager with that agent's tracing key (one process,
+  # three agents; AMP attributes a trace by its key). Routes come from .amp/, written by amp-setup.sh.
+  trace-router:
+    build:
+      context: ./infra/trace-router
+    restart: unless-stopped
+    environment:
+      ROUTES_FILE: /amp/trace-routes.json
+      PRICES_FILE: /amp/model-prices.json
+      BUDGETS_FILE: /amp/budgets.json
+      LEDGER_FILE: /data/usage.jsonl
+    volumes:
+      - ./.amp:/amp:ro
+      - usage-ledger:/data
+    extra_hosts:
+      - "default-default.gateway.localhost:host-gateway"
+    ports:
+      - "4318:4318"
+
+  # Called by Agent Manager's gateway (interceptor-service on the `claude-judge` provider) to make the LLM
+  # judges' requests acceptable to Anthropic's OpenAI-compatible API. Reached from k3d as host.k3d.internal.
+  judge-adapter:
+    build:
+      context: ./infra/judge-adapter
+    restart: unless-stopped
+    ports:
+      - "8014:8090"
+
+  # Literature search for the agents: a Ballerina MCP server over NCBI E-utilities (no patient data).
+  pubmed-mcp:
+    build:
+      context: ./ehr_lab_physician
+      args:
+        PACKAGE: pubmed_mcp
+    restart: unless-stopped
+    ports:
+      - "8012:8000"
+
+  lab-simulator:
+    build:
+      context: ./ehr_lab_physician
+      args:
+        PACKAGE: lab_simulator
+    restart: unless-stopped
+    depends_on:
+      - fhir-lab
+    environment:
+      BAL_CONFIG_FILES: /config/lab-simulator.toml
+    volumes:
+      - ./config/lab-simulator.toml:/config/lab-simulator.toml:ro
+    ports:
+      - "9093:9093"
+
+  # ── WSO2 Agent Manager MCP proxies (opt-in: --profile amp-tunnel, started by amp-setup.sh) ──
+  # Agent Manager proxies only MCP upstreams with a public address, so its gateway reaches the FHIR MCP
+  # servers through a Cloudflare quick tunnel (no account). The gatekeeper rejects anything without
+  # the X-Tunnel-Key that only Agent Manager's MCP proxy sends; the key lives in .amp/tunnel.env.
+  mcp-gatekeeper:
+    image: nginx:1.29.8-alpine
+    profiles: [amp-tunnel]
+    restart: unless-stopped
+    depends_on:
+      - fhir-mcp-cerner
+      - fhir-mcp-athena
+      - pubmed-mcp
+    env_file:
+      - path: ./.amp/tunnel.env
+        required: false
+    volumes:
+      - ./infra/mcp-gatekeeper/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+    # Never serve without a key: an empty key would let requests without the header through.
+    entrypoint: ["/bin/sh", "-c"]
+    command: ['[ $${#MCP_TUNNEL_KEY} -ge 32 ] || { echo "MCP_TUNNEL_KEY missing — run scripts/amp-setup.sh" >&2; exit 1; }; exec /docker-entrypoint.sh nginx -g "daemon off;"']
+
+  mcp-tunnel:
+    image: cloudflare/cloudflared:2026.9.3
+    profiles: [amp-tunnel]
+    restart: unless-stopped
+    depends_on:
+      - mcp-gatekeeper
+    command: ["tunnel", "--no-autoupdate", "--url", "http://mcp-gatekeeper:8080"]
+
+  # ── Demo portal (React) ─────────────────────────────────────────────────────
+  # Physician workspace, patient app and lab console. nginx proxies /api and /lab-api.
+  portal:
+    build:
+      context: ./demo-portal
+    restart: unless-stopped
+    depends_on:
+      - integration
+      - lab-simulator
+    ports:
+      - "5173:80"
+
+volumes:
+  pgdata:
+  usage-ledger:
+  igcache-cerner:
+  igcache-athena:
+  igcache-lab:
