@@ -3,6 +3,8 @@ secrets.toml
 # Host mode (scripts/host-mode.sh): generated package configs (the integration's holds the secrets) and the
 # COMPOSE_FILE switch
 ehr_lab_physician/*/Config.toml
+ehr_lab_physician/*/tests/Config.toml
+ehr_lab_physician/mocks/*/Config.toml
 .env
 # WSO2 Integrator's ICP runtime id (machine-specific)
 .icp_runtime_id
@@ -31,3 +33,7 @@ seed/synthea/.cache/
 # gateway-builder output (scripts/amp-gateway.sh)
 gateway/output/
 gateway/build-manifest.yaml
+
+# Generated service configuration (scripts/host-mode.sh)
+config/*.toml
+!config/*.example.toml

@@ -1,0 +1,115 @@
+# Copy to Config.toml (gitignored) and fill in. All values here are placeholders.
+labFhirBaseUrl = "http://localhost:8082/fhir/r4"
+labDisplayName = "Quest Diagnostics"
+labWebhookApiKey = "demo-lab-webhook-key"
+labPollIntervalSeconds = 20
+dbHost = "localhost"
+dbPort = 5_433
+dbUser = "demo"
+dbPassword = "demo"
+dbName = "longevity"
+modelProvider = "anthropic"
+anthropicModelName = "claude-haiku-4-5"
+openrouterModelName = "deepseek/deepseek-v4.1-flash"
+maxTokens = 32_768
+apiPort = 9_090
+corsAllowOrigins = [ "http://localhost:5173", "http://localhost:5174" ]
+temporalUiUrl = "http://localhost:8233"
+temporalHttpUrl = "http://localhost:7243"
+toxiproxyUrl = "http://localhost:8474"
+labWebhookProxy = "lab-webhook"
+pubmedMcpUrl = "http://localhost:8012/mcp"
+labMcpServerUrl = "http://localhost:8011/mcp/"
+
+[[ehrSystems]]
+id = "ehr"
+displayName = "EHR"
+vendor = "fhir"
+fhirBaseUrl = "http://localhost:18081/fhir/r4"
+mcpServerUrl = "http://localhost:8010/mcp/"
+mrnSystem = "urn:demo:longview-clinic:mrn"
+outageProxy = "ehr"
+
+[ballerina.observe]
+tracingEnabled = true
+tracingProvider = "otel"
+
+[ballerina.otel]
+tracesProtocol = "http/protobuf"
+tracesEndpoint = "http://localhost:4318/v1/traces"
+
+  [ballerina.otel.tracesResourceAttributes]
+  "service.name" = "ehr-agentic-integration"
+
+[ballerina.workflow]
+mode = "SELF_HOSTED"
+url = "localhost:7233"
+namespace = "default"
+taskQueue = "ehr-lab-agents"
+
+[wso2healthcare.ehr_agentic_integration]
+anthropicApiKey = "sk-ant-your-api-key"
+
+  [wso2healthcare.ehr_agentic_integration.agentManager]
+  enabled = true
+  consoleUrl = "http://console.amp.localhost:8080"
+  orgName = "default"
+  projectName = "longevity-clinic"
+  llmGatewayUrl = "http://default-default.gateway.localhost:19080/anthropic/v1"
+  tokenUrl = "http://default-idp.amp.localhost:8080/oauth2/token"
+
+    [wso2healthcare.ehr_agentic_integration.agentManager.mcpProxyUrls]
+    ehr = "http://default-default.gateway.localhost:19080/fhir-ehr/mcp"
+    lab = "http://default-default.gateway.localhost:19080/fhir-lab/mcp"
+    pubmed = "http://default-default.gateway.localhost:19080/pubmed/mcp"
+
+    [wso2healthcare.ehr_agentic_integration.agentManager.copilot]
+    name = "diagnostic-copilot"
+    displayName = "Diagnostic Copilot"
+    llmGatewayUrl = "http://default-default.gateway.localhost:19080/claude-e3627b0b1da9e419-9ed86492/v1"
+    llmApiKey = "your-agent-llm-api-key"
+    clientId = "your-agent-client-id"
+    clientSecret = "your-agent-client-secret"
+    roles = [ "ehr-reader", "literature-searcher" ]
+
+      [wso2healthcare.ehr_agentic_integration.agentManager.copilot.mcpScopes]
+      ehr = [ "fhir-ehr:read" ]
+      pubmed = [ "pubmed:search" ]
+
+    [wso2healthcare.ehr_agentic_integration.agentManager.analyst]
+    name = "results-analyst"
+    displayName = "Results Analysis"
+    llmGatewayUrl = "http://default-default.gateway.localhost:19080/claude-2232dc9a70888c44-9ed86492/v1"
+    llmApiKey = "your-agent-llm-api-key"
+    clientId = "your-agent-client-id"
+    clientSecret = "your-agent-client-secret"
+    roles = [ "ehr-reader", "lab-reader", "literature-searcher" ]
+
+      [wso2healthcare.ehr_agentic_integration.agentManager.analyst.mcpScopes]
+      ehr = [ "fhir-ehr:read" ]
+      pubmed = [ "pubmed:search" ]
+      lab = [ "fhir-lab:read" ]
+
+    [wso2healthcare.ehr_agentic_integration.agentManager.carePlanner]
+    name = "care-planner"
+    displayName = "Care Plan"
+    llmGatewayUrl = "http://default-default.gateway.localhost:19080/claude-a23855848c7791a2-9ed86492/v1"
+    llmApiKey = "your-agent-llm-api-key"
+    clientId = "your-agent-client-id"
+    clientSecret = "your-agent-client-secret"
+    roles = [ "literature-searcher" ]
+
+      [wso2healthcare.ehr_agentic_integration.agentManager.carePlanner.mcpScopes]
+      pubmed = [ "pubmed:search" ]
+
+[wso2.icp.runtime.bridge]
+environment = "dev"
+project = "default-project"
+integration = "EHR + Lab Agentic Integration"
+runtime = "isurus"
+secret = "your-icp-runtime-secret"
+enableWorkflowManagement = true
+
+[ballerina.ai.wso2ProviderConfig]
+serviceUrl = "https://7eff1239-64bb-4663-b256-30a00d187a5c-prod.e1-us-east-azure.choreoapis.dev/copilot/llm-api/v1.0/openai"
+accessToken = "your-access-token"

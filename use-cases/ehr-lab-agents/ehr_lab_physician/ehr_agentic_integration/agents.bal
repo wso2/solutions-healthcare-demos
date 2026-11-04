@@ -126,54 +126,45 @@ const COPILOT_ROLE = "Longevity Diagnostic Copilot";
 const ANALYST_ROLE = "Longevity Lab Results Analyst";
 const CARE_PLANNER_ROLE = "Longevity Care Plan Writer";
 
-# Copilot and Analyst instances per EHR: each has its EHR's FHIR MCP server as tools.
-isolated map<ai:Agent> copilots = {};
-isolated map<ai:Agent> analysts = {};
+# The EHR the agents read.
+final EhrSystemConfig agentEhr = ehrSystems[0];
 
-final readonly & boolean agentsReady = check createEhrAgents();
+// MCP tool kits, one set per agent: each connects with that agent's own Agent Manager credentials.
+final PrefixedMcpToolKit[] copilotEhrTools = connectEhrMcp(agentEhr, agentManager.copilot);
+final ai:McpToolKit[] copilotPubmedTools = connectPubmedMcp(agentManager.copilot);
+final PrefixedMcpToolKit[] analystEhrTools = connectEhrMcp(agentEhr, agentManager.analyst);
+final PrefixedMcpToolKit[] analystLabTools = connectLabMcp(agentManager.analyst);
+final ai:McpToolKit[] analystPubmedTools = connectPubmedMcp(agentManager.analyst);
+final ai:McpToolKit[] carePlannerPubmedTools = connectPubmedMcp(agentManager.carePlanner);
 
-function createEhrAgents() returns boolean|error {
-    foreach EhrSystemConfig ehr in ehrSystems {
-        ai:Agent copilot = check new (
-            systemPrompt = {role: COPILOT_ROLE, instructions: COPILOT_INSTRUCTIONS + EHR_ACCESS + LITERATURE + CLINICAL_GUARDRAILS},
-            model = copilotModel,
-            tools = [getLabCatalog, getBiomarkerHistory, ...connectEhrMcp(ehr, agentManager.copilot),
-                ...connectPubmedMcp(agentManager.copilot)],
-            memory = agentMemory,
-            maxIter = agentMaxIter,
-            verbose = agentVerbose
-        );
-        ai:Agent analyst = check new (
-            systemPrompt = {role: ANALYST_ROLE,
-                instructions: ANALYST_INSTRUCTIONS + EHR_ACCESS + LAB_ACCESS + LITERATURE + CLINICAL_GUARDRAILS},
-            model = analystModel,
-            tools = [getLabCatalog, getBiomarkerHistory, ...connectEhrMcp(ehr, agentManager.analyst),
-                ...connectLabMcp(agentManager.analyst), ...connectPubmedMcp(agentManager.analyst)],
-            memory = agentMemory,
-            maxIter = agentMaxIter,
-            verbose = agentVerbose
-        );
-        lock {
-            copilots[ehr.id] = copilot;
-        }
-        lock {
-            analysts[ehr.id] = analyst;
-        }
-    }
-    // No EHR tools: the Care Plan agent may only use what the analysis established, plus the literature.
-    ai:Agent carePlanner = check new (
-        systemPrompt = {role: CARE_PLANNER_ROLE, instructions: CARE_PLAN_INSTRUCTIONS + LITERATURE + CLINICAL_GUARDRAILS},
-        model = carePlanModel,
-        tools = [getLabCatalog, ...connectPubmedMcp(agentManager.carePlanner)],
-        memory = agentMemory,
-        maxIter = agentMaxIter,
-        verbose = agentVerbose
-    );
-    lock {
-        carePlanners["default"] = carePlanner;
-    }
-    return true;
-}
+final ai:Agent copilotAgent = check new (
+    systemPrompt = {role: COPILOT_ROLE, instructions: COPILOT_INSTRUCTIONS + EHR_ACCESS + LITERATURE + CLINICAL_GUARDRAILS},
+    model = copilotModel,
+    tools = [getLabCatalog, getBiomarkerHistory, ...copilotEhrTools, ...copilotPubmedTools],
+    memory = agentMemory,
+    maxIter = agentMaxIter,
+    verbose = agentVerbose
+);
+
+final ai:Agent analystAgent = check new (
+    systemPrompt = {role: ANALYST_ROLE,
+        instructions: ANALYST_INSTRUCTIONS + EHR_ACCESS + LAB_ACCESS + LITERATURE + CLINICAL_GUARDRAILS},
+    model = analystModel,
+    tools = [getLabCatalog, getBiomarkerHistory, ...analystEhrTools, ...analystLabTools, ...analystPubmedTools],
+    memory = agentMemory,
+    maxIter = agentMaxIter,
+    verbose = agentVerbose
+);
+
+// No EHR tools: the Care Plan agent may only use what the analysis established, plus the literature.
+final ai:Agent carePlanAgent = check new (
+    systemPrompt = {role: CARE_PLANNER_ROLE, instructions: CARE_PLAN_INSTRUCTIONS + LITERATURE + CLINICAL_GUARDRAILS},
+    model = carePlanModel,
+    tools = [getLabCatalog, ...carePlannerPubmedTools],
+    memory = agentMemory,
+    maxIter = agentMaxIter,
+    verbose = agentVerbose
+);
 
 # Connects an agent to the EHR's FHIR MCP server, read tools only, published as `ehr_search`, `ehr_read`….
 #
@@ -247,41 +238,6 @@ function connectMcp(string target, string label, string directUrl, string[]? per
     return [toolkit];
 }
 
-isolated function copilotFor(string ehr) returns ai:Agent|error {
-    lock {
-        ai:Agent? agent = copilots[ehr];
-        if agent is ai:Agent {
-            return agent;
-        }
-    }
-    return error(string `No Copilot for EHR "${ehr}"`);
-}
-
-isolated function analystFor(string ehr) returns ai:Agent|error {
-    lock {
-        ai:Agent? agent = analysts[ehr];
-        if agent is ai:Agent {
-            return agent;
-        }
-    }
-    return error(string `No Results Analysis agent for EHR "${ehr}"`);
-}
-
-// ── Care Plan (no EHR access) ──
-
-# The Care Plan agent, created with the others (its literature tool is connected at start-up).
-isolated map<ai:Agent> carePlanners = {};
-
-isolated function carePlannerAgent() returns ai:Agent|error {
-    lock {
-        ai:Agent? agent = carePlanners["default"];
-        if agent is ai:Agent {
-            return agent;
-        }
-    }
-    return error("The Care Plan agent is not initialized");
-}
-
 // ── Tools ──
 
 # Lists what the clinic can order from the lab.
@@ -332,7 +288,6 @@ isolated function getBiomarkerHistory(string ehr, string patientId, string loinc
 isolated function runCopilotEvaluation(string assessmentId, PatientSummary summary, EvaluationRequest request)
         returns CopilotEvaluation|error {
     check checkModelConfigured();
-    ai:Agent copilot = check copilotFor(summary.patient.ehr);
     ExplorerRow[] records = request.records.length() > evaluationMaxRecords
         ? request.records.slice(0, evaluationMaxRecords) : request.records;
     string range = request.dateFrom is string || request.dateTo is string
@@ -350,25 +305,24 @@ ${compactRecords(records)}
 
 ## Patient context
 ${contextForPrompt(summary)}`;
-    CopilotEvaluation evaluation = check copilot.run(prompt, copilotSession(assessmentId));
+    CopilotEvaluation evaluation = check copilotAgent.run(prompt, copilotSession(assessmentId));
     return withCatalogTestsOnly(evaluation);
 }
 
 # A follow-up in the Copilot conversation: the physician's reply or question.
 #
 # + assessmentId - the assessment whose Copilot conversation continues
-# + ehr - the patient's EHR, which picks the Copilot with that EHR's tools
+# + ehr - the patient's EHR
 # + message - the physician's message
 # + return - the revised evaluation with only catalog tests kept, or an error if no model is configured or the agent fails
 isolated function runCopilotFollowUp(string assessmentId, string ehr, string message) returns CopilotEvaluation|error {
     check checkModelConfigured();
-    ai:Agent copilot = check copilotFor(ehr);
     string prompt = string `The physician replied:
 
 "${message}"
 
 Answer in "reply". Revise the evaluation and the panel only where this changes them, and say what changed in reasoningNote.`;
-    CopilotEvaluation evaluation = check copilot.run(prompt, copilotSession(assessmentId));
+    CopilotEvaluation evaluation = check copilotAgent.run(prompt, copilotSession(assessmentId));
     return withCatalogTestsOnly(evaluation);
 }
 
@@ -383,7 +337,6 @@ Answer in "reply". Revise the evaluation and the panel only where this changes t
 isolated function runResultsAnalysisAgent(string assessmentId, PatientSummary summary, LabOrderApproval approval,
         CopilotEvaluation? evaluation, LabResults results) returns ResultsAnalysis|error {
     check checkModelConfigured();
-    ai:Agent analyst = check analystFor(summary.patient.ehr);
     string prompt = string `Analyse the new lab results for this patient.
 
 EHR (for tools): ${summary.patient.ehr} — ${summary.patient.ehrName}
@@ -400,7 +353,7 @@ ${results.results.toJsonString()}
 
 ## EHR summary (history before today)
 ${summaryForPrompt(summary)}`;
-    return analyst.run(prompt, analysisSession(assessmentId));
+    return analystAgent.run(prompt, analysisSession(assessmentId));
 }
 
 # Asks the Care Plan agent for the draft note and patient report.
@@ -426,8 +379,7 @@ ${(from MedicationItem m in summary.medications where m.status == "active" selec
 
 ## Allergies
 ${summary.allergies.toJsonString()}`;
-    ai:Agent carePlanner = check carePlannerAgent();
-    CarePlanResult plan = check carePlanner.run(prompt, carePlanSession(assessmentId));
+    CarePlanResult plan = check carePlanAgent.run(prompt, carePlanSession(assessmentId));
     plan.followUpLabs = from FollowUpTest test in plan.followUpLabs
         where orderableByCode(test.testCode) is OrderableTest
         select test;

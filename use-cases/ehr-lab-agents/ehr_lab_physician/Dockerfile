@@ -17,6 +17,10 @@ RUN --mount=type=cache,target=/home/ballerina/.ballerina,uid=100,gid=1000,sharin
 FROM ${BAL_IMAGE}
 # Not under /home/ballerina: the base image declares it a VOLUME, and compose keeps a container's
 # anonymous volumes across recreation, so a jar there would outlive every rebuild.
-COPY --from=build /home/ballerina/app.jar /opt/app/app.jar
+COPY --from=build --chown=ballerina:troupe /home/ballerina/app.jar /opt/app/app.jar
+# The ICP bridge writes .icp_runtime_id into the working directory, so the app user must own it.
 WORKDIR /opt/app
+USER root
+RUN chown ballerina:troupe /opt/app
+USER ballerina
 ENTRYPOINT ["java", "-jar", "/opt/app/app.jar"]

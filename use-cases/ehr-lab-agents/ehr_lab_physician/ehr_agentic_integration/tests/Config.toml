@@ -20,3 +20,7 @@ outageProxy = "ehr"
 
 [ballerina.workflow]
 mode = "IN_MEMORY"
+
+[ballerina.ai.wso2ProviderConfig]
+serviceUrl = "https://7eff1239-64bb-4663-b256-30a00d187a5c-prod.e1-us-east-azure.choreoapis.dev/copilot/llm-api/v1.0/openai"
+accessToken = "your-access-token"

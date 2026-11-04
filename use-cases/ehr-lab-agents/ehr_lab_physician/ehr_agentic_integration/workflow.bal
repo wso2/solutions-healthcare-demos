@@ -1,4 +1,5 @@
 import ballerina/workflow;
+import wso2/icp.runtime.bridge as _;
 
 // One durable workflow per longevity assessment:
 //

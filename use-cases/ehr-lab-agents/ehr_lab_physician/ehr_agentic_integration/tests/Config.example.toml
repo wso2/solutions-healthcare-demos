@@ -1,0 +1,27 @@
+# Copy to Config.toml (gitignored) and fill in. All values here are placeholders.
+# Test configuration: the compose stack's Postgres and FHIR servers on their host ports, and an
+# in-memory workflow engine so tests need no Temporal server. (scripts/bal.sh overrides the hosts
+# when tests run inside the Ballerina container.)
+dbHost = "localhost"
+dbPort = 5433
+labFhirBaseUrl = "http://localhost:8082/fhir/r4"
+apiPort = 19090
+toxiproxyUrl = "http://localhost:8474"
+
+labMcpServerUrl = "http://localhost:8011/mcp/"
+
+[[ehrSystems]]
+id = "ehr"
+displayName = "EHR"
+vendor = "fhir"
+fhirBaseUrl = "http://localhost:8081/fhir/r4"
+mcpServerUrl = "http://localhost:8010/mcp/"
+mrnSystem = "urn:demo:longview-clinic:mrn"
+outageProxy = "ehr"
+
+[ballerina.workflow]
+mode = "IN_MEMORY"
+
+[ballerina.ai.wso2ProviderConfig]
+serviceUrl = "https://7eff1239-64bb-4663-b256-30a00d187a5c-prod.e1-us-east-azure.choreoapis.dev/copilot/llm-api/v1.0/openai"
+accessToken = "your-access-token"

@@ -678,6 +678,19 @@ modules = [
 
 [[package]]
 org = "ballerinax"
+name = "metrics.logs"
+version = "1.2.1"
+dependencies = [
+	{org = "ballerina", name = "log"},
+	{org = "ballerina", name = "otel"},
+	{org = "ballerinai", name = "observe"}
+]
+modules = [
+	{org = "ballerinax", packageName = "metrics.logs", moduleName = "metrics.logs"}
+]
+
+[[package]]
+org = "ballerinax"
 name = "openrouter"
 version = "1.1.0"
 dependencies = [
@@ -714,6 +727,29 @@ modules = [
 ]
 
 [[package]]
+org = "wso2"
+name = "icp.runtime.bridge"
+version = "2.0.0"
+dependencies = [
+	{org = "ballerina", name = "crypto"},
+	{org = "ballerina", name = "file"},
+	{org = "ballerina", name = "http"},
+	{org = "ballerina", name = "io"},
+	{org = "ballerina", name = "jballerina.java"},
+	{org = "ballerina", name = "jwt"},
+	{org = "ballerina", name = "lang.array"},
+	{org = "ballerina", name = "lang.runtime"},
+	{org = "ballerina", name = "log"},
+	{org = "ballerina", name = "observe"},
+	{org = "ballerina", name = "task"},
+	{org = "ballerina", name = "time"},
+	{org = "ballerina", name = "uuid"}
+]
+modules = [
+	{org = "wso2", packageName = "icp.runtime.bridge", moduleName = "icp.runtime.bridge"}
+]
+
+[[package]]
 org = "wso2healthcare"
 name = "ehr_agentic_integration"
 version = "0.1.0"
@@ -742,8 +778,10 @@ dependencies = [
 	{org = "ballerinax", name = "health.clients.fhir"},
 	{org = "ballerinax", name = "health.fhir.r4"},
 	{org = "ballerinax", name = "health.fhir.r4.international401"},
+	{org = "ballerinax", name = "metrics.logs"},
 	{org = "ballerinax", name = "postgresql"},
-	{org = "ballerinax", name = "postgresql.driver"}
+	{org = "ballerinax", name = "postgresql.driver"},
+	{org = "wso2", name = "icp.runtime.bridge"}
 ]
 modules = [
 	{org = "wso2healthcare", packageName = "ehr_agentic_integration", moduleName = "ehr_agentic_integration"}

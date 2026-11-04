@@ -113,6 +113,8 @@ log "gateway $VHOST · AgentID tokens from $TOKEN_URL"
 
 # ── Project ──
 status=$(api GET "/orgs/$ORG/projects/$PROJECT")
+# Agent Manager 1.0.0 answers 500 "Failed to get project" (not 404) for a project that does not exist yet.
+if [[ $status == 500 ]] && grep -q "Failed to get project" "$WORK/resp"; then status=404; fi
 if [[ $status == 404 ]]; then
   jq -n --arg name "$PROJECT" '{name: $name, displayName: "Longevity Clinic", deploymentPipeline: "default",
     description: "EHR + Lab agentic integration: Diagnostic Copilot, Results Analysis and Care Plan agents"}' > "$WORK/body"
@@ -137,7 +139,7 @@ elif ! $SKIP_LLM; then
     resilience: {timeout: "300s", idleTimeout: "300s"},
     accessControl: {mode: "allow_all", exceptions: []},
     security: {enabled: true, apiKey: {enabled: true, key: "x-api-key", in: "header"}},
-    modelProviders: [{id: "anthropic", name: "Anthropic", models: [{id: "claude-sonnet-4-6", name: "Claude Sonnet 4.6"}]}],
+    modelProviders: [{id: "anthropic", name: "Anthropic", models: [{id: "claude-haiku-4-5", name: "Claude Haiku 4.5"}]}],
     gateways: [$gw]}' > "$WORK/body"
   rm -f "$WORK/anthropic-key"
   status=$(api POST "/orgs/$ORG/llm-providers" "$WORK/body")

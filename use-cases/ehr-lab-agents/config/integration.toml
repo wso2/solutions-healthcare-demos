@@ -16,8 +16,8 @@ dbName = "longevity"
 
 # "anthropic" or "openrouter" — switch with ./scripts/amp-models.sh (it also points the agents at the
 # matching model configurations in Agent Manager).
-modelProvider = "openrouter"
-anthropicModelName = "claude-sonnet-4-6"
+modelProvider = "anthropic"
+anthropicModelName = "claude-haiku-4-5"
 openrouterModelName = "deepseek/deepseek-v4.1-flash"
 # Output cap per model call. Reasoning models (GLM 5.3) spend part of it thinking before they answer;
 # 8192 cut GLM off mid-answer on the Copilot's larger requests.

@@ -7,4 +7,5 @@ title = "EHR + Lab Agentic Integration"
 
 [build-options]
 sticky = true
+remoteManagement = true
 observabilityIncluded = true

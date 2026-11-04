@@ -3,6 +3,9 @@ import ballerina/lang.'int as langint;
 import ballerina/log;
 import ballerina/random;
 import ballerina/workflow;
+import ballerinax/metrics.logs as _;
+
+import wso2/icp.runtime.bridge as _;
 
 // The API the demo portal uses. Reads of an EHR go straight to it through the FHIR connector;
 // physician actions complete the workflow's human tasks; assessment reads come from the read model.
@@ -70,8 +73,14 @@ service /api on new http:Listener(apiPort) {
     # + return - the connected EHRs, the lab, model and workflow settings, and the agents in use
     resource function get system() returns json {
         json[] ehrs = from EhrSystemConfig ehr in ehrSystems
-            select {id: ehr.id, name: ehr.displayName, vendor: ehr.vendor, baseUrl: ehr.fhirBaseUrl,
-                reachable: ehrReachable(ehr.id), summaryOperation: ehrSupportsSummaryOperation(ehr.id)};
+            select {
+                id: ehr.id,
+                name: ehr.displayName,
+                vendor: ehr.vendor,
+                baseUrl: ehr.fhirBaseUrl,
+                reachable: ehrReachable(ehr.id),
+                summaryOperation: ehrSupportsSummaryOperation(ehr.id)
+            };
         return {
             ehrs,
             lab: {name: labDisplayName, baseUrl: labFhirBaseUrl},
@@ -132,7 +141,7 @@ service /api on new http:Listener(apiPort) {
     # + return - each kind with its label and the FHIR resource behind it
     resource function get explorer\-kinds() returns json =>
         from ExplorerKind kind in EXPLORER_KINDS
-        select {kind: kind.kind, label: kind.label, resourceType: kind.resourceType};
+    select {kind: kind.kind, label: kind.label, resourceType: kind.resourceType};
 
     # The tests the clinic can order.
     #
@@ -235,7 +244,8 @@ service /api on new http:Listener(apiPort) {
         if rows is error {
             return <http:InternalServerError>{body: <ErrorBody>{message: rows.message()}};
         }
-        return from AssessmentRow row in rows select assessmentListItem(row);
+        return from AssessmentRow row in rows
+            select assessmentListItem(row);
     }
 
     # The published Longevity Record for a patient (what the patient app reads).
@@ -291,8 +301,14 @@ service /api on new http:Listener(apiPort) {
         foreach AssessmentRow row in rows {
             string key = row.ehr + "/" + row.patientId;
             if !byPatient.hasKey(key) {
-                byPatient[key] = {ehr: row.ehr, ehrName: ehrName(row.ehr), patientId: row.patientId,
-                    patientName: row.patientName, stage: row.stage, updatedAt: row.updatedAt};
+                byPatient[key] = {
+                    ehr: row.ehr,
+                    ehrName: ehrName(row.ehr),
+                    patientId: row.patientId,
+                    patientName: row.patientName,
+                    stage: row.stage,
+                    updatedAt: row.updatedAt
+                };
             }
         }
         return byPatient.toArray();
@@ -351,7 +367,8 @@ service /api on new http:Listener(apiPort) {
         if rows is error {
             return <http:InternalServerError>{body: <ErrorBody>{message: rows.message()}};
         }
-        return from AssessmentRow row in rows select assessmentListItem(row);
+        return from AssessmentRow row in rows
+            select assessmentListItem(row);
     }
 
     # One assessment: its step outputs, timeline and open tasks.
@@ -371,10 +388,19 @@ service /api on new http:Listener(apiPort) {
         map<string>|error tasks = openHumanTasks(id);
         map<string>|error reviews = openReviewTasks(id);
         return {
-            id: row.id, ehr: row.ehr, ehrName: ehrName(row.ehr), patientId: row.patientId, patientName: row.patientName,
-            practitionerId: row.practitionerId, stage: row.stage, waitingOn: waitingOn(row.stage), 'error: row.'error,
-            ehrEncounterId: row.ehrEncounterId, labServiceRequestId: row.labServiceRequestId,
-            createdAt: row.createdAt, updatedAt: row.updatedAt,
+            id: row.id,
+            ehr: row.ehr,
+            ehrName: ehrName(row.ehr),
+            patientId: row.patientId,
+            patientName: row.patientName,
+            practitionerId: row.practitionerId,
+            stage: row.stage,
+            waitingOn: waitingOn(row.stage),
+            'error: row.'error,
+            ehrEncounterId: row.ehrEncounterId,
+            labServiceRequestId: row.labServiceRequestId,
+            createdAt: row.createdAt,
+            updatedAt: row.updatedAt,
             data: data is json ? data : {},
             openTasks: tasks is map<string> ? tasks : {},
             openReviews: reviews is map<string> ? reviews : {},
@@ -602,10 +628,18 @@ isolated function assessmentListItem(AssessmentRow row) returns json {
     json|error tests = data is json ? data.labOrder.tests : ();
     json|error headline = data is json ? data.analysis.headline : ();
     return {
-        id: row.id, ehr: row.ehr, ehrName: ehrName(row.ehr), patientId: row.patientId, patientName: row.patientName,
-        stage: row.stage, waitingOn: waitingOn(row.stage), 'error: row.'error,
-        tests: tests is json[] ? tests : [], headline: headline is string ? headline : (),
-        createdAt: row.createdAt, updatedAt: row.updatedAt
+        id: row.id,
+        ehr: row.ehr,
+        ehrName: ehrName(row.ehr),
+        patientId: row.patientId,
+        patientName: row.patientName,
+        stage: row.stage,
+        waitingOn: waitingOn(row.stage),
+        'error: row.'error,
+        tests: tests is json[] ? tests : [],
+        headline: headline is string ? headline : (),
+        createdAt: row.createdAt,
+        updatedAt: row.updatedAt
     };
 }
 
@@ -639,17 +673,26 @@ isolated function patientJourney(AssessmentRow row) returns json {
     if testCodes is json[] {
         foreach json code in testCodes {
             OrderableTest? test = orderableByCode(code.toString());
-            tests.push({code: code.toString(), name: test is OrderableTest ? test.name : code.toString(),
-                preparation: test is OrderableTest ? test.preparation : ()});
+            tests.push({
+                code: code.toString(),
+                name: test is OrderableTest ? test.name : code.toString(),
+                preparation: test is OrderableTest ? test.preparation : ()
+            });
         }
     }
     json|error notification = data.patientNotification;
     json|error visit = data.labVisit;
     json|error placerOrder = data.labOrder.placerOrderId;
     return {
-        id: row.id, ehr: row.ehr, ehrName: ehrName(row.ehr), stage: row.stage, step,
-        startedAt: row.createdAt, updatedAt: row.updatedAt,
-        tests, orderNumber: placerOrder is string ? placerOrder : (),
+        id: row.id,
+        ehr: row.ehr,
+        ehrName: ehrName(row.ehr),
+        stage: row.stage,
+        step,
+        startedAt: row.createdAt,
+        updatedAt: row.updatedAt,
+        tests,
+        orderNumber: placerOrder is string ? placerOrder : (),
         notification: notification is json ? notification : (),
         labVisit: visit is json ? visit : (),
         labName: labDisplayName

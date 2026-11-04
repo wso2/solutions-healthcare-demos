@@ -106,7 +106,7 @@ if $VERIFY; then
     curl -sS "$URL/chat/completions" -H @"$WORK/auth" -H 'Content-Type: application/json' --data-binary "@$WORK/msg" -o "$WORK/reply"
     TEXT='.choices[0].message.content // .error.message // .'
   else
-    MODEL=claude-sonnet-4-6
+    MODEL=$(sed -n 's/^anthropicModelName *= *"\(.*\)"/\1/p' config/integration.toml)
     jq -n --arg m "$MODEL" --arg q "$ASK" '{model: $m, max_tokens: 200, messages: [{role: "user", content: $q}]}' > "$WORK/msg"
     curl -sS "$URL/messages" -H "x-api-key: $KEY" -H 'anthropic-version: 2023-06-01' -H 'Content-Type: application/json' \
       --data-binary "@$WORK/msg" -o "$WORK/reply"

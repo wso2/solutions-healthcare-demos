@@ -1,0 +1,68 @@
+# Copy to Config.toml (gitignored) and fill in. All values here are placeholders.
+# Integration settings for the docker compose network. Secrets live in ../secrets.toml.
+#
+# The EHR is reached through Toxiproxy (toxiproxy:8081), which forwards to its FHIR server. That is what
+# lets the presenter's outage switch cut the network for real.
+
+labFhirBaseUrl = "http://fhir-lab:9090/fhir/r4"
+labDisplayName = "Quest Diagnostics"
+labWebhookApiKey = "demo-lab-webhook-key"
+labPollIntervalSeconds = 20
+
+dbHost = "postgres"
+dbPort = 5432
+dbUser = "demo"
+dbPassword = "demo"
+dbName = "longevity"
+
+# "anthropic" or "openrouter" — switch with ./scripts/amp-models.sh (it also points the agents at the
+# matching model configurations in Agent Manager).
+modelProvider = "anthropic"
+anthropicModelName = "claude-haiku-4-5"
+openrouterModelName = "deepseek/deepseek-v4.1-flash"
+# Output cap per model call. Reasoning models (GLM 5.3) spend part of it thinking before they answer;
+# 8192 cut GLM off mid-answer on the Copilot's larger requests.
+maxTokens = 32768
+
+apiPort = 9090
+corsAllowOrigins = ["http://localhost:5173", "http://localhost:5174"]
+temporalUiUrl = "http://localhost:8233"
+temporalHttpUrl = "http://temporal:7243"
+
+toxiproxyUrl = "http://toxiproxy:8474"
+labWebhookProxy = "lab-webhook"
+
+# Literature search tool (the PubMed MCP server); under Agent Manager the agents reach it through its
+# MCP proxy with their AgentID instead.
+pubmedMcpUrl = "http://pubmed-mcp:8000/mcp"
+
+# The lab's FHIR server as MCP tools for the results agent (under Agent Manager, through its MCP proxy).
+labMcpServerUrl = "http://fhir-mcp-lab:8000/mcp/"
+
+[[ehrSystems]]
+id = "ehr"
+displayName = "EHR"
+vendor = "fhir"
+fhirBaseUrl = "http://toxiproxy:8081/fhir/r4"
+mcpServerUrl = "http://fhir-mcp-ehr:8000/mcp/"
+mrnSystem = "urn:demo:longview-clinic:mrn"
+outageProxy = "ehr"
+
+# Traces go to infra/trace-router, which forwards agent runs to WSO2 Agent Manager under each agent's
+# own key once scripts/amp-setup.sh has registered them (and drops them before that).
+[ballerina.observe]
+tracingEnabled = true
+tracingProvider = "otel"
+
+[ballerina.otel]
+tracesProtocol = "http/protobuf"
+tracesEndpoint = "http://trace-router:4318/v1/traces"
+
+[ballerina.otel.tracesResourceAttributes]
+"service.name" = "ehr-agentic-integration"
+
+[ballerina.workflow]
+mode = "SELF_HOSTED"
+url = "temporal:7233"
+namespace = "default"
+taskQueue = "ehr-lab-agents"
