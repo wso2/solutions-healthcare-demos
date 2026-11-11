@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, Clock, FlaskConical, Send, Syringe, UserRound } from 'lucide-react'
 import { api, type LabOrder } from '../lib/api'
 import { usePolling } from '../lib/usePolling'
+import { labOrdersFromBundle } from '../lib/fhir'
 import { formatTime, parseTimestamp } from '../lib/format'
 import { Badge, Card, CardHeader, Empty, ErrorNote, Spinner } from '../components/ui'
 import { SimulatePanel } from '../components/SimulatePanel'
@@ -15,7 +16,8 @@ import { SimulatePanel } from '../components/SimulatePanel'
 const SHOW_FAILURE_SWITCHES = false
 
 export function LabConsole() {
-  const { data: orders, error, refresh } = usePolling(api.labOrders, 3000)
+  const { data: bundle, error, refresh } = usePolling(api.labOrders, 3000)
+  const orders = useMemo(() => (bundle ? labOrdersFromBundle(bundle) : undefined), [bundle])
   const [busy, setBusy] = useState<string>()
   const [message, setMessage] = useState<string>()
   const [actionError, setActionError] = useState<string>()
@@ -27,11 +29,11 @@ export function LabConsole() {
     try {
       if (order.status === 'awaiting-patient') {
         const r = await api.collectSpecimen(order.id)
-        setMessage(`${order.patientName}: specimen collected (Specimen/${r.specimenId.slice(0, 8)}). ` +
+        setMessage(`${order.patientName}: specimen collected (Specimen/${(r.resource.id ?? '').slice(0, 8)}). ` +
           (r.integrationNotified ? 'Integration notified — the patient\'s lab-visit task is complete.' : 'Webhook failed — the integration\'s fallback poller will pick it up.'))
       } else {
         const r = await api.releaseLabOrder(order.id)
-        setMessage(`${order.patientName}: ${r.observations} results released as DiagnosticReport/${r.diagnosticReportId.slice(0, 8)}. ` +
+        setMessage(`${order.patientName}: ${r.resource.result?.length ?? 0} results released as DiagnosticReport/${(r.resource.id ?? '').slice(0, 8)}. ` +
           (r.integrationNotified ? 'Integration notified by webhook.' : 'Webhook failed — the integration\'s fallback poller will pick it up.'))
       }
       void refresh()

@@ -295,6 +295,8 @@ services:
 
   # ── Demo portal (React) ─────────────────────────────────────────────────────
   # Physician workspace, patient app and lab console. nginx proxies /api and /lab-api.
+  # The patient app's SMART on FHIR sign-in (APIM in front of its API) is read at runtime from
+  # config/patient-auth.json: "mode" normal or smart (scripts/patient-app-mode.sh), read on every page load.
   portal:
     build:
       context: ./demo-portal
@@ -304,6 +306,8 @@ services:
       - lab-simulator
     ports:
       - "5173:80"
+    volumes:
+      - ./config/patient-auth.json:/usr/share/nginx/html/patient-auth.json:ro
 
 volumes:
   pgdata:

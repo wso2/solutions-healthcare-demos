@@ -55,3 +55,6 @@ dist-ssr
 *.sln
 *.sw?
 
+
+# Claude Code
+.claude/

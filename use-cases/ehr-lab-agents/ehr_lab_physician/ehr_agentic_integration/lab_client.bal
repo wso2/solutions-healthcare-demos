@@ -4,7 +4,8 @@ import ballerinax/health.fhir.r4.international401;
 
 // Everything the integration exchanges with the reference lab goes through this file, as typed FHIR R4
 // resources (Patient, ServiceRequest, Specimen, DiagnosticReport, Observation): what is built is checked
-// against the resource's structure at compile time, and what the lab returns is checked when it is read.
+// against the resource's structure at compile time and serialised with the FHIR library, and what the lab
+// returns is parsed with the library's parser when it is read.
 // The lab is a separate FHIR system: it has its own patient ids, so the EHR patient is matched to (or
 // registered with) the lab by MRN before an order is placed.
 
@@ -41,15 +42,15 @@ isolated function ensureLabPatient(international401:Patient ehrPatient, string m
 # + labServiceRequestId - the lab's ServiceRequest id
 # + return - the Specimen, nil while the patient has not been to the lab, or an error if the lab cannot be read
 isolated function findSpecimen(string labServiceRequestId) returns international401:Specimen?|error {
-    international401:ServiceRequest serviceRequest = check (check readLabResource("ServiceRequest", labServiceRequestId))
-        .cloneWithType();
+    international401:ServiceRequest serviceRequest =
+        check (check parseFhir(check readLabResource("ServiceRequest", labServiceRequestId))).ensureType();
     r4:Reference[] specimens = serviceRequest.specimen ?: [];
     string? specimenRef = specimens.length() > 0 ? specimens[0].reference : ();
     if specimenRef is () {
         return ();
     }
     string specimenId = check idFromLocation(specimenRef);
-    international401:Specimen specimen = check (check readLabResource("Specimen", specimenId)).cloneWithType();
+    international401:Specimen specimen = check (check parseFhir(check readLabResource("Specimen", specimenId))).ensureType();
     return specimen;
 }
 
@@ -60,12 +61,13 @@ isolated function findSpecimen(string labServiceRequestId) returns international
 # + testCodes - catalog codes of the approved tests
 # + practitionerName - the ordering physician, as shown to the lab
 # + note - order note for the lab; omitted when blank
-# + return - the lab's ServiceRequest id
+# + return - the lab's ServiceRequest as placed (with its id)
 isolated function submitLabOrder(string labPatientId, string placerOrderId, string[] testCodes,
-        string practitionerName, string note) returns string|error {
+        string practitionerName, string note) returns international401:ServiceRequest|error {
     international401:ServiceRequest serviceRequest = labServiceRequest(string `Patient/${labPatientId}`,
             placerOrderId, testCodes, {display: practitionerName}, note);
-    return createOnce(labFhir, serviceRequest, PLACER_ORDER_SYSTEM, placerOrderId);
+    serviceRequest.id = check createOnce(labFhir, serviceRequest, PLACER_ORDER_SYSTEM, placerOrderId);
+    return serviceRequest;
 }
 
 # The lab's report for an order, if it has produced one. Looked up by reference to the order:
@@ -74,9 +76,14 @@ isolated function submitLabOrder(string labPatientId, string placerOrderId, stri
 # + labServiceRequestId - the lab's ServiceRequest id
 # + return - the report, or nil when the lab has no report yet
 isolated function findLabReport(string labServiceRequestId) returns international401:DiagnosticReport?|error {
-    json[] reports = check searchResources(labFhir, "DiagnosticReport",
-            {"based-on": [string `ServiceRequest/${labServiceRequestId}`]});
-    return reports.length() > 0 ? check reports[0].cloneWithType() : ();
+    anydata[] reports = parseResources(check searchResources(labFhir, "DiagnosticReport",
+            {"based-on": [string `ServiceRequest/${labServiceRequestId}`]}));
+    foreach anydata report in reports {
+        if report is international401:DiagnosticReport {
+            return report;
+        }
+    }
+    return ();
 }
 
 isolated function isFinalReportStatus(string? status) returns boolean =>
@@ -95,43 +102,18 @@ isolated function reportObservations(international401:DiagnosticReport report)
     if observationIds.length() == 0 {
         return [];
     }
-    json[] observations = check searchResources(labFhir, "Observation", {"_id": [string:'join(",", ...observationIds)]});
-    return <international401:Observation[]>check typedResources(observations, ObservationList);
-}
-
-# Flattens lab Observations into result values, including the lab's own reference ranges.
-#
-# + observations - the lab's Observations
-# + return - one value per Observation that has a LOINC code and a numeric value
-isolated function labResultValues(international401:Observation[] observations) returns LabResultValue[] {
-    LabResultValue[] values = [];
-    foreach international401:Observation observation in observations {
-        decimal? value = observation.valueQuantity?.value;
-        string? code = codingCode(observation.code, LOINC);
-        if value is () || code is () {
-            continue;
-        }
-        Analyte? analyte = analyteByCode(code);
-        international401:ObservationReferenceRange[] ranges = observation.referenceRange ?: [];
-        values.push({
-            code,
-            name: analyte is Analyte ? analyte.name : conceptText(observation.code) ?: code,
-            value,
-            unit: observation.valueQuantity?.unit ?: (analyte is Analyte ? analyte.unit : ""),
-            interpretation: interpretationCode(observation),
-            referenceLow: ranges.length() > 0 ? ranges[0].low?.value : (),
-            referenceHigh: ranges.length() > 0 ? ranges[0].high?.value : (),
-            effectiveDate: dateOnly(observation.effectiveDateTime) ?: ""
-        });
-    }
-    return values;
+    anydata[] observations = parseResources(check searchResources(labFhir, "Observation",
+            {"_id": [string:'join(",", ...observationIds)]}));
+    return from anydata observation in observations
+        where observation is international401:Observation
+        select observation;
 }
 
 # Reads one resource from the lab.
 #
 # + resourceType - the resource type
 # + id - the resource's id in the lab
-# + return - the resource as the lab returned it, ready to be read as its FHIR type
+# + return - the resource as the lab returned it, as FHIR JSON ready for `parseFhir`
 isolated function readLabResource(string resourceType, string id) returns json|error {
     fhir:FHIRResponse response = check labFhir->getById(resourceType, id);
     return <json>response.'resource;

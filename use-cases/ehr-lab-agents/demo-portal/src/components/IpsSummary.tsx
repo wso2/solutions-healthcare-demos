@@ -4,6 +4,7 @@ import {
   Activity, CalendarDays, ChevronDown, ClipboardList, Database, FileJson, HeartPulse, Pill, Stethoscope, Syringe, Users, X,
 } from 'lucide-react'
 import { api, type BiomarkerSeries, type PatientSummary, type SummaryFlag, type VitalTrend } from '../lib/api'
+import type { Bundle, Composition } from '../lib/fhir'
 import { formatDate, formatNumber, formatRange, formatShortDate, titleCase } from '../lib/format'
 import { BiomarkerChart } from './BiomarkerChart'
 import { Badge, Card, CardHeader, ErrorNote, SeverityChip, Spinner, TrendIcon } from './ui'
@@ -355,19 +356,20 @@ function Provenance({ summary }: { summary: PatientSummary }) {
           </ul>
         )}
       </div>
-      {bundleOpen && <IpsBundleDialog ehr={summary.patient.ehr} patientId={summary.patient.id} name={summary.patient.name} onClose={() => setBundleOpen(false)} />}
+      {bundleOpen && <IpsBundleDialog ehr={summary.patient.ehr} patientId={summary.patient.id} name={summary.patient.name} initial={summary.bundle} onClose={() => setBundleOpen(false)} />}
     </>
   )
 }
 
-function IpsBundleDialog({ ehr, patientId, name, onClose }: { ehr: string; patientId: string; name: string; onClose: () => void }) {
-  const [bundle, setBundle] = useState<unknown>()
+/** The IPS document the summary was derived from; fetched only when the summary did not carry it. */
+function IpsBundleDialog({ ehr, patientId, name, initial, onClose }: { ehr: string; patientId: string; name: string; initial?: Bundle; onClose: () => void }) {
+  const [bundle, setBundle] = useState<Bundle | undefined>(initial)
   const [error, setError] = useState<string>()
   useEffect(() => {
+    if (initial) return
     api.ips(ehr, patientId).then(setBundle).catch((e) => setError(e instanceof Error ? e.message : String(e)))
-  }, [ehr, patientId])
-  const entries = (bundle as { entry?: { resource: { resourceType: string; section?: { title: string; entry?: unknown[] }[] } }[] } | undefined)?.entry
-  const composition = entries?.[0]?.resource
+  }, [ehr, patientId, initial])
+  const composition = bundle?.entry?.find((e) => e.resource?.resourceType === 'Composition')?.resource as Composition | undefined
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-ink/40 p-4" role="dialog" aria-modal="true" aria-label="International Patient Summary bundle">
       <div className="card flex max-h-[85vh] w-full max-w-4xl flex-col">

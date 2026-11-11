@@ -9,3 +9,29 @@ title = "EHR + Lab Agentic Integration"
 sticky = true
 remoteManagement = true
 observabilityIncluded = true
+
+[[dependency]]
+org = "ballerinax"
+name = "health.fhir.r4"
+version = "6.3.3"
+
+[[dependency]]
+org = "ballerinax"
+name = "health.fhir.r4.international401"
+version = "4.0.5"
+
+[[dependency]]
+org = "ballerinax"
+name = "health.fhirr4"
+version = "3.0.8"
+
+# Brought in by health.fhirr4; 4.0.1 does not compile against international401 4.0.5.
+[[dependency]]
+org = "ballerinax"
+name = "health.fhir.r4.ips"
+version = "4.0.2"
+
+[[dependency]]
+org = "ballerinax"
+name = "health.fhir.r4.parser"
+version = "7.1.1"

@@ -36,6 +36,9 @@ if grep -q 'sk-ant-\.\.\.' secrets.toml; then
   exit 1
 fi
 
+# The patient app's mode (normal | smart) and SMART settings; the portal container mounts this file.
+[[ -f config/patient-auth.json ]] || cp config/patient-auth.example.json config/patient-auth.json
+
 ./scripts/colima-up.sh
 mkdir -p .amp   # Agent Manager credentials land here (amp-setup.sh); the trace router mounts it
 

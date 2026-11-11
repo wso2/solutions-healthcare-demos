@@ -1,3 +1,5 @@
+import ballerinax/health.fhir.r4.international401;
+
 // The Longevity Record: one JSON document per patient that the physician dashboard and the patient
 // app read. It is the "large JSON" layer of the customer's stack — produced here from the systems of
 // record, so their dashboards never talk to an EHR or a lab directly.
@@ -8,35 +10,38 @@ const string LONGEVITY_RECORD_SCHEMA = "longevity-record/v2";
 # Builds the Longevity Record published when the physician releases an assessment.
 #
 # + assessmentId - the assessment
-# + summary - the patient summary
-# + results - the lab results
+# + ehr - the patient's EHR
+# + summary - the patient summary (the IPS document's contents)
+# + results - the lab results as filed in the EHR: the DiagnosticReport and its Observations
 # + analysis - the Results Analysis
 # + plan - the care plan
 # + release - the physician's release
 # + practitionerId - who released it
 # + noteId - the chart note in the EHR
 # + return - the record as JSON
-isolated function buildLongevityRecord(string assessmentId, PatientSummary summary, LabResults results,
-        ResultsAnalysis analysis, CarePlanResult plan, PhysicianRelease release, string practitionerId,
-        string noteId) returns json {
+isolated function buildLongevityRecord(string assessmentId, string ehr, IpsContents summary,
+        [international401:DiagnosticReport, international401:Observation[]] results, ResultsAnalysis analysis,
+        CarePlanResult plan, PhysicianRelease release, string practitionerId, string noteId) returns json {
+    [international401:DiagnosticReport, international401:Observation[]] [report, observations] = results;
     return {
         schema: LONGEVITY_RECORD_SCHEMA,
         generatedAt: nowIso(),
-        patient: summary.patient.toJson(),
+        patient: patientDigest(ehr, summary.ehrName, summary.patient, mrnSystemOf(ehr)),
         sources: {
-            ehr: {id: summary.patient.ehr, system: summary.patient.ehrName, clinicalNoteId: noteId,
-                resultsReportId: results.ehrDiagnosticReportId, summaryMethod: summary.'source},
-            lab: {system: labDisplayName, diagnosticReportId: results.diagnosticReportId, issued: results.issued},
+            ehr: {id: ehr, system: summary.ehrName, clinicalNoteId: noteId,
+                resultsReportId: report.id ?: "", summaryMethod: summary.'source},
+            lab: {system: labDisplayName, diagnosticReportId: identifierValue(report.identifier, LAB_RESULT_ID_SYSTEM) ?: "",
+                issued: report.issued ?: ""},
             assessmentId
         },
         clinicalContext: {
-            conditions: summary.conditions.toJson(),
-            allergies: summary.allergies.toJson(),
-            medications: summary.medications.toJson(),
-            familyHistory: summary.familyHistory.toJson(),
-            vitals: summary.vitals.toJson()
+            conditions: from international401:Condition c in summary.conditions select conditionDigest(c),
+            allergies: from international401:AllergyIntolerance a in summary.allergies select allergyDigest(a),
+            medications: from Medication m in summary.medications select medicationDigest(m),
+            familyHistory: familyHistoryDigest(summary.familyHistory),
+            vitals: latestVitalsDigest(summary.vitals)
         },
-        biomarkers: mergedBiomarkers(summary.biomarkers, results.results, analysis.biomarkerInsights),
+        biomarkers: mergedBiomarkers(summary.biomarkers, labResultsDigest(observations), analysis.biomarkerInsights),
         assessment: {
             headline: analysis.headline,
             riskFlags: analysis.riskFlags.toJson(),
@@ -74,40 +79,45 @@ isolated function buildLongevityRecord(string assessmentId, PatientSummary summa
 # + insights - the Results Analysis reading of each result
 # + return - one entry per analyte (EHR series first, then analytes new today), each with today's result
 # appended to its history, the lab's reference range and the analyst's insight when there is one
-isolated function mergedBiomarkers(BiomarkerSeries[] history, LabResultValue[] latest,
+isolated function mergedBiomarkers(BiomarkerSeries[] history, map<json>[] latest,
         BiomarkerInsight[] insights) returns json[] {
     map<map<json>> byCode = {};
     string[] codeOrder = [];
     foreach BiomarkerSeries series in history {
         json[] points = from BiomarkerPoint point in series.points select point.toJson();
+        Analyte? catalogAnalyte = analyteByCode(series.code);
         map<json> entry = {
-            code: series.code, name: series.name, unit: series.unit, longevityTarget: series.longevityTarget,
+            code: series.code, name: series.name, unit: series.unit,
+            longevityTarget: catalogAnalyte is Analyte ? catalogAnalyte.longevityTarget : (),
             referenceLow: series.referenceLow, referenceHigh: series.referenceHigh, history: points
         };
         byCode[series.code] = entry;
         codeOrder.push(series.code);
     }
-    foreach LabResultValue result in latest {
-        map<json>? existing = byCode[result.code];
+    foreach map<json> result in latest {
+        string code = result["code"].toString();
+        // Today's result joins the series of its catalog analyte (results may use an equivalent LOINC code).
+        Analyte? resultAnalyte = analyteByCode(code);
+        string seriesCode = resultAnalyte is Analyte ? resultAnalyte.code : code;
+        map<json>? existing = byCode[seriesCode];
         map<json> entry;
         json[] points;
         if existing is map<json> {
             entry = existing;
             points = <json[]>entry["history"];
         } else {
-            Analyte? analyte = analyteByCode(result.code);
             points = [];
-            entry = {code: result.code, name: result.name, unit: result.unit,
-                longevityTarget: analyte is Analyte ? analyte.longevityTarget : ()};
-            codeOrder.push(result.code);
+            entry = {code: seriesCode, name: result["name"], unit: result["unit"],
+                longevityTarget: resultAnalyte is Analyte ? resultAnalyte.longevityTarget : ()};
+            codeOrder.push(seriesCode);
         }
-        map<json> point = {date: result.effectiveDate, value: result.value, interpretation: result.interpretation,
+        map<json> point = {date: result["effectiveDate"], value: result["value"], interpretation: result["interpretation"],
             'source: labDisplayName};
         points.push(point);
         entry["history"] = points;
-        entry["referenceLow"] = result.referenceLow;
-        entry["referenceHigh"] = result.referenceHigh;
-        byCode[result.code] = entry;
+        entry["referenceLow"] = result["referenceLow"];
+        entry["referenceHigh"] = result["referenceHigh"];
+        byCode[seriesCode] = entry;
     }
     foreach BiomarkerInsight insight in insights {
         map<json>? entry = byCode[insight.code];

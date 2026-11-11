@@ -59,7 +59,7 @@ dependencies = [
 [[package]]
 org = "ballerina"
 name = "data.jsondata"
-version = "1.1.6"
+version = "1.1.7"
 dependencies = [
 	{org = "ballerina", name = "jballerina.java"},
 	{org = "ballerina", name = "lang.object"}
@@ -401,6 +401,57 @@ modules = [
 ]
 
 [[package]]
+org = "ballerinax"
+name = "health.fhir.r4"
+version = "6.3.3"
+dependencies = [
+	{org = "ballerina", name = "constraint"},
+	{org = "ballerina", name = "http"},
+	{org = "ballerina", name = "io"},
+	{org = "ballerina", name = "jwt"},
+	{org = "ballerina", name = "lang.regexp"},
+	{org = "ballerina", name = "lang.value"},
+	{org = "ballerina", name = "log"},
+	{org = "ballerina", name = "time"},
+	{org = "ballerina", name = "url"},
+	{org = "ballerina", name = "uuid"},
+	{org = "ballerinax", name = "health.base"}
+]
+modules = [
+	{org = "ballerinax", packageName = "health.fhir.r4", moduleName = "health.fhir.r4"}
+]
+
+[[package]]
+org = "ballerinax"
+name = "health.fhir.r4.international401"
+version = "4.0.5"
+dependencies = [
+	{org = "ballerina", name = "constraint"},
+	{org = "ballerina", name = "log"},
+	{org = "ballerinax", name = "health.fhir.r4"}
+]
+modules = [
+	{org = "ballerinax", packageName = "health.fhir.r4.international401", moduleName = "health.fhir.r4.international401"}
+]
+
+[[package]]
+org = "ballerinax"
+name = "health.fhir.r4.parser"
+version = "7.1.1"
+dependencies = [
+	{org = "ballerina", name = "constraint"},
+	{org = "ballerina", name = "http"},
+	{org = "ballerina", name = "lang.regexp"},
+	{org = "ballerina", name = "log"},
+	{org = "ballerinax", name = "health.clients.fhir"},
+	{org = "ballerinax", name = "health.fhir.r4"},
+	{org = "ballerinax", name = "health.fhir.r4.international401"}
+]
+modules = [
+	{org = "ballerinax", packageName = "health.fhir.r4.parser", moduleName = "health.fhir.r4.parser"}
+]
+
+[[package]]
 org = "wso2healthcare"
 name = "lab_simulator"
 version = "0.1.0"
@@ -412,7 +463,10 @@ dependencies = [
 	{org = "ballerina", name = "time"},
 	{org = "ballerina", name = "uuid"},
 	{org = "ballerinai", name = "observe"},
-	{org = "ballerinax", name = "health.clients.fhir"}
+	{org = "ballerinax", name = "health.clients.fhir"},
+	{org = "ballerinax", name = "health.fhir.r4"},
+	{org = "ballerinax", name = "health.fhir.r4.international401"},
+	{org = "ballerinax", name = "health.fhir.r4.parser"}
 ]
 modules = [
 	{org = "wso2healthcare", packageName = "lab_simulator", moduleName = "lab_simulator"}

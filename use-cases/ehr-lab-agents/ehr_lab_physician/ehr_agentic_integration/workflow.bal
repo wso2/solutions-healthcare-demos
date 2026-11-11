@@ -61,8 +61,12 @@ function longevityAssessment(workflow:Context ctx, AssessmentInput input, Assess
     string id = input.assessmentId;
     do {
         // Pull the record from the patient's EHR and build the summary (deterministic), then open the visit.
-        PatientSummary summary = check ctx->callActivity(buildPatientSummary,
+        // Clinical data moves between steps as FHIR JSON (the IPS document, the orders, the Specimen, the
+        // lab's results); each activity parses what it needs with the FHIR library.
+        json summary = check ctx->callActivity(buildPatientSummary,
                 {assessmentId: id, ehr: input.ehr, patientId: input.patientId}, retryPolicy = FHIR_RETRY);
+        string patientName = summaryPatientName(summary);
+        string ehrDisplayName = ehrName(input.ehr);
         string encounterId = check ctx->callActivity(openEhrEncounter,
                 {assessmentId: id, ehr: input.ehr, patientId: input.patientId, practitionerId: input.practitionerId},
                 retryPolicy = FHIR_RETRY);
@@ -70,38 +74,39 @@ function longevityAssessment(workflow:Context ctx, AssessmentInput input, Assess
         // ⏸ Physician: explores the record, evaluates it with the Copilot (outside the workflow, in
         // the same agent conversation) and orders labs.
         LabOrderApproval approval = check ctx->awaitHumanTask("orderLabs",
-                {patient: summary.patient.name, ehr: summary.patient.ehrName},
+                {patient: patientName, ehr: ehrDisplayName},
                 userRoles = "physician", title = "Evaluate and order labs",
-                description = string `Review ${summary.patient.name}'s record, evaluate it with the Copilot and order labs.`);
-        LabOrderPlaced labOrder = check ctx->callActivity(placeLabOrder,
+                description = string `Review ${patientName}'s record, evaluate it with the Copilot and order labs.`);
+        json labOrder = check ctx->callActivity(placeLabOrder,
                 {assessmentId: id, ehr: input.ehr, patientId: input.patientId, encounterId,
                     practitionerId: input.practitionerId, approval},
                 retryPolicy = FHIR_RETRY);
-        PatientNotification _ = check ctx->callActivity(notifyPatient,
+        json _ = check ctx->callActivity(notifyPatient,
                 {assessmentId: id, ehr: input.ehr, patientId: input.patientId, encounterId,
                     practitionerId: input.practitionerId, labOrder},
                 retryPolicy = FHIR_RETRY);
 
         // ⏸ Patient: goes to the lab. The lab completes the task when it collects the specimen.
-        LabVisit visit = check ctx->awaitHumanTask("labVisit",
-                {patient: summary.patient.name, lab: labDisplayName, tests: labOrder.tests},
+        // The lab completes this task with the Specimen it collected.
+        json visit = check ctx->awaitHumanTask("labVisit",
+                {patient: patientName, lab: labDisplayName, tests: approval.approvedTests},
                 userRoles = ["patient", "lab"], title = "Visit the lab",
-                description = string `${summary.patient.name} goes to ${labDisplayName} for the blood draw.`,
+                description = string `${patientName} goes to ${labDisplayName} for the blood draw.`,
                 timeout = {days: labVisitTimeoutDays});
         () _ = check ctx->callActivity(recordLabVisit, {assessmentId: id, visit});
 
         // ⏸ Lab: processes the sample. Signalled by its webhook or, if that is missed, the fallback poller.
-        [LabResultNotice] [notice] = check ctx->await([events.labResultReady],
+        [json] [notice] = check ctx->await([events.labResultReady],
                 timeout = {hours: labResultTimeoutHours});
 
         // The rest runs unattended: results into the EHR, both agents, the draft note.
-        LabResults results = check ctx->callActivity(collectLabResults,
+        json results = check ctx->callActivity(collectLabResults,
                 {assessmentId: id, ehr: input.ehr, patientId: input.patientId, encounterId, labOrder, notice},
                 retryPolicy = FHIR_RETRY);
         ResultsAnalysis analysis = check ctx->callActivity(analyseResults,
-                {assessmentId: id, summary, approval, results}, retryPolicy = AGENT_RETRY);
+                {assessmentId: id, ehr: input.ehr, summary, approval, results}, retryPolicy = AGENT_RETRY);
         CarePlanResult plan = check ctx->callActivity(writeCarePlan,
-                {assessmentId: id, summary, approval, analysis}, retryPolicy = AGENT_RETRY);
+                {assessmentId: id, ehr: input.ehr, summary, approval, analysis}, retryPolicy = AGENT_RETRY);
         string noteId = check ctx->callActivity(fileDraftNote,
                 {assessmentId: id, ehr: input.ehr, patientId: input.patientId, encounterId,
                     practitionerId: input.practitionerId, plan},
@@ -109,15 +114,15 @@ function longevityAssessment(workflow:Context ctx, AssessmentInput input, Assess
 
         // ⏸ Physician: reviews the analysis and the draft, and releases it to the patient.
         PhysicianRelease release = check ctx->awaitHumanTask("reviewAndRelease",
-                {patient: summary.patient.name, headline: analysis.headline},
+                {patient: patientName, headline: analysis.headline},
                 userRoles = "physician", title = "Review and release",
-                description = string `Review the analysis and care plan for ${summary.patient.name}, then release it to the patient.`);
+                description = string `Review the analysis and care plan for ${patientName}, then release it to the patient.`);
         () _ = check ctx->callActivity(finalizeInEhr,
                 {assessmentId: id, ehr: input.ehr, encounterId, noteId, practitionerId: input.practitionerId,
                     plan, release},
                 retryPolicy = FHIR_RETRY);
         () _ = check ctx->callActivity(publishLongevityRecord,
-                {assessmentId: id, summary, results, analysis, plan, release, noteId});
+                {assessmentId: id, ehr: input.ehr, summary, results, analysis, plan, release, noteId});
 
         return {assessmentId: id, status: "completed", clinicalNoteId: noteId};
     } on fail error failure {

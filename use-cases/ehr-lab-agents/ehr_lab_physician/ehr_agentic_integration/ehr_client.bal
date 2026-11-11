@@ -63,7 +63,9 @@ isolated function ehrSupportsSummaryOperation(string ehr) returns boolean {
         log:printWarn("Could not read the EHR CapabilityStatement; using composed searches", response, ehr = ehr);
         return false;
     }
-    boolean supported = capabilityHasOperation(<json>response.'resource, "summary");
+    anydata|error capability = parseFhir(<json>response.'resource);
+    boolean supported = capability is international401:CapabilityStatement
+        && capabilityHasOperation(capability, "summary");
     lock {
         summaryOperationSupport[ehr] = supported;
     }
@@ -71,31 +73,17 @@ isolated function ehrSupportsSummaryOperation(string ehr) returns boolean {
     return supported;
 }
 
-isolated function capabilityHasOperation(json capability, string operationName) returns boolean {
-    json|error rest = capability.rest;
-    if rest !is json[] {
-        return false;
-    }
-    foreach json restEntry in rest {
-        json[] operations = [];
-        json|error systemOps = restEntry.operation;
-        if systemOps is json[] {
-            operations.push(...systemOps);
-        }
-        json|error resources = restEntry.'resource;
-        if resources is json[] {
-            foreach json resourceEntry in resources {
-                json|error resourceOps = resourceEntry.operation;
-                if resourceEntry.'type == "Patient" && resourceOps is json[] {
-                    operations.push(...resourceOps);
-                }
+isolated function capabilityHasOperation(international401:CapabilityStatement capability, string operationName)
+        returns boolean {
+    foreach international401:CapabilityStatementRest rest in capability.rest ?: [] {
+        string[] names = from var operation in rest.operation ?: [] select operation.name;
+        foreach international401:CapabilityStatementRestResource resourceEntry in rest.'resource ?: [] {
+            if resourceEntry.'type == "Patient" {
+                names.push(...from var operation in resourceEntry.operation ?: [] select operation.name);
             }
         }
-        foreach json operation in operations {
-            json|error name = operation.name;
-            if name is string && (name == operationName || name == "$" + operationName) {
-                return true;
-            }
+        if names.indexOf(operationName) is int || names.indexOf("$" + operationName) is int {
+            return true;
         }
     }
     return false;
@@ -123,8 +111,8 @@ isolated function ehrReachable(string ehr) returns boolean {
 # + ehr - the EHR id
 # + query - an MRN (e.g. `MRN-100234`) or part of a name
 # + birthDate - optional birth date filter
-# + return - the matching patients, or an error if the EHR search fails
-isolated function searchEhrPatients(string ehr, string query, string? birthDate) returns PatientCard[]|error {
+# + return - the matching patients, by name, or an error if the EHR search fails
+isolated function searchEhrPatients(string ehr, string query, string? birthDate) returns international401:Patient[]|error {
     EhrSystemConfig system = check ehrSystem(ehr);
     map<string[]> params = {"_count": ["50"]};
     string trimmed = query.trim();
@@ -138,13 +126,12 @@ isolated function searchEhrPatients(string ehr, string query, string? birthDate)
     if birthDate is string && birthDate.length() > 0 {
         params["birthdate"] = [birthDate];
     }
-    json[] found = check searchResources(check ehrClient(ehr), "Patient", params);
-    international401:Patient[] patients = <international401:Patient[]>check typedResources(found, PatientList);
-    PatientCard[] cards = from international401:Patient patient in patients
-        select patientCard(system, patient);
-    return from PatientCard card in cards
-        order by card.name ascending
-        select card;
+    anydata[] found = parseResources(check searchResources(check ehrClient(ehr), "Patient", params));
+    return from anydata patient in found
+        where patient is international401:Patient
+        let string name = patientName(patient.name)
+        order by name ascending
+        select patient;
 }
 
 # Reads one patient from an EHR.
@@ -154,35 +141,7 @@ isolated function searchEhrPatients(string ehr, string query, string? birthDate)
 # + return - the Patient, or an error if it cannot be read
 isolated function readEhrPatient(string ehr, string patientId) returns international401:Patient|error {
     fhir:FHIRResponse response = check (check ehrClient(ehr))->getById("Patient", patientId);
-    return (<json>response.'resource).cloneWithType();
-}
-
-# A patient as the portal lists them.
-#
-# + system - the EHR the patient came from
-# + patient - the Patient resource
-# + return - the patient's card
-isolated function patientCard(EhrSystemConfig system, international401:Patient patient) returns PatientCard {
-    r4:Address[] addresses = patient.address ?: [];
-    string? phone = ();
-    foreach r4:ContactPoint contact in patient.telecom ?: [] {
-        if contact.system == "phone" {
-            phone = contact.value;
-            break;
-        }
-    }
-    return {
-        ehr: system.id,
-        ehrName: system.displayName,
-        id: patient.id ?: "",
-        name: patientName(patient.name),
-        gender: patient.gender,
-        birthDate: patient.birthDate,
-        age: ageFrom(patient.birthDate),
-        mrn: identifierValue(patient.identifier, system.mrnSystem),
-        city: addresses.length() > 0 ? addresses[0].city : (),
-        phone
-    };
+    return (check parseFhir(<json>response.'resource)).ensureType();
 }
 
 # Pulls the patient's record from the EHR: `Patient/$summary` when the EHR supports it, otherwise
@@ -197,20 +156,12 @@ isolated function fetchEhrRecord(string ehr, string patientId) returns EhrRecord
     if ehrSupportsSummaryOperation(ehr) {
         fhir:FHIRResponse response = check connector->callOperation("Patient", "summary", fhir:GET, id = patientId);
         json bundle = <json>response.'resource;
-        return {
-            patient,
-            conditions: <international401:Condition[]>check typedResources(resourcesOfType(bundle, "Condition"), ConditionList),
-            allergies: <international401:AllergyIntolerance[]>check typedResources(resourcesOfType(bundle, "AllergyIntolerance"), AllergyIntoleranceList),
-            medicationRequests: <international401:MedicationRequest[]>check typedResources(resourcesOfType(bundle, "MedicationRequest"), MedicationRequestList),
-            medicationStatements: <international401:MedicationStatement[]>check typedResources(resourcesOfType(bundle, "MedicationStatement"), MedicationStatementList),
-            immunizations: <international401:Immunization[]>check typedResources(resourcesOfType(bundle, "Immunization"), ImmunizationList),
-            procedures: <international401:Procedure[]>check typedResources(resourcesOfType(bundle, "Procedure"), ProcedureList),
-            familyHistory: <international401:FamilyMemberHistory[]>check typedResources(resourcesOfType(bundle, "FamilyMemberHistory"), FamilyMemberHistoryList),
-            encounters: <international401:Encounter[]>check typedResources(resourcesOfType(bundle, "Encounter"), EncounterList),
-            observations: <international401:Observation[]>check typedResources(resourcesOfType(bundle, "Observation"), ObservationList),
-            'source: "summary-operation",
-            queries: [string `GET Patient/${patientId}`, string `GET Patient/${patientId}/$summary`]
-        };
+        json[] entries = from json entry in jsonArray(bundle, "entry")
+            let json|error resourceJson = entry.'resource
+            where resourceJson is map<json> && resourceJson["resourceType"] != "Patient"
+            select resourceJson;
+        return ehrRecordFrom(patient, entries, "summary-operation",
+                [string `GET Patient/${patientId}`, string `GET Patient/${patientId}/$summary`]);
     }
 
     string since = string `ge${time:utcToCivil(time:utcNow()).year - summaryLookbackYears}-01-01`;
@@ -245,33 +196,49 @@ isolated function fetchEhrRecord(string ehr, string patientId) returns EhrRecord
     json[]|error vitalsResult = wait vitals;
     json[]|error socialResult = wait social;
 
-    json[] observations = [...check labsResult, ...check vitalsResult, ...check socialResult];
+    json[] resources = [...check conditionsResult, ...check allergiesResult, ...check requestsResult,
+        ...check statementsResult, ...check immunizationsResult, ...check proceduresResult, ...check familyResult,
+        ...check encountersResult, ...check labsResult, ...check vitalsResult, ...check socialResult];
+    return ehrRecordFrom(patient, resources, "composed-search", [
+        string `GET Patient/${patientId}`,
+        string `GET Condition?patient=${subject}`,
+        string `GET AllergyIntolerance?patient=${subject}`,
+        string `GET MedicationRequest?patient=${subject}`,
+        string `GET MedicationStatement?patient=${subject}`,
+        string `GET Immunization?patient=${subject}`,
+        string `GET Procedure?patient=${subject}&date=${since}`,
+        string `GET FamilyMemberHistory?patient=${subject}`,
+        string `GET Encounter?patient=${subject}&date=${since}`,
+        string `GET Observation?patient=${subject}&category=laboratory&date=${since}`,
+        string `GET Observation?patient=${subject}&category=vital-signs&date=${since}`,
+        string `GET Observation?patient=${subject}&category=social-history`
+    ]);
+}
+
+# The patient record from the resources an EHR returned, each parsed into its FHIR R4 record; resources that
+# do not parse are skipped (and logged).
+#
+# + patient - the Patient
+# + resources - every other resource, as FHIR JSON
+# + 'source - how the record was read
+# + queries - the FHIR requests that produced it
+# + return - the record
+isolated function ehrRecordFrom(international401:Patient patient, json[] resources, string 'source, string[] queries)
+        returns EhrRecord {
+    anydata[] parsed = parseResources(resources);
     return {
         patient,
-        conditions: <international401:Condition[]>check typedResources(check conditionsResult, ConditionList),
-        allergies: <international401:AllergyIntolerance[]>check typedResources(check allergiesResult, AllergyIntoleranceList),
-        medicationRequests: <international401:MedicationRequest[]>check typedResources(check requestsResult, MedicationRequestList),
-        medicationStatements: <international401:MedicationStatement[]>check typedResources(check statementsResult, MedicationStatementList),
-        immunizations: <international401:Immunization[]>check typedResources(check immunizationsResult, ImmunizationList),
-        procedures: <international401:Procedure[]>check typedResources(check proceduresResult, ProcedureList),
-        familyHistory: <international401:FamilyMemberHistory[]>check typedResources(check familyResult, FamilyMemberHistoryList),
-        encounters: <international401:Encounter[]>check typedResources(check encountersResult, EncounterList),
-        observations: <international401:Observation[]>check typedResources(observations, ObservationList),
-        'source: "composed-search",
-        queries: [
-            string `GET Patient/${patientId}`,
-            string `GET Condition?patient=${subject}`,
-            string `GET AllergyIntolerance?patient=${subject}`,
-            string `GET MedicationRequest?patient=${subject}`,
-            string `GET MedicationStatement?patient=${subject}`,
-            string `GET Immunization?patient=${subject}`,
-            string `GET Procedure?patient=${subject}&date=${since}`,
-            string `GET FamilyMemberHistory?patient=${subject}`,
-            string `GET Encounter?patient=${subject}&date=${since}`,
-            string `GET Observation?patient=${subject}&category=laboratory&date=${since}`,
-            string `GET Observation?patient=${subject}&category=vital-signs&date=${since}`,
-            string `GET Observation?patient=${subject}&category=social-history`
-        ]
+        conditions: from anydata r in parsed where r is international401:Condition select r,
+        allergies: from anydata r in parsed where r is international401:AllergyIntolerance select r,
+        medicationRequests: from anydata r in parsed where r is international401:MedicationRequest select r,
+        medicationStatements: from anydata r in parsed where r is international401:MedicationStatement select r,
+        immunizations: from anydata r in parsed where r is international401:Immunization select r,
+        procedures: from anydata r in parsed where r is international401:Procedure select r,
+        familyHistory: from anydata r in parsed where r is international401:FamilyMemberHistory select r,
+        encounters: from anydata r in parsed where r is international401:Encounter select r,
+        observations: from anydata r in parsed where r is international401:Observation select r,
+        'source,
+        queries
     };
 }
 
@@ -290,10 +257,11 @@ isolated function ehrObservationHistory(string ehr, string patientId, string loi
         }
     }
     string codeParam = string:'join(",", ...from string code in codes select string `${LOINC}|${code}`);
-    json[] found = check searchResources(check ehrClient(ehr), "Observation",
-            {"patient": [string `Patient/${patientId}`], "code": [codeParam], "_sort": ["date"]});
-    international401:Observation[] observations =
-        <international401:Observation[]>check typedResources(found, ObservationList);
+    anydata[] found = parseResources(check searchResources(check ehrClient(ehr), "Observation",
+            {"patient": [string `Patient/${patientId}`], "code": [codeParam], "_sort": ["date"]}));
+    international401:Observation[] observations = from anydata r in found
+        where r is international401:Observation
+        select r;
     string sourceName = ehrName(ehr);
     BiomarkerPoint[] points = from international401:Observation observation in observations
         let decimal? value = observation.valueQuantity?.value
@@ -333,7 +301,7 @@ isolated function observationSource(international401:Observation observation, st
 # + return - the name, or an error if the Practitioner cannot be read
 isolated function practitionerDisplay(string ehr, string practitionerId) returns string|error {
     fhir:FHIRResponse response = check (check ehrClient(ehr))->getById("Practitioner", practitionerId);
-    international401:Practitioner practitioner = check (<json>response.'resource).cloneWithType();
+    international401:Practitioner practitioner = check (check parseFhir(<json>response.'resource)).ensureType();
     return patientName(practitioner.name);
 }
 
@@ -356,8 +324,7 @@ isolated function createEhrEncounter(string assessmentId, string ehr, string pat
         returns string|error {
     EhrSystemConfig system = check ehrSystem(ehr);
     fhir:FHIRConnector connector = check ehrClient(ehr);
-    json encounter = {
-        resourceType: "Encounter",
+    international401:Encounter encounter = {
         identifier: [{system: ASSESSMENT_ID_SYSTEM, value: assessmentId}],
         status: "in-progress",
         'class: {system: "http://terminology.hl7.org/CodeSystem/v3-ActCode", code: "AMB", display: "ambulatory"},
@@ -371,27 +338,20 @@ isolated function createEhrEncounter(string assessmentId, string ehr, string pat
     };
     // Not `createOnce`: wso2/fhir-server does not index Encounter.identifier, so a conditional create
     // would never match. The patient's open encounters are few; match the identifier here instead.
-    json[] open = check searchResources(connector, "Encounter",
-            {"patient": [string `Patient/${patientId}`], "status": ["in-progress"]});
-    foreach json existing in open {
-        if hasIdentifier(existing, ASSESSMENT_ID_SYSTEM, assessmentId) {
-            return (check existing.id).toString();
+    anydata[] open = parseResources(check searchResources(connector, "Encounter",
+            {"patient": [string `Patient/${patientId}`], "status": ["in-progress"]}));
+    foreach anydata candidate in open {
+        if candidate !is international401:Encounter {
+            continue;
+        }
+        international401:Encounter existing = candidate;
+        string? existingId = existing.id;
+        if existingId is string && identifierValue(existing.identifier, ASSESSMENT_ID_SYSTEM) == assessmentId {
+            return existingId;
         }
     }
-    fhir:FHIRResponse response = check connector->create(encounter, returnPreference = fhir:REPRESENTATION);
+    fhir:FHIRResponse response = check connector->create(check fhirJson(encounter), returnPreference = fhir:REPRESENTATION);
     return createdId(response);
-}
-
-isolated function hasIdentifier(json resourceJson, string system, string value) returns boolean {
-    json|error identifiers = resourceJson.identifier;
-    if identifiers is json[] {
-        foreach json identifier in identifiers {
-            if identifier is map<json> && identifier["system"] == system && identifier["value"] == value {
-                return true;
-            }
-        }
-    }
-    return false;
 }
 
 # Records the lab order in the EHR (the order of record), linked to the visit's Encounter.
@@ -403,13 +363,14 @@ isolated function hasIdentifier(json resourceJson, string system, string value) 
 # + placerOrderId - the clinic's order id, which makes the create idempotent
 # + testCodes - catalog codes of the approved tests
 # + note - order note; omitted when blank
-# + return - the EHR ServiceRequest id, or an error if the EHR rejects it
+# + return - the EHR's ServiceRequest as filed (with its id), or an error if the EHR rejects it
 isolated function createEhrServiceRequest(string ehr, string patientId, string encounterId, string practitionerId,
-        string placerOrderId, string[] testCodes, string note) returns string|error {
+        string placerOrderId, string[] testCodes, string note) returns international401:ServiceRequest|error {
     international401:ServiceRequest serviceRequest = labServiceRequest(string `Patient/${patientId}`, placerOrderId,
             testCodes, {reference: string `Practitioner/${practitionerId}`}, note);
     serviceRequest.encounter = {reference: string `Encounter/${encounterId}`};
-    return createOnce(check ehrClient(ehr), serviceRequest, PLACER_ORDER_SYSTEM, placerOrderId);
+    serviceRequest.id = check createOnce(check ehrClient(ehr), serviceRequest, PLACER_ORDER_SYSTEM, placerOrderId);
+    return serviceRequest;
 }
 
 # Tells the patient what to do, as a FHIR Communication in their chart: the record that they were
@@ -422,11 +383,12 @@ isolated function createEhrServiceRequest(string ehr, string patientId, string e
 # + ehrServiceRequestId - the order the message is about
 # + practitionerId - the physician sending it
 # + message - the message text
-# + return - the Communication id, or an error if the EHR rejects it
+# + instructions - the preparation instructions, one payload each after the message
+# + return - the Communication as filed (with its id), or an error if the EHR rejects it
 isolated function createEhrCommunication(string assessmentId, string ehr, string patientId, string encounterId,
-        string ehrServiceRequestId, string practitionerId, string message) returns string|error {
-    json communication = {
-        resourceType: "Communication",
+        string ehrServiceRequestId, string practitionerId, string message, string[] instructions)
+        returns international401:Communication|error {
+    international401:Communication communication = {
         identifier: [{system: ASSESSMENT_ID_SYSTEM, value: assessmentId + "-lab-visit"}],
         status: "completed",
         category: [{coding: [{system: "http://terminology.hl7.org/CodeSystem/communication-category",
@@ -440,7 +402,14 @@ isolated function createEhrCommunication(string assessmentId, string ehr, string
         sender: {reference: string `Practitioner/${practitionerId}`},
         payload: [{contentString: message}]
     };
-    return createOnce(check ehrClient(ehr), communication, ASSESSMENT_ID_SYSTEM, assessmentId + "-lab-visit");
+    foreach string instruction in instructions {
+        international401:CommunicationPayload[] payload = communication.payload ?: [];
+        payload.push({contentString: instruction});
+        communication.payload = payload;
+    }
+    communication.id = check createOnce(check ehrClient(ehr), communication, ASSESSMENT_ID_SYSTEM,
+            assessmentId + "-lab-visit");
+    return communication;
 }
 
 # Files the lab's results into the EHR as one transaction — Observations plus a DiagnosticReport
@@ -450,18 +419,19 @@ isolated function createEhrCommunication(string assessmentId, string ehr, string
 # + patientId - the patient's id in that EHR
 # + encounterId - the visit's Encounter id
 # + ehrServiceRequestId - the EHR's order of record, which the results are based on
-# + labReport - the lab's DiagnosticReport as json
-# + labObservations - the lab's Observations as json
-# + return - the EHR DiagnosticReport id, or an error if the transaction fails
+# + labReport - the lab's DiagnosticReport
+# + labObservations - the lab's Observations
+# + return - the results as the EHR now holds them — a `collection` Bundle of the DiagnosticReport followed by
+# its Observations — or an error if the transaction fails or the filed results cannot be read back
 isolated function fileLabResultsInEhr(string ehr, string patientId, string encounterId, string ehrServiceRequestId,
         international401:DiagnosticReport labReport, international401:Observation[] labObservations)
-        returns string|error {
+        returns r4:Bundle|error {
     // In the EHR the results belong to the EHR's patient, visit and order, not the lab's; the lab's ids
     // become identifiers, which also make a retried filing find what it filed before.
     r4:Reference[] subject = [{reference: string `Patient/${patientId}`}];
     r4:Reference encounter = {reference: string `Encounter/${encounterId}`};
     r4:Reference[] basedOn = [{reference: string `ServiceRequest/${ehrServiceRequestId}`}];
-    json[] entries = [];
+    r4:BundleEntry[] entries = [];
     r4:Reference[] resultRefs = [];
     foreach int i in 0 ..< labObservations.length() {
         international401:Observation observation = labObservations[i].clone();
@@ -474,7 +444,7 @@ isolated function fileLabResultsInEhr(string ehr, string patientId, string encou
         observation.basedOn = basedOn;
         observation.identifier = [{system: LAB_RESULT_ID_SYSTEM, value: labId}];
         string fullUrl = string `urn:uuid:obs-${i}-${labId}`;
-        entries.push({fullUrl, 'resource: observation.toJson(), request: {method: "POST", url: "Observation",
+        entries.push({fullUrl, 'resource: observation, request: {method: "POST", url: "Observation",
             ifNoneExist: string `identifier=${LAB_RESULT_ID_SYSTEM}|${labId}`}});
         resultRefs.push({reference: fullUrl});
     }
@@ -488,13 +458,30 @@ isolated function fileLabResultsInEhr(string ehr, string patientId, string encou
     report.basedOn = basedOn;
     report.identifier = [{system: LAB_RESULT_ID_SYSTEM, value: labReportId}];
     report.result = resultRefs;
-    entries.push({fullUrl: "urn:uuid:report", 'resource: report.toJson(), request: {method: "POST",
+    entries.push({fullUrl: "urn:uuid:report", 'resource: report, request: {method: "POST",
         url: "DiagnosticReport", ifNoneExist: string `identifier=${LAB_RESULT_ID_SYSTEM}|${labReportId}`}});
 
-    fhir:FHIRResponse response = check (check ehrClient(ehr))->'transaction(
-            {resourceType: "Bundle", 'type: "transaction", entry: entries});
-    string[] ids = check transactionIds(<json>response.'resource);
-    return ids[ids.length() - 1];
+    fhir:FHIRConnector connector = check ehrClient(ehr);
+    r4:Bundle 'transaction = {'type: "transaction", entry: entries};
+    fhir:FHIRResponse response = check connector->'transaction(check fhirJson('transaction));
+    r4:Bundle transactionResponse = check (check parseFhir(<json>response.'resource)).ensureType();
+    string[] ids = check transactionIds(transactionResponse);
+
+    // Read back what the EHR stored, so the assessment shows the results as filed in the chart.
+    string reportId = ids[ids.length() - 1];
+    fhir:FHIRResponse reportResponse = check connector->getById("DiagnosticReport", reportId);
+    international401:DiagnosticReport filedReport = check (check parseFhir(<json>reportResponse.'resource)).ensureType();
+    string[] observationIds = ids.slice(0, ids.length() - 1);
+    anydata[] filedObservations = observationIds.length() == 0 ? [] : parseResources(check searchResources(connector,
+            "Observation", {"_id": [string:'join(",", ...observationIds)]}));
+    string base = (check ehrSystem(ehr)).fhirBaseUrl;
+    r4:BundleEntry[] filed = [{fullUrl: string `${base}/DiagnosticReport/${reportId}`, 'resource: filedReport}];
+    foreach anydata observation in filedObservations {
+        if observation is international401:Observation {
+            filed.push({fullUrl: string `${base}/Observation/${observation.id ?: ""}`, 'resource: observation});
+        }
+    }
+    return {'type: "collection", timestamp: nowIso(), entry: filed};
 }
 
 # Writes the Care Plan agent's chart note to the EHR as a preliminary DocumentReference on the visit.
@@ -509,8 +496,7 @@ isolated function fileLabResultsInEhr(string ehr, string patientId, string encou
 # + return - the DocumentReference id, or an error if the EHR rejects it
 isolated function createEhrDraftNote(string assessmentId, string ehr, string patientId, string encounterId,
         string practitionerId, string noteMarkdown) returns string|error {
-    json documentReference = {
-        resourceType: "DocumentReference",
+    international401:DocumentReference documentReference = {
         identifier: [{system: ASSESSMENT_ID_SYSTEM, value: assessmentId}],
         status: "current",
         docStatus: "preliminary",
@@ -540,18 +526,18 @@ isolated function finalizeEhrNote(string ehr, string noteId, string noteMarkdown
         string comment) returns error? {
     fhir:FHIRConnector connector = check ehrClient(ehr);
     fhir:FHIRResponse current = check connector->getById("DocumentReference", noteId);
-    map<json> note = <map<json>>(<json>current.'resource).clone();
+    international401:DocumentReference note = check (check parseFhir(<json>current.'resource)).ensureType();
     string signed = noteMarkdown + string `${"\n\n"}---${"\n"}Reviewed and released by ${physicianName} on ${nowIso().substring(0, 10)}.`;
     if comment.trim().length() > 0 {
         signed += string `${"\n\n"}Physician comment: ${comment}`;
     }
-    note["docStatus"] = "final";
-    note["description"] = "Preventive health assessment";
-    note["content"] = [{attachment: {contentType: "text/markdown", title: "Preventive health assessment — plan",
+    note.docStatus = "final";
+    note.description = "Preventive health assessment";
+    note.content = [{attachment: {contentType: "text/markdown", title: "Preventive health assessment — plan",
         data: array:toBase64(signed.toBytes())}}];
     // REPRESENTATION, not the default MINIMAL: with MINIMAL the connector requires a Location header,
     // which wso2/fhir-server does not send on update (ETag only).
-    _ = check connector->update(note, returnPreference = fhir:REPRESENTATION);
+    _ = check connector->update(check fhirJson(note), returnPreference = fhir:REPRESENTATION);
 }
 
 # Closes the visit's Encounter.
@@ -562,16 +548,15 @@ isolated function finalizeEhrNote(string ehr, string noteId, string noteMarkdown
 isolated function finishEhrEncounter(string ehr, string encounterId) returns error? {
     fhir:FHIRConnector connector = check ehrClient(ehr);
     fhir:FHIRResponse current = check connector->getById("Encounter", encounterId);
-    map<json> encounter = <map<json>>(<json>current.'resource).clone();
-    if encounter["status"] == "finished" {
+    international401:Encounter encounter = check (check parseFhir(<json>current.'resource)).ensureType();
+    if encounter.status == "finished" {
         return;
     }
-    encounter["status"] = "finished";
-    json period = encounter["period"];
-    map<json> updatedPeriod = period is map<json> ? period.clone() : {};
-    updatedPeriod["end"] = nowIso();
-    encounter["period"] = updatedPeriod;
-    _ = check connector->update(encounter, returnPreference = fhir:REPRESENTATION);
+    encounter.status = "finished";
+    r4:Period period = encounter.period ?: {};
+    period.end = nowIso();
+    encounter.period = period;
+    _ = check connector->update(check fhirJson(encounter), returnPreference = fhir:REPRESENTATION);
 }
 
 # A lab ServiceRequest for the given subject. Shared by the EHR's order of record and the copy
@@ -582,7 +567,7 @@ isolated function finishEhrEncounter(string ehr, string encounterId) returns err
 # + testCodes - catalog codes of the tests to order
 # + requester - the ordering physician, as a FHIR Reference
 # + note - order note; omitted when blank
-# + return - the ServiceRequest as json
+# + return - the ServiceRequest
 isolated function labServiceRequest(string subjectReference, string placerOrderId, string[] testCodes,
         r4:Reference requester, string note) returns international401:ServiceRequest {
     r4:CodeableConcept[] orderDetail = from string code in testCodes

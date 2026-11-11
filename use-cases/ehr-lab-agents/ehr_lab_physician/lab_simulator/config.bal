@@ -13,8 +13,9 @@ configurable string labOrganizationId = "org-quest-lab";
 # Name the lab presents on results and in the console.
 configurable string labDisplayName = "Quest Diagnostics";
 
-# Where to send notifications (specimen collected, report ready).
-configurable string integrationWebhookUrl = "http://localhost:9090/api/lab/notifications";
+# The integration's FHIR `$process-message` operation, where the lab sends its FHIR messages (specimen
+# collected, report ready).
+configurable string integrationWebhookUrl = "http://localhost:9090/fhir/r4/$process-message";
 
 # Key presented to the integration's webhook in the `X-Lab-Api-Key` header.
 configurable string integrationWebhookApiKey = "demo-lab-webhook-key";

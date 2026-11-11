@@ -2,7 +2,8 @@ import { Fragment, useMemo, useState } from 'react'
 import {
   Bell, BookOpen, CalendarClock, CheckCircle2, ChevronDown, Circle, Clock, FileSignature, FlaskConical, RotateCcw, Send, Siren, Sparkles, Target, TestTube2,
 } from 'lucide-react'
-import { api, type Assessment, type BiomarkerInsight, type BiomarkerPoint, type LabCatalog, type LabResultValue, type Level, type ResultsAnalysis } from '../lib/api'
+import { api, type BiomarkerInsight, type BiomarkerPoint, type LabCatalog, type LabResultValue, type Level, type ResultsAnalysis } from '../lib/api'
+import type { AssessmentView as Assessment } from '../lib/fhir'
 import { formatDate, formatNumber, formatRange, formatTime } from '../lib/format'
 import { BiomarkerChart } from './BiomarkerChart'
 import { AgentFailureNote } from './AgentFailureNote'

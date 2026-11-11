@@ -5,6 +5,8 @@ import { api, type AssessmentListItem, type PatientCard, type SystemInfo } from 
 import { formatDate, initials, relativeTime, titleCase } from '../lib/format'
 import { WAITING_ON, stagePosition } from '../lib/stages'
 import { usePolling } from '../lib/usePolling'
+import { patientCardsFromBundle } from '../lib/fhir'
+import { loadSystem } from '../lib/useSystem'
 import { EhrBadge } from '../components/patient'
 import { Avatar, Badge, Card, CardHeader, Empty, ErrorNote, Spinner } from '../components/ui'
 
@@ -39,7 +41,8 @@ export function PhysicianHome() {
     setSearching(true)
     setSearchError(undefined)
     try {
-      setPatients(await api.searchPatients(ehr, q))
+      const [bundle, info] = await Promise.all([api.searchPatients(ehr, q), loadSystem().catch(() => undefined)])
+      setPatients(patientCardsFromBundle(bundle, ehr, info?.ehrs.find((e) => e.id === ehr)))
     } catch (e) {
       setSearchError(e instanceof Error ? e.message : String(e))
       setPatients([])

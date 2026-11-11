@@ -1,6 +1,10 @@
 // Types shared by the workflow, activities, agents and API.
-// FHIR resources themselves use ballerinax/health.fhir.r4 (`r4`) and `international401`; these are
-// the integration's own shapes — what the portal renders and what agents read and return.
+// Clinical data is FHIR R4 throughout: resources are `international401` records (and `r4:Bundle`) inside the
+// integration, and FHIR JSON — produced by the library's serializers — wherever they leave it: in API responses,
+// in the read model and through the workflow (whose compiler cannot describe FHIR's recursive record types, so
+// activities hand resources to each other as FHIR JSON and parse them back with the library's parser). What is
+// left here is the integration's own vocabulary: assessment lifecycle, physician requests, agent outputs and the
+// workflow view.
 
 // ── Assessment lifecycle ──
 
@@ -31,351 +35,6 @@ enum Actor {
     LAB = "lab",
     OPERATIONS = "operations"
 }
-
-// ── Patients ──
-
-# A patient as listed in search results and page headers.
-#
-# + ehr - the EHR the patient's record lives in
-# + ehrName - that EHR's display name
-# + id - the patient's id in that EHR
-# + name - display name
-# + gender - administrative gender
-# + birthDate - birth date
-# + age - age in years today
-# + mrn - medical record number in that EHR
-# + city - home city
-# + phone - contact phone, for the patient notification
-type PatientCard record {|
-    string ehr;
-    string ehrName;
-    string id;
-    string name;
-    string? gender;
-    string? birthDate;
-    int? age;
-    string? mrn;
-    string? city;
-    string? phone = ();
-|};
-
-// ── Patient summary (deterministic — built from FHIR, no LLM) ──
-// The sections follow the International Patient Summary (IPS): problems, allergies, medications,
-// immunizations, results, vital signs, procedures and social history, plus family history and the
-// clinic's own trend flags and care gaps.
-
-# A problem-list entry.
-#
-# + display - the condition
-# + code - ICD-10 code when present, otherwise SNOMED CT
-# + onset - onset date
-# + abatement - date it resolved, if it has
-# + status - clinical status (active, resolved…)
-type ConditionItem record {|
-    string display;
-    string? code;
-    string? onset;
-    string? abatement = ();
-    string? status;
-|};
-
-# A medication, prescribed or reported by the patient.
-#
-# + display - the medication and strength
-# + status - active, completed, stopped…
-# + since - when it was started or prescribed
-# + until - when it ended, if it has
-# + dosage - dosage instructions
-# + source - `prescribed` (MedicationRequest) or `patient-reported` (MedicationStatement, e.g. over the counter)
-type MedicationItem record {|
-    string display;
-    string? status;
-    string? since;
-    string? until = ();
-    string? dosage;
-    "prescribed"|"patient-reported" 'source = "prescribed";
-|};
-
-# An allergy or intolerance.
-#
-# + substance - what the patient reacts to
-# + category - medication, food, environment or biologic
-# + criticality - low, high or unable-to-assess
-# + reactions - the recorded manifestations
-# + severity - the most severe recorded reaction severity
-# + recorded - when it was recorded
-type AllergyItem record {|
-    string substance;
-    string? category;
-    string? criticality;
-    string[] reactions;
-    string? severity;
-    string? recorded;
-|};
-
-# A vaccine given.
-#
-# + vaccine - the vaccine
-# + date - when it was given
-# + status - completed, not-done…
-type ImmunizationItem record {|
-    string vaccine;
-    string? date;
-    string? status;
-|};
-
-# A past procedure.
-#
-# + display - the procedure
-# + date - when it was performed
-# + status - completed, in-progress…
-type ProcedureItem record {|
-    string display;
-    string? date;
-    string? status;
-|};
-
-# A social-history finding, such as smoking status.
-#
-# + label - what was observed
-# + value - the finding
-# + date - when it was recorded
-type SocialHistoryItem record {|
-    string label;
-    string value;
-    string? date;
-|};
-
-# A relative's condition.
-#
-# + relationship - who (father, mother…)
-# + condition - their condition
-# + onsetAge - their age at onset
-type FamilyHistoryItem record {|
-    string relationship;
-    string condition;
-    int? onsetAge;
-|};
-
-# A visit.
-#
-# + id - the Encounter id
-# + date - visit date
-# + type - kind of visit
-# + reason - reason for the visit
-# + status - finished, in-progress…
-# + provider - the organization that provided it
-type EncounterItem record {|
-    string id;
-    string? date;
-    string 'type;
-    string? reason;
-    string? status;
-    string? provider = ();
-|};
-
-# The latest vital signs.
-#
-# + systolic - systolic blood pressure (mmHg)
-# + diastolic - diastolic blood pressure (mmHg)
-# + bloodPressureDate - date of that blood pressure
-# + heartRate - heart rate (/min)
-# + respiratoryRate - respiratory rate (/min)
-# + temperature - body temperature (°C)
-# + bmi - body mass index
-# + weightKg - body weight (kg)
-# + heightCm - body height (cm)
-type VitalSigns record {|
-    decimal? systolic = ();
-    decimal? diastolic = ();
-    string? bloodPressureDate = ();
-    decimal? heartRate = ();
-    decimal? respiratoryRate = ();
-    decimal? temperature = ();
-    decimal? bmi = ();
-    decimal? weightKg = ();
-    decimal? heightCm = ();
-|};
-
-# One reading of a vital sign; blood pressure carries both values.
-#
-# + date - when it was measured
-# + value - the value (systolic for blood pressure)
-# + value2 - diastolic, for blood pressure
-type VitalPoint record {|
-    string date;
-    decimal value;
-    decimal? value2 = ();
-|};
-
-# A vital sign over time, for the summary's trend charts.
-#
-# + code - LOINC code
-# + name - display name
-# + unit - unit
-# + points - readings, oldest first
-type VitalTrend record {|
-    string code;
-    string name;
-    string unit;
-    VitalPoint[] points;
-|};
-
-# One lab result in an analyte's history.
-#
-# + date - when the sample was taken
-# + value - the result
-# + interpretation - the lab's flag (H, L, N)
-# + source - the system the result came from
-type BiomarkerPoint record {|
-    string date;
-    decimal value;
-    string? interpretation;
-    string 'source;
-|};
-
-# One analyte's history, oldest first, with the deterministic trend read from it.
-#
-# + code - LOINC code (the clinic's catalog code when the EHR used an equivalent one)
-# + name - display name
-# + unit - unit of the latest result
-# + points - every result, oldest first
-# + latest - the most recent value
-# + latestDate - date of the most recent value
-# + previous - the value before the latest, or nil with a single result
-# + changePct - change from the first to the latest value in percent, or nil with a single result
-# + trend - direction of that change; `single` when there is only one result
-# + status - the latest value against the lab's reference range
-# + referenceLow - lower bound of the lab's reference range on the latest result
-# + referenceHigh - upper bound of the lab's reference range on the latest result
-# + longevityTarget - the clinic's target, for analytes in the catalog
-type BiomarkerSeries record {|
-    string code;
-    string name;
-    string unit;
-    BiomarkerPoint[] points;
-    decimal latest;
-    string latestDate;
-    decimal? previous;
-    decimal? changePct;
-    "rising"|"falling"|"stable"|"single" trend;
-    "normal"|"high"|"low" status;
-    decimal? referenceLow;
-    decimal? referenceHigh;
-    string? longevityTarget;
-|};
-
-# A rule-based finding in the summary.
-#
-# + severity - info, watch or concern
-# + title - the finding
-# + detail - the values behind it
-# + codes - LOINC codes it is about
-type SummaryFlag record {|
-    "info"|"watch"|"concern" severity;
-    string title;
-    string detail;
-    string[] codes = [];
-|};
-
-# A longevity-baseline test the patient has never had.
-#
-# + title - what is missing
-# + detail - why it matters
-# + suggestedTests - catalog tests that would close the gap
-type CareGap record {|
-    string title;
-    string detail;
-    string[] suggestedTests;
-|};
-
-# The patient summary: the IPS sections plus the clinic's deterministic flags and care gaps.
-#
-# + patient - who it is about
-# + source - `summary-operation` when the EHR answered Patient/$summary, `composed-search` otherwise
-# + fhirQueries - the FHIR requests that produced it
-# + conditions - problem list
-# + allergies - allergies and intolerances
-# + medications - prescribed and patient-reported medications, current and past
-# + immunizations - vaccines given
-# + procedures - recent procedures
-# + socialHistory - smoking status and similar findings
-# + familyHistory - relatives' conditions
-# + encounters - recent visits
-# + vitals - the latest vital signs
-# + vitalTrends - blood pressure, weight, BMI and heart rate over time
-# + biomarkers - lab analytes over the lookback window
-# + flags - rule-based findings
-# + careGaps - longevity-baseline tests never done
-# + generatedAt - when it was built
-type PatientSummary record {|
-    PatientCard patient;
-    string 'source;
-    string[] fhirQueries;
-    ConditionItem[] conditions;
-    AllergyItem[] allergies;
-    MedicationItem[] medications;
-    ImmunizationItem[] immunizations;
-    ProcedureItem[] procedures;
-    SocialHistoryItem[] socialHistory;
-    FamilyHistoryItem[] familyHistory;
-    EncounterItem[] encounters;
-    VitalSigns vitals;
-    VitalTrend[] vitalTrends;
-    BiomarkerSeries[] biomarkers;
-    SummaryFlag[] flags;
-    CareGap[] careGaps;
-    string generatedAt;
-|};
-
-// ── EHR data explorer ──
-
-# One row of the explorer: any clinical resource, normalised so the portal can show every kind in one
-# filterable table and the physician can hand a selection to the Copilot.
-#
-# + ref - the resource reference, e.g. `Observation/abc`
-# + kind - encounter, problem, medication, lab, vital, immunization, allergy, procedure, note, report or social
-# + date - the clinically relevant date
-# + title - what it is
-# + detail - one line of context (reason, dosage, reactions, note excerpt…)
-# + value - numeric or coded result, for labs and vitals
-# + unit - unit of `value`
-# + flag - the lab's interpretation (H, L, N) or an allergy's criticality
-# + status - the resource's status
-# + code - its primary code
-# + text - the full text of a clinical note
-type ExplorerRow record {|
-    string ref;
-    string kind;
-    string? date;
-    string title;
-    string? detail = ();
-    string? value = ();
-    string? unit = ();
-    string? flag = ();
-    string? status = ();
-    string? code = ();
-    string? text = ();
-|};
-
-# What the explorer fetched.
-#
-# + ehr - the EHR it came from
-# + patientId - the patient
-# + rows - the records, newest first
-# + counts - rows per kind
-# + queries - the FHIR searches that were run
-# + fetchedAt - when
-# + durationMs - how long the EHR took
-type ExplorerResult record {|
-    string ehr;
-    string patientId;
-    ExplorerRow[] rows;
-    map<int> counts;
-    string[] queries;
-    string fetchedAt;
-    int durationMs;
-|};
 
 // ── Copilot evaluation ──
 
@@ -434,12 +93,12 @@ type CopilotEvaluation record {|
 
 # What the physician hands the Copilot.
 #
-# + records - the explorer rows they selected
+# + resources - the FHIR resources they selected in the explorer, as FHIR JSON
 # + dateFrom - start of the date range they looked at
 # + dateTo - end of that range
 # + question - what they want evaluated; blank asks for a general evaluation
 type EvaluationRequest record {|
-    ExplorerRow[] records;
+    json[] resources;
     string? dateFrom = ();
     string? dateTo = ();
     string question = "";
@@ -458,45 +117,11 @@ type LabOrderApproval record {|
     string clinicalContext = "";
 |};
 
-# The patient's lab visit: the result of the "lab visit" human task, completed by the lab when it
-# collects the specimen.
-#
-# + specimenId - the lab's Specimen id
-# + collectedAt - when the specimen was collected
-# + collectedBy - who completed the task
-type LabVisit record {|
-    string specimenId;
-    string collectedAt;
-    string collectedBy = "lab";
-|};
-
 # The physician's release: the result of the "review and release" human task.
 #
 # + comment - the physician's comment, added to the chart note and the patient's report
 type PhysicianRelease record {|
     string comment = "";
-|};
-
-# Notice from the lab that its report is ready (a system event, not a person). It carries the lab's FHIR
-# resources — as the lab sent them in its message, or as the fallback poller read them from the lab — so the
-# results step works from exactly what the lab reported. They were read as FHIR R4 types when they arrived
-# and are read as such again in the results step; in between they travel as FHIR JSON, because the workflow
-# compiler describes every type that crosses the workflow boundary and FHIR's recursive types are too large
-# to describe.
-#
-# + serviceRequestId - the lab's order
-# + diagnosticReportId - the lab's report
-# + status - the report's status
-# + via - which path noticed it (lab webhook or fallback poll)
-# + report - the lab's DiagnosticReport, as FHIR JSON
-# + observations - the Observations the report references, as FHIR JSON
-type LabResultNotice record {|
-    string serviceRequestId;
-    string diagnosticReportId;
-    string status;
-    string via;
-    json report;
-    json[] observations;
 |};
 
 // ── Agent outputs ──
@@ -624,72 +249,6 @@ type CarePlanResult record {|
     PatientReport patientReport;
 |};
 
-// ── Lab exchange ──
-
-# The order as placed in both systems.
-#
-# + labPatientId - the patient's id in the lab
-# + labServiceRequestId - the lab's order
-# + ehrServiceRequestId - the EHR's order of record
-# + placerOrderId - the clinic's order id, the same in both
-# + tests - catalog codes ordered
-type LabOrderPlaced record {|
-    string labPatientId;
-    string labServiceRequestId;
-    string ehrServiceRequestId;
-    string placerOrderId;
-    string[] tests;
-|};
-
-# What the patient was told to do.
-#
-# + communicationId - the FHIR Communication filed in the EHR
-# + message - the message
-# + instructions - preparation instructions for the ordered tests
-# + labName - where to go
-type PatientNotification record {|
-    string communicationId;
-    string message;
-    string[] instructions;
-    string labName;
-|};
-
-# One result from the lab.
-#
-# + code - LOINC code
-# + name - analyte
-# + value - result
-# + unit - unit
-# + interpretation - the lab's flag
-# + referenceLow - lower bound of the lab's reference range
-# + referenceHigh - upper bound of the lab's reference range
-# + effectiveDate - when the sample was taken
-type LabResultValue record {|
-    string code;
-    string name;
-    decimal value;
-    string unit;
-    string? interpretation;
-    decimal? referenceLow;
-    decimal? referenceHigh;
-    string effectiveDate;
-|};
-
-# The lab's report as filed in the EHR.
-#
-# + diagnosticReportId - the lab's report
-# + ehrDiagnosticReportId - the copy filed in the EHR
-# + status - the report's status
-# + issued - when the lab issued it
-# + results - the results
-type LabResults record {|
-    string diagnosticReportId;
-    string ehrDiagnosticReportId;
-    string status;
-    string issued;
-    LabResultValue[] results;
-|};
-
 // ── Workflow ──
 
 # What the workflow starts with.
@@ -709,9 +268,10 @@ type AssessmentInput record {|
 # completes it, later ones are ignored — which is what lets both the lab webhook and the fallback
 # poller signal `labResultReady` safely. Waits on people are human tasks instead (see workflow.bal).
 #
-# + labResultReady - notice that the lab's report is ready
+# + labResultReady - the lab's final report and its Observations, as a FHIR `collection` Bundle (FHIR JSON)
+# tagged with the path that noticed it (lab_results_intake.bal)
 type AssessmentEvents record {|
-    future<LabResultNotice> labResultReady;
+    future<json> labResultReady;
 |};
 
 # How the workflow ended.

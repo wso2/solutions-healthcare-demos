@@ -1,6 +1,7 @@
 import ballerina/ai;
 import ballerina/http;
 import ballerina/log;
+import ballerinax/health.fhir.r4.international401;
 import ballerinax/ai.memory.postgresql as aimemory;
 
 // Three agents, one per point in the journey where clinical reasoning happens:
@@ -251,7 +252,8 @@ isolated function getLabCatalog() returns json {
     return {
         orderableTests: ORDERABLE_TESTS.toJson(),
         analytes: from Analyte analyte in ANALYTES
-            select {code: analyte.code, name: analyte.name, unit: analyte.unit, longevityTarget: analyte.longevityTarget}
+            select {code: analyte.code, name: analyte.name, unit: analyte.unit, longevityTarget: analyte.longevityTarget},
+        aliases: ANALYTE_ALIASES.toJson()
     };
 }
 
@@ -282,29 +284,30 @@ isolated function getBiomarkerHistory(string ehr, string patientId, string loinc
 # Asks the Copilot to evaluate the records the physician selected.
 #
 # + assessmentId - the assessment, which keys the Copilot's conversation memory
+# + ehr - the patient's EHR
 # + summary - the patient's summary, for context
-# + request - the selected records, date range and question
+# + request - the selected FHIR resources, date range and question
 # + return - the evaluation with only catalog tests kept, or an error if no model is configured or the agent fails
-isolated function runCopilotEvaluation(string assessmentId, PatientSummary summary, EvaluationRequest request)
+isolated function runCopilotEvaluation(string assessmentId, string ehr, IpsContents summary, EvaluationRequest request)
         returns CopilotEvaluation|error {
     check checkModelConfigured();
-    ExplorerRow[] records = request.records.length() > evaluationMaxRecords
-        ? request.records.slice(0, evaluationMaxRecords) : request.records;
+    anydata[] records = parseResources(request.resources.length() > evaluationMaxRecords
+        ? request.resources.slice(0, evaluationMaxRecords) : request.resources);
     string range = request.dateFrom is string || request.dateTo is string
         ? string `${request.dateFrom ?: "the beginning"} to ${request.dateTo ?: "today"}` : "all dates";
     string prompt = string `Evaluate these EHR records for the physician.
 
-EHR (for tools): ${summary.patient.ehr} — ${summary.patient.ehrName}
-Patient id (for tools): ${summary.patient.id}
+EHR (for tools): ${ehr} — ${summary.ehrName}
+Patient id (for tools): ${summary.patient.id ?: ""}
 
 ## Physician's question
 ${request.question.trim().length() == 0 ? "Give an overview and evaluation of these records, and propose a lab panel." : request.question}
 
-## Selected records (${records.length()} rows, ${range})
+## Selected records (${records.length()} FHIR resources, ${range})
 ${compactRecords(records)}
 
 ## Patient context
-${contextForPrompt(summary)}`;
+${contextForPrompt(ehr, summary)}`;
     CopilotEvaluation evaluation = check copilotAgent.run(prompt, copilotSession(assessmentId));
     return withCatalogTestsOnly(evaluation);
 }
@@ -329,18 +332,21 @@ Answer in "reply". Revise the evaluation and the panel only where this changes t
 # Asks the Results Analysis agent to interpret the new results.
 #
 # + assessmentId - the assessment, which keys the agent's memory
+# + ehr - the patient's EHR
 # + summary - the patient's summary
 # + approval - the physician's order, with their reason for it
 # + evaluation - the Copilot's evaluation the order came from, if there was one
-# + results - the new results
+# + results - the new results as filed in the EHR: the DiagnosticReport and its Observations
 # + return - the analysis, or an error if no model is configured or the agent fails
-isolated function runResultsAnalysisAgent(string assessmentId, PatientSummary summary, LabOrderApproval approval,
-        CopilotEvaluation? evaluation, LabResults results) returns ResultsAnalysis|error {
+isolated function runResultsAnalysisAgent(string assessmentId, string ehr, IpsContents summary,
+        LabOrderApproval approval, CopilotEvaluation? evaluation,
+        [international401:DiagnosticReport, international401:Observation[]] results) returns ResultsAnalysis|error {
     check checkModelConfigured();
+    [international401:DiagnosticReport, international401:Observation[]] [report, observations] = results;
     string prompt = string `Analyse the new lab results for this patient.
 
-EHR (for tools): ${summary.patient.ehr} — ${summary.patient.ehrName}
-Patient id (for tools): ${summary.patient.id}
+EHR (for tools): ${ehr} — ${summary.ehrName}
+Patient id (for tools): ${summary.patient.id ?: ""}
 
 ## Why the physician ordered these tests
 Reason: ${approval.clinicalContext == "" ? "(not given)" : approval.clinicalContext}
@@ -348,25 +354,27 @@ Tests ordered: ${string:'join(", ", ...approval.approvedTests)}
 Order note: ${approval.note == "" ? "(none)" : approval.note}
 ${evaluation is CopilotEvaluation ? "Copilot evaluation before the order:\n" + evaluation.overview : ""}
 
-## New results from ${labDisplayName} (report ${results.diagnosticReportId}, issued ${results.issued})
-${results.results.toJsonString()}
+## New results from ${labDisplayName} (report ${identifierValue(report.identifier, LAB_RESULT_ID_SYSTEM) ?: report.id ?: ""}, issued ${report.issued ?: ""})
+${labResultsDigest(observations).toJsonString()}
 
 ## EHR summary (history before today)
-${summaryForPrompt(summary)}`;
+${summaryDigest(ehr, summary).toJsonString()}`;
     return analystAgent.run(prompt, analysisSession(assessmentId));
 }
 
 # Asks the Care Plan agent for the draft note and patient report.
 #
 # + assessmentId - the assessment, which keys the agent's memory
+# + ehr - the patient's EHR
 # + summary - the patient's summary (for medications and allergies)
 # + approval - the physician's order, with their reason for it
 # + analysis - the results analysis
 # + return - the draft care plan with only catalog follow-up tests kept, or an error if the agent fails
-isolated function runCarePlanAgent(string assessmentId, PatientSummary summary, LabOrderApproval approval,
+isolated function runCarePlanAgent(string assessmentId, string ehr, IpsContents summary, LabOrderApproval approval,
         ResultsAnalysis analysis) returns CarePlanResult|error {
     check checkModelConfigured();
-    string prompt = string `Draft the care plan for ${summary.patient.name} (${summary.patient.age ?: 0}, ${summary.patient.gender ?: "unknown"}).
+    international401:Patient patient = summary.patient;
+    string prompt = string `Draft the care plan for ${patientName(patient.name)} (${ageFrom(patient.birthDate) ?: 0}, ${patient.gender ?: "unknown"}).
 
 ## Why the physician ordered the tests
 ${approval.clinicalContext == "" ? "(not given)" : approval.clinicalContext}
@@ -375,10 +383,10 @@ ${approval.clinicalContext == "" ? "(not given)" : approval.clinicalContext}
 ${analysis.toJsonString()}
 
 ## Current medications
-${(from MedicationItem m in summary.medications where m.status == "active" select m).toJsonString()}
+${(from Medication m in summary.medications where m.status == "active" select medicationDigest(m)).toJsonString()}
 
 ## Allergies
-${summary.allergies.toJsonString()}`;
+${(from international401:AllergyIntolerance a in summary.allergies select allergyDigest(a)).toJsonString()}`;
     CarePlanResult plan = check carePlanAgent.run(prompt, carePlanSession(assessmentId));
     plan.followUpLabs = from FollowUpTest test in plan.followUpLabs
         where orderableByCode(test.testCode) is OrderableTest
@@ -386,56 +394,52 @@ ${summary.allergies.toJsonString()}`;
     return plan;
 }
 
-# The summary as the agents see it: everything clinical, without the integration's own bookkeeping.
-#
-# + summary - the patient summary
-# + return - the summary as a JSON string, without `fhirQueries`, `generatedAt` and `source`
-isolated function summaryForPrompt(PatientSummary summary) returns string {
-    map<json> view = <map<json>>summary.toJson();
-    _ = view.removeIfHasKey("fhirQueries");
-    _ = view.removeIfHasKey("generatedAt");
-    _ = view.removeIfHasKey("source");
-    _ = view.removeIfHasKey("vitalTrends");
-    return view.toJsonString();
-}
-
 # The patient context the Copilot always gets, whatever the physician selected.
 #
+# + ehr - the patient's EHR
 # + summary - the patient summary
-# + return - problems, allergies, medications, family and social history, vitals, flags and care gaps as JSON
-isolated function contextForPrompt(PatientSummary summary) returns string {
+# + return - patient, active problems, allergies, medications, family and social history, vitals, flags and care
+# gaps, condensed from the IPS document's FHIR resources
+isolated function contextForPrompt(string ehr, IpsContents summary) returns string {
     return {
-        patient: summary.patient.toJson(),
-        activeProblems: (from ConditionItem c in summary.conditions where c.status == "active" select c).toJson(),
-        allergies: summary.allergies.toJson(),
-        medications: summary.medications.toJson(),
-        familyHistory: summary.familyHistory.toJson(),
-        socialHistory: summary.socialHistory.toJson(),
-        latestVitals: summary.vitals.toJson(),
-        flags: summary.flags.toJson(),
-        careGaps: summary.careGaps.toJson()
+        patient: patientDigest(ehr, summary.ehrName, summary.patient, mrnSystemOf(ehr)),
+        activeProblems: from international401:Condition c in summary.conditions
+            where conditionStatus(c) == "active" select conditionDigest(c),
+        allergies: from international401:AllergyIntolerance a in summary.allergies select allergyDigest(a),
+        medications: from Medication m in summary.medications select medicationDigest(m),
+        familyHistory: familyHistoryDigest(summary.familyHistory),
+        socialHistory: from international401:Observation o in summary.social select socialHistoryDigest(o),
+        latestVitals: latestVitalsDigest(summary.vitals),
+        flags: from international401:DetectedIssue f in summary.flags select flagDigest(f),
+        careGaps: from international401:ServiceRequest g in summary.careGaps select careGapDigest(g)
     }.toJsonString();
 }
 
-# The selected rows as compact lines for the prompt; notes keep their full text.
+# The selected FHIR resources as compact lines for the prompt; notes keep their full text.
 #
-# + records - the rows
-# + return - one line per row (notes followed by their text)
-isolated function compactRecords(ExplorerRow[] records) returns string {
+# + records - the parsed resources
+# + return - one line per resource (notes followed by their text)
+isolated function compactRecords(anydata[] records) returns string {
     string[] lines = [];
-    foreach ExplorerRow row in records {
-        string line = string `- [${row.kind}] ${row.date is string ? (<string>row.date).substring(0, 10) : "undated"} — ${row.title}`;
-        if row.value is string {
-            line += string `: ${<string>row.value}${row.unit is string ? " " + <string>row.unit : ""}`;
+    foreach anydata r in records {
+        RecordLine row = recordLine(r);
+        string? date = row.date;
+        string line = string `- [${row.kind}] ${date is string ? date.substring(0, int:min(10, date.length())) : "undated"} — ${row.title}`;
+        string? value = row.value;
+        if value is string {
+            line += string `: ${value}${row.unit is string ? " " + <string>row.unit : ""}`;
         }
-        if row.flag is string && row.flag != "N" {
-            line += string ` (${<string>row.flag})`;
+        string? flag = row.flag;
+        if flag is string && flag != "N" {
+            line += string ` (${flag})`;
         }
-        if row.detail is string && row.kind != "note" {
-            line += string ` · ${<string>row.detail}`;
+        string? detail = row.detail;
+        if detail is string && row.kind != "note" {
+            line += string ` · ${detail}`;
         }
-        if row.status is string {
-            line += string ` · ${<string>row.status}`;
+        string? status = row.status;
+        if status is string {
+            line += string ` · ${status}`;
         }
         string? text = row.text;
         if text is string {

@@ -1,7 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, ClipboardList, FileHeart, Play, Search } from 'lucide-react'
-import { api, type AssessmentListItem, type PatientSummary } from '../lib/api'
+import { api, type AssessmentListItem } from '../lib/api'
+import { summaryFromIps, type Bundle } from '../lib/fhir'
+import { useReferenceData } from '../lib/useSystem'
 import { relativeTime } from '../lib/format'
 import { WAITING_ON, stagePosition } from '../lib/stages'
 import { Explorer, type EvaluateArgs } from '../components/Explorer'
@@ -23,14 +25,19 @@ export function PatientPage() {
   const [params, setParams] = useSearchParams()
   const tab = params.get('tab') ?? 'summary'
   const navigate = useNavigate()
-  const [summary, setSummary] = useState<PatientSummary>()
+  const [bundle, setBundle] = useState<Bundle>()
+  const { system, catalog, ready } = useReferenceData()
+  const summary = useMemo(
+    () => (bundle && ready ? summaryFromIps(bundle, ehr, system?.ehrs.find((e) => e.id === ehr), catalog) : undefined),
+    [bundle, ready, system, catalog, ehr],
+  )
   const [error, setError] = useState<string>()
   const [assessments, setAssessments] = useState<AssessmentListItem[]>()
   const [starting, setStarting] = useState(false)
 
   useEffect(() => {
-    setSummary(undefined)
-    api.summary(ehr, patientId).then(setSummary).catch((e) => setError(e instanceof Error ? e.message : String(e)))
+    setBundle(undefined)
+    api.summary(ehr, patientId).then(setBundle).catch((e) => setError(e instanceof Error ? e.message : String(e)))
     api.patientAssessments(ehr, patientId).then(setAssessments).catch(() => setAssessments([]))
   }, [ehr, patientId])
 

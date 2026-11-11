@@ -12,7 +12,6 @@ modelProvider = "anthropic"
 anthropicModelName = "claude-haiku-4-5"
 openrouterModelName = "deepseek/deepseek-v4.1-flash"
 maxTokens = 32_768
-apiPort = 9_090
 corsAllowOrigins = [ "http://localhost:5173", "http://localhost:5174" ]
 temporalUiUrl = "http://localhost:8233"
 temporalHttpUrl = "http://localhost:7243"

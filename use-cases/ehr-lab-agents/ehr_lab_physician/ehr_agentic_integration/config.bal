@@ -137,8 +137,8 @@ configurable string labWebhookProxy = "lab-webhook";
 configurable boolean allowCrashSimulation = true;
 
 // ── API ──
-# Port of the portal API.
-configurable int apiPort = 9090;
+// The portal API and the FHIR API listen on Ballerina's default HTTP listener: port 9090, changed with
+// `[ballerina.http] defaultListenerPort` (main.bal).
 # Browser origins allowed to call the API.
 configurable string[] corsAllowOrigins = ["http://localhost:5173"];
 # The physician the demo runs as.

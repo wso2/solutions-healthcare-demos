@@ -10,13 +10,17 @@ import { usePolling } from '../lib/usePolling'
 import { BiomarkerChart } from '../components/BiomarkerChart'
 import { EhrBadge } from '../components/patient'
 import { Avatar, Badge, Empty, ErrorNote, Spinner } from '../components/ui'
+import { usePatientSession } from './PatientAuth'
 
 // The patient app (the customer's layer 4). It shows where the patient's assessment is, what they need to
 // do (go to the lab), and — only once the physician has released it — their plain-language report from
 // the published health record. It never talks to the EHR or the lab.
 
 export function PatientHome() {
-  const { data: patients, error } = usePolling(() => api.patientAppPatients(), 5000)
+  const { data: all, error } = usePolling(() => api.patientAppPatients(), 5000)
+  // A token with SMART patient context is bound to one patient: show only that patient's record.
+  const contextPatient = usePatientSession()?.patient
+  const patients = contextPatient ? all?.filter((p) => p.patientId === contextPatient) : all
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>

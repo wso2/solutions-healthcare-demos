@@ -24,7 +24,7 @@ openrouterModelName = "deepseek/deepseek-v4.1-flash"
 # 8192 cut GLM off mid-answer on the Copilot's larger requests.
 maxTokens = 32768
 
-apiPort = 9090
+# The portal API (/api) and the FHIR API (/fhir/r4) share port 9090, Ballerina's default HTTP listener.
 corsAllowOrigins = ["http://localhost:5173", "http://localhost:5174"]
 temporalUiUrl = "http://localhost:8233"
 temporalHttpUrl = "http://temporal:7243"

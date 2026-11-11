@@ -3,6 +3,7 @@ import { Link, Outlet } from 'react-router-dom'
 import { Activity, FlaskConical, HeartPulse, Moon, Stethoscope, Sun, type LucideIcon } from 'lucide-react'
 import { loadSystem } from '../lib/useSystem'
 import { usePolling } from '../lib/usePolling'
+import { PatientAccount } from '../pages/PatientAuth'
 
 // One app per browser tab: the header names the app and links only to its own start page.
 
@@ -34,6 +35,7 @@ export function AppShell({ app }: { app: AppKey }) {
           </Link>
           <HealthIndicator />
           <ThemeToggle />
+          {app === 'patient' && <PatientAccount />}
         </div>
       </header>
       <main className="mx-auto max-w-[1400px] px-4 pb-20 pt-6 sm:px-6">

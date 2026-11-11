@@ -2,7 +2,7 @@ import ballerina/log;
 import ballerina/time;
 import ballerinax/health.clients.fhir;
 import ballerinax/health.fhir.r4 as r4;
-import ballerinax/health.fhir.r4.international401;
+import ballerinax/health.fhir.r4.parser;
 
 const int SEARCH_PAGE_SIZE = 200;
 const int SEARCH_MAX_PAGES = 5;
@@ -65,27 +65,72 @@ isolated function resourcesOfType(json bundle, string resourceType) returns json
     return matches;
 }
 
-# Converts json resources to a typed FHIR array (e.g. `international401:Patient[]`), skipping and
-# logging any that do not fit. One malformed resource from an upstream system should not sink a whole
-# patient summary. The result is built by `cloneWithType(arrayType)`, so its runtime type is the
-# requested array type and callers can cast it.
+// ── Parsing and serialising: the Ballerina FHIR library's own functions ──
+//
+// Everything read from a FHIR server (or received from one) is parsed with `parser:parse` into its
+// `international401` record, and everything sent is serialised with the library's JSON serializers
+// (`r4:executeResourceJsonSerializer`, `r4:fhirBundleJsonSerializer`). The parser is always given the base
+// profile of the resource's type: left to itself it picks a profile from the payload's `meta.profile` (which
+// fails for a vendor profile it does not know) or the first one registered for the type (for Observation that
+// is the BMI vital-sign profile, which rejects a lab result).
+
+# Canonical URL prefix of the base FHIR R4 profiles.
+const string BASE_PROFILE = "http://hl7.org/fhir/StructureDefinition/";
+
+# Parses one FHIR resource into its `international401` record (or `r4:Bundle`), against the base profile of its type.
 #
-# + resources - the resources as json
-# + arrayType - the typed array to build, such as `PatientList`
-# + return - the resources that fit, as a value of `arrayType`, or an error if the conversion fails
-isolated function typedResources(json[] resources, typedesc<anydata[]> arrayType) returns anydata[]|error {
-    json[] valid = [];
+# + payload - the resource as FHIR JSON
+# + return - the typed resource (narrow it with `ensureType`), or an error if it is not a valid resource of its type
+isolated function parseFhir(json payload) returns anydata|error {
+    // Normalise first: JSON handed between workflow activities arrives with `anydata`-typed nested values, which
+    // the parser would not recognise as JSON (and would try to read as XML).
+    json fhirJsonPayload = payload.toJson();
+    json|error resourceType = fhirJsonPayload.resourceType;
+    if resourceType !is string {
+        return error("Not a FHIR resource: it has no resourceType");
+    }
+    return parser:parse(fhirJsonPayload, targetProfile = BASE_PROFILE + resourceType);
+}
+
+# Parses FHIR resources, skipping and logging any that do not parse. One malformed resource from an
+# upstream system should not sink a whole patient summary.
+#
+# + resources - the resources as FHIR JSON
+# + return - the resources that parsed, typed, in order; narrow them with `is` (e.g. `international401:Condition`)
+isolated function parseResources(json[] resources) returns anydata[] {
+    anydata[] parsed = [];
     foreach json resourceJson in resources {
-        anydata[]|error single = [resourceJson].cloneWithType(arrayType);
-        if single is error {
-            log:printWarn("Skipping a FHIR resource that does not match its profile", single,
-                    id = resourceJson is map<json> ? resourceJson["id"].toString() : "");
+        anydata|error typed = parseFhir(resourceJson);
+        if typed is error {
+            log:printWarn("Skipping a FHIR resource that does not parse", typed,
+                    fhirResource = string `${jsonText(resourceJson, "resourceType") ?: "?"}/${jsonText(resourceJson, "id") ?: ""}`);
             continue;
         }
-        valid.push(resourceJson);
+        parsed.push(typed);
     }
-    return valid.cloneWithType(arrayType);
+    return parsed;
 }
+
+# Serialises a FHIR record to FHIR JSON with the library's serializer: the Bundle serializer for a Bundle,
+# the resource serializer for anything else.
+#
+# + fhirResource - an `international401` resource or an `r4:Bundle`
+# + return - the FHIR JSON, or an error if the value is not a FHIR resource the library knows
+isolated function fhirJson(anydata fhirResource) returns json|error {
+    if fhirResource is r4:Bundle {
+        r4:FHIRWireFormat? wire = check r4:fhirBundleJsonSerializer(fhirResource);
+        return wire is json ? wire : error("The Bundle serializer returned no JSON");
+    }
+    return r4:executeResourceJsonSerializer(fhirResource);
+}
+
+# The resources of one type in a Bundle, parsed.
+#
+# + bundle - the Bundle as FHIR JSON
+# + resourceType - the type to keep
+# + return - the resources that parsed, in bundle order
+isolated function parsedEntries(json bundle, string resourceType) returns anydata[] =>
+    parseResources(resourcesOfType(bundle, resourceType));
 
 # The logical id the server assigned to a created resource: from the returned body when the server
 # sent a representation, otherwise from the Location header.
@@ -125,18 +170,19 @@ isolated function idFromLocation(string location) returns string|error {
 # + responseBundle - the transaction-response Bundle
 # + return - one id per entry (empty when an entry has neither a location nor a resource id), or an
 # error if the Bundle has no entries
-isolated function transactionIds(json responseBundle) returns string[]|error {
-    string[] ids = [];
-    json|error entries = responseBundle.entry;
-    if entries !is json[] {
+isolated function transactionIds(r4:Bundle responseBundle) returns string[]|error {
+    r4:BundleEntry[] entries = responseBundle.entry ?: [];
+    if entries.length() == 0 {
         return error("Transaction response has no entries");
     }
-    foreach json entry in entries {
-        json|error location = entry.response.location;
+    string[] ids = [];
+    foreach r4:BundleEntry entry in entries {
+        string? location = entry?.response?.location;
         if location is string {
             ids.push(check idFromLocation(location));
         } else {
-            json|error id = entry.'resource.id;
+            anydata value = entry?.'resource;
+            anydata id = value is map<anydata> ? value["id"] : ();
             ids.push(id is string ? id : "");
         }
     }
@@ -219,18 +265,6 @@ isolated function nowIso() returns string => time:utcToString(time:utcNow());
 
 isolated function dateOnly(string? dateTime) returns string? =>
     dateTime is string && dateTime.length() >= 10 ? dateTime.substring(0, 10) : dateTime;
-
-// Array types passed to `typedResources` (an array type cannot be written inline as a typedesc value).
-type PatientList international401:Patient[];
-type ConditionList international401:Condition[];
-type AllergyIntoleranceList international401:AllergyIntolerance[];
-type MedicationRequestList international401:MedicationRequest[];
-type MedicationStatementList international401:MedicationStatement[];
-type ImmunizationList international401:Immunization[];
-type ProcedureList international401:Procedure[];
-type FamilyMemberHistoryList international401:FamilyMemberHistory[];
-type EncounterList international401:Encounter[];
-type ObservationList international401:Observation[];
 
 // ── Readers over raw FHIR json (the explorer reads resources as json, so one unusual resource
 // from an upstream system never hides a whole category) ──
@@ -321,13 +355,13 @@ isolated function describeError(error err) returns string {
 # runs one attempt at a time, so search-then-create is safe here.
 #
 # + connector - the system to write to
-# + resourceValue - the resource (a typed FHIR resource, or json), which must carry the identifier
+# + resourceValue - the typed FHIR resource, which must carry the identifier
 # + system - identifier system
 # + value - identifier value
 # + return - the id of the created or existing resource
 isolated function createOnce(fhir:FHIRConnector connector, anydata resourceValue, string system, string value)
         returns string|error {
-    json resourceJson = resourceValue.toJson();
+    json resourceJson = check fhirJson(resourceValue);
     string resourceType = (check resourceJson.resourceType).toString();
     json[] matches = check searchResources(connector, resourceType, {"identifier": [string `${system}|${value}`]});
     if matches.length() > 0 {

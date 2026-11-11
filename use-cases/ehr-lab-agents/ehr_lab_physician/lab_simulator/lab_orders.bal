@@ -1,102 +1,92 @@
 import ballerina/log;
 import ballerina/time;
-import ballerinax/health.clients.fhir;
+import ballerinax/health.fhir.r4;
+import ballerinax/health.fhir.r4.international401;
 
 // Orders arrive as ServiceRequests on the lab's FHIR server (placed there by the integration).
 // Releasing an order files Observations + a final DiagnosticReport on the lab's FHIR server, marks the
 // order completed, and notifies the integration — the "lab report ready" arrow in the diagram.
 
-# Lists recent orders with whether each has been resulted, in one search: the reports come back
-# alongside their orders through `_revinclude`.
+# The lab's recent orders as a FHIR `searchset` Bundle: the 30 newest ServiceRequests (search mode `match`),
+# each followed by what the lab console needs to show it (search mode `include`) — its Patient, its Specimen once
+# collected and its DiagnosticReport once resulted. One search brings the orders and their reports
+# (`_revinclude`); patients and specimens are read and added here.
 #
-# + return - the 30 most recent orders, newest first, or an error if the lab FHIR server cannot be searched
-isolated function recentOrders() returns LabOrder[]|error {
-    map<string[]> query = {"_sort": ["-authored"], "_count": ["30"], "_revinclude": ["DiagnosticReport:based-on"]};
-    fhir:FHIRResponse response = check labFhir->search("ServiceRequest", searchParameters = query);
-    json bundle = <json>response.'resource;
-    json[] serviceRequests = resourcesOfType(bundle, "ServiceRequest");
-    json[] reports = resourcesOfType(bundle, "DiagnosticReport");
+# + return - the Bundle, or an error if the lab FHIR server cannot be searched
+isolated function recentOrders() returns r4:Bundle|error {
+    r4:Bundle bundle = check searchBundle("ServiceRequest",
+            {"_sort": ["-authored"], "_count": ["30"], "_revinclude": ["DiagnosticReport:based-on"]});
+    international401:ServiceRequest[] serviceRequests = from anydata r in resourcesOfType(bundle, "ServiceRequest")
+        where r is international401:ServiceRequest select r;
+    international401:DiagnosticReport[] reports = from anydata r in resourcesOfType(bundle, "DiagnosticReport")
+        where r is international401:DiagnosticReport select r;
 
-    map<string> patientNames = {};
-    map<string?> patientMrns = {};
-    LabOrder[] orders = [];
-    foreach json sr in serviceRequests {
-        string id = (check sr.id).toString();
-        string patientId = referenceId((check sr.subject.reference).toString());
-        if !patientNames.hasKey(patientId) {
-            json|error patient = readResource("Patient", patientId);
-            patientNames[patientId] = patient is error ? patientId : humanName(patient);
-            patientMrns[patientId] = patient is error ? () : mrnOf(patient);
-        }
-        string? reportId = ();
-        foreach json report in reports {
-            if basedOnContains(report, id) {
-                json|error reportIdValue = report.id;
-                reportId = reportIdValue is string ? reportIdValue : ();
+    r4:BundleEntry[] entries = [];
+    string[] included = [];
+    foreach international401:ServiceRequest sr in serviceRequests {
+        entries.push({fullUrl: string `${labFhirBaseUrl}/ServiceRequest/${sr.id ?: ""}`, 'resource: sr, search: {mode: "match"}});
+        string patientId = referenceId(sr.subject.reference ?: "");
+        if included.indexOf("Patient/" + patientId) is () {
+            international401:Patient|error patient = readPatient(patientId);
+            if patient is international401:Patient {
+                included.push("Patient/" + patientId);
+                entries.push(includeEntry("Patient", patientId, patient));
             }
         }
-        json|error status = sr.status;
-        json|error authoredOn = sr.authoredOn;
-        json|error requester = sr.requester.display;
         string? specimenId = specimenIdOf(sr);
-        string? collectedAt = specimenId is string ? specimenCollectedAt(specimenId) : ();
-        orders.push({
-            id,
-            placerOrderId: identifierValue(sr, PLACER_ORDER_SYSTEM),
-            patientId,
-            patientName: patientNames[patientId] ?: patientId,
-            mrn: patientMrns[patientId],
-            tests: orderedTests(sr),
-            authoredOn: authoredOn is string ? authoredOn : (),
-            requester: requester is string ? requester : (),
-            status: status == "completed" || reportId is string ? "resulted" : specimenId is string ? "collected" : "awaiting-patient",
-            specimenId,
-            collectedAt,
-            reportId
-        });
+        if specimenId is string {
+            international401:Specimen|error specimen = readSpecimen(specimenId);
+            if specimen is international401:Specimen {
+                entries.push(includeEntry("Specimen", specimenId, specimen));
+            }
+        }
+        foreach international401:DiagnosticReport report in reports {
+            if basedOnContains(report, sr.id ?: "") {
+                entries.push(includeEntry("DiagnosticReport", report.id ?: "", report));
+            }
+        }
     }
-    return orders;
+    return {'type: "searchset", total: serviceRequests.length(), timestamp: time:utcToString(time:utcNow()), entry: entries};
 }
+
+isolated function includeEntry(string resourceType, string id, anydata 'resource) returns r4:BundleEntry =>
+    {fullUrl: string `${labFhirBaseUrl}/${resourceType}/${id}`, 'resource, search: {mode: "include"}};
 
 # The patient arrived and gave a sample: files a Specimen for the order, links it from the order, and
 # sends the integration a FHIR message with both (it completes the patient's lab-visit task).
 #
 # + serviceRequestId - the lab's ServiceRequest id
-# + return - what was filed, `WrongOrderState` if the specimen was already collected or the order is
-# resulted, or an error if the lab FHIR server rejects it
-isolated function collectSpecimen(string serviceRequestId) returns CollectionResult|WrongOrderState|error {
-    json sr = check readResource("ServiceRequest", serviceRequestId);
+# + return - the Specimen as filed and whether the integration accepted the notification, `WrongOrderState` if
+# the specimen was already collected or the order is resulted, or an error if the lab FHIR server rejects it
+isolated function collectSpecimen(string serviceRequestId)
+        returns [international401:Specimen, boolean]|WrongOrderState|error {
+    international401:ServiceRequest sr = check readServiceRequest(serviceRequestId);
     if sr.status == "completed" || specimenIdOf(sr) is string {
         return error WrongOrderState("The specimen for this order has already been collected");
     }
     string collectedAt = time:utcToString(time:utcNow());
-    map<json> linked = <map<json>>sr.clone();
-    linked["specimen"] = [{reference: "urn:uuid:specimen"}];
-    json[] entries = [
-        {
-            fullUrl: "urn:uuid:specimen",
-            'resource: {
-                resourceType: "Specimen",
-                status: "available",
-                'type: {coding: [{system: "http://snomed.info/sct", code: "122555007", display: "Venous blood specimen"}],
-                    text: "Venous blood"},
-                subject: check sr.subject,
-                request: [{reference: string `ServiceRequest/${serviceRequestId}`}],
-                receivedTime: collectedAt,
-                collection: {collectedDateTime: collectedAt,
-                    method: {text: "Venipuncture"}, bodySite: {text: "Antecubital vein"}}
-            },
-            request: {method: "POST", url: "Specimen"}
-        },
+    international401:Specimen specimen = {
+        status: "available",
+        'type: {coding: [{system: "http://snomed.info/sct", code: "122555007", display: "Venous blood specimen"}],
+            text: "Venous blood"},
+        subject: sr.subject,
+        request: [{reference: string `ServiceRequest/${serviceRequestId}`}],
+        receivedTime: collectedAt,
+        collection: {collectedDateTime: collectedAt, method: {text: "Venipuncture"},
+            bodySite: {text: "Antecubital vein"}}
+    };
+    international401:ServiceRequest linked = sr.clone();
+    linked.specimen = [{reference: "urn:uuid:specimen"}];
+    r4:Bundle response = check submitTransaction([
+        {fullUrl: "urn:uuid:specimen", 'resource: specimen, request: {method: "POST", url: "Specimen"}},
         {'resource: linked, request: {method: "PUT", url: string `ServiceRequest/${serviceRequestId}`}}
-    ];
-    fhir:FHIRResponse response = check labFhir->'transaction({resourceType: "Bundle", 'type: "transaction", entry: entries});
-    string specimenId = check idAtEntry(<json>response.'resource, 0, "Specimen");
+    ]);
+    string specimenId = check idAtEntry(response, 0, "Specimen");
     log:printInfo("Specimen collected", serviceRequestId = serviceRequestId, specimenId = specimenId);
-    json message = labMessage(EVENT_SPECIMEN_COLLECTED, "Specimen collected", string `Specimen/${specimenId}`,
-            [check readResource("Specimen", specimenId), check readResource("ServiceRequest", serviceRequestId)]);
-    boolean notified = notifyIntegration(EVENT_SPECIMEN_COLLECTED, message);
-    return {serviceRequestId, specimenId, collectedAt, integrationNotified: notified};
+    international401:Specimen filed = check readSpecimen(specimenId);
+    r4:Bundle message = labMessage(EVENT_SPECIMEN_COLLECTED, "Specimen collected", string `Specimen/${specimenId}`,
+            [filed, check readServiceRequest(serviceRequestId)]);
+    return [filed, notifyIntegration(EVENT_SPECIMEN_COLLECTED, message)];
 }
 
 # Runs an order: files a result for every analyte of every ordered test, a final report, and the order
@@ -104,11 +94,12 @@ isolated function collectSpecimen(string serviceRequestId) returns CollectionRes
 # Observations and the order.
 #
 # + serviceRequestId - the lab's ServiceRequest id
-# + return - what was filed, `AlreadyResulted` if the order is already completed, `WrongOrderState` if
-# no specimen has been collected, or an error if the order cannot be read, has no test this lab runs, or
-# the transaction fails
-isolated function releaseOrder(string serviceRequestId) returns ReleaseResult|AlreadyResulted|WrongOrderState|error {
-    json sr = check readResource("ServiceRequest", serviceRequestId);
+# + return - the final DiagnosticReport as filed and whether the integration accepted the notification,
+# `AlreadyResulted` if the order is already completed, `WrongOrderState` if no specimen has been collected, or an
+# error if the order cannot be read, has no test this lab runs, or the transaction fails
+isolated function releaseOrder(string serviceRequestId)
+        returns [international401:DiagnosticReport, boolean]|AlreadyResulted|WrongOrderState|error {
+    international401:ServiceRequest sr = check readServiceRequest(serviceRequestId);
     if sr.status == "completed" {
         return error AlreadyResulted("already resulted");
     }
@@ -116,15 +107,15 @@ isolated function releaseOrder(string serviceRequestId) returns ReleaseResult|Al
     if specimenId is () {
         return error WrongOrderState("The patient has not been to the lab yet: collect the specimen first");
     }
-    string patientRef = (check sr.subject.reference).toString();
-    json patient = check readResource("Patient", referenceId(patientRef));
-    string? mrn = mrnOf(patient);
+    string patientRef = sr.subject.reference ?: "";
+    international401:Patient patient = check readPatient(referenceId(patientRef));
     boolean female = patient.gender == "female";
-    map<decimal> profile = profileFor(mrn);
+    map<decimal> profile = profileFor(mrnOf(patient));
 
     string now = time:utcToString(time:utcNow());
-    json[] entries = [];
-    json[] resultRefs = [];
+    string effective = specimenCollectedAt(specimenId) ?: now;
+    r4:BundleEntry[] entries = [];
+    r4:Reference[] resultRefs = [];
     string[] seen = [];
     foreach OrderedTest test in orderedTests(sr) {
         foreach string key in TEST_ANALYTES[test.code] ?: [] {
@@ -137,7 +128,7 @@ isolated function releaseOrder(string serviceRequestId) returns ReleaseResult|Al
             string fullUrl = string `urn:uuid:obs-${key}`;
             entries.push({
                 fullUrl,
-                'resource: observationFor(analyte, value, female, patientRef, serviceRequestId, specimenId, now),
+                'resource: observationFor(analyte, value, female, patientRef, serviceRequestId, specimenId, effective, now),
                 request: {method: "POST", url: "Observation"}
             });
             resultRefs.push({reference: fullUrl});
@@ -146,46 +137,41 @@ isolated function releaseOrder(string serviceRequestId) returns ReleaseResult|Al
     if resultRefs.length() == 0 {
         return error(string `ServiceRequest/${serviceRequestId} has no tests this lab can run`);
     }
-    entries.push({
-        fullUrl: "urn:uuid:report",
-        'resource: {
-            resourceType: "DiagnosticReport",
-            status: "final",
-            category: [{coding: [{system: "http://terminology.hl7.org/CodeSystem/v2-0074", code: "LAB", display: "Laboratory"}]}],
-            code: {text: "Biomarker panel"},
-            subject: {reference: patientRef},
-            basedOn: [{reference: string `ServiceRequest/${serviceRequestId}`}],
-            specimen: [{reference: string `Specimen/${specimenId}`}],
-            effectiveDateTime: specimenCollectedAt(specimenId) ?: now,
-            issued: now,
-            performer: [{reference: string `Organization/${labOrganizationId}`, display: labDisplayName}],
-            result: resultRefs
-        },
-        request: {method: "POST", url: "DiagnosticReport"}
-    });
-    map<json> completed = <map<json>>sr.clone();
-    completed["status"] = "completed";
+    international401:DiagnosticReport report = {
+        status: "final",
+        category: [{coding: [{system: "http://terminology.hl7.org/CodeSystem/v2-0074", code: "LAB", display: "Laboratory"}]}],
+        code: {text: "Biomarker panel"},
+        subject: {reference: patientRef},
+        basedOn: [{reference: string `ServiceRequest/${serviceRequestId}`}],
+        specimen: [{reference: string `Specimen/${specimenId}`}],
+        effectiveDateTime: effective,
+        issued: now,
+        performer: [{reference: string `Organization/${labOrganizationId}`, display: labDisplayName}],
+        result: resultRefs
+    };
+    entries.push({fullUrl: "urn:uuid:report", 'resource: report, request: {method: "POST", url: "DiagnosticReport"}});
+    international401:ServiceRequest completed = sr.clone();
+    completed.status = "completed";
     entries.push({'resource: completed, request: {method: "PUT", url: string `ServiceRequest/${serviceRequestId}`}});
 
-    fhir:FHIRResponse response = check labFhir->'transaction({resourceType: "Bundle", 'type: "transaction", entry: entries});
-    string reportId = check idAtEntry(<json>response.'resource, entries.length() - 2, "DiagnosticReport");
+    r4:Bundle response = check submitTransaction(entries);
+    string reportId = check idAtEntry(response, entries.length() - 2, "DiagnosticReport");
     log:printInfo("Lab order resulted", serviceRequestId = serviceRequestId, diagnosticReportId = reportId,
             observations = resultRefs.length());
 
     // The Observations are the transaction's first entries; the message carries them as the server stored them.
     string[] observationIds = [];
     foreach int i in 0 ..< resultRefs.length() {
-        observationIds.push(check idAtEntry(<json>response.'resource, i, "Observation"));
+        observationIds.push(check idAtEntry(response, i, "Observation"));
     }
-    fhir:FHIRResponse observationPage = check labFhir->search("Observation",
-            searchParameters = {"_id": [string:'join(",", ...observationIds)], "_count": [observationIds.length().toString()]});
-    json message = labMessage(EVENT_RESULTS_READY, "Results ready", string `DiagnosticReport/${reportId}`, [
-        check readResource("DiagnosticReport", reportId),
-        ...resourcesOfType(<json>observationPage.'resource, "Observation"),
-        check readResource("ServiceRequest", serviceRequestId)
-    ]);
-    boolean notified = notifyIntegration(EVENT_RESULTS_READY, message);
-    return {serviceRequestId, diagnosticReportId: reportId, observations: resultRefs.length(), integrationNotified: notified};
+    r4:Bundle observationPage = check searchBundle("Observation",
+            {"_id": [string:'join(",", ...observationIds)], "_count": [observationIds.length().toString()]});
+    international401:Observation[] observations = from anydata r in resourcesOfType(observationPage, "Observation")
+        where r is international401:Observation select r;
+    international401:DiagnosticReport filedReport = check readDiagnosticReport(reportId);
+    r4:Bundle message = labMessage(EVENT_RESULTS_READY, "Results ready", string `DiagnosticReport/${reportId}`,
+            [filedReport, ...observations, check readServiceRequest(serviceRequestId)]);
+    return [filedReport, notifyIntegration(EVENT_RESULTS_READY, message)];
 }
 
 # Builds one lab result, with the reference range and H/L/N flag for the patient's sex.
@@ -196,30 +182,30 @@ isolated function releaseOrder(string serviceRequestId) returns ReleaseResult|Al
 # + patientRef - the patient reference, e.g. `Patient/123`
 # + serviceRequestId - the order the result fulfils
 # + specimenId - the specimen it was measured on
+# + effective - when the specimen was collected
 # + now - the result timestamp
-# + return - the Observation resource
+# + return - the Observation
 isolated function observationFor(LabAnalyte analyte, decimal value, boolean female, string patientRef,
-        string serviceRequestId, string specimenId, string now) returns json {
+        string serviceRequestId, string specimenId, string effective, string now) returns international401:Observation {
     decimal? low = female && analyte.lowFemale is decimal ? analyte.lowFemale : analyte.low;
     decimal? high = female && analyte.highFemale is decimal ? analyte.highFemale : analyte.high;
-    map<json> range = {};
+    international401:ObservationReferenceRange range = {};
     if low is decimal {
-        range["low"] = {value: low, unit: analyte.unit, system: UCUM, code: analyte.ucum};
+        range.low = {value: low, unit: analyte.unit, system: UCUM, code: analyte.ucum};
     }
     if high is decimal {
-        range["high"] = {value: high, unit: analyte.unit, system: UCUM, code: analyte.ucum};
+        range.high = {value: high, unit: analyte.unit, system: UCUM, code: analyte.ucum};
     }
     string flag = high is decimal && value > high ? "H" : (low is decimal && value < low ? "L" : "N");
     string flagDisplay = flag == "H" ? "High" : (flag == "L" ? "Low" : "Normal");
     return {
-        resourceType: "Observation",
         status: "final",
         category: [{coding: [{system: "http://terminology.hl7.org/CodeSystem/observation-category", code: "laboratory", display: "Laboratory"}]}],
         code: {coding: [{system: LOINC, code: analyte.code, display: analyte.display}]},
         subject: {reference: patientRef},
         basedOn: [{reference: string `ServiceRequest/${serviceRequestId}`}],
         specimen: {reference: string `Specimen/${specimenId}`},
-        effectiveDateTime: specimenCollectedAt(specimenId) ?: now,
+        effectiveDateTime: effective,
         issued: now,
         performer: [{reference: string `Organization/${labOrganizationId}`, display: labDisplayName}],
         valueQuantity: {value, unit: analyte.unit, system: UCUM, code: analyte.ucum},
@@ -232,8 +218,9 @@ isolated function observationFor(LabAnalyte analyte, decimal value, boolean fema
 #
 # + serviceRequest - the ServiceRequest
 # + return - the Specimen id, or nil before collection
-isolated function specimenIdOf(json serviceRequest) returns string? {
-    string? reference = referenceAt(serviceRequest, "specimen");
+isolated function specimenIdOf(international401:ServiceRequest serviceRequest) returns string? {
+    r4:Reference[] specimens = serviceRequest.specimen ?: [];
+    string? reference = specimens.length() > 0 ? specimens[0].reference : ();
     return reference is string ? referenceId(reference) : ();
 }
 
@@ -242,10 +229,6 @@ isolated function specimenIdOf(json serviceRequest) returns string? {
 # + specimenId - the Specimen id
 # + return - the collection time, or nil if the specimen cannot be read
 isolated function specimenCollectedAt(string specimenId) returns string? {
-    json|error specimen = readResource("Specimen", specimenId);
-    if specimen is error {
-        return ();
-    }
-    json|error collected = specimen.collection.collectedDateTime;
-    return collected is string ? collected : ();
+    international401:Specimen|error specimen = readSpecimen(specimenId);
+    return specimen is error ? () : specimen.collection?.collectedDateTime;
 }

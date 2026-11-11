@@ -3,7 +3,8 @@ import {
   Activity, CalendarDays, CheckSquare, ChevronDown, ClipboardList, Database, FileText, FlaskConical, Pill, RefreshCw, Search,
   ShieldAlert, Sparkles, Square, Stethoscope, Syringe, Users, type LucideIcon,
 } from 'lucide-react'
-import { api, type ExplorerKind, type ExplorerResult, type ExplorerRow } from '../lib/api'
+import { api, type ExplorerKind, type ExplorerResult } from '../lib/api'
+import { explorerFromBundle, type FhirResource } from '../lib/fhir'
 import { formatDate } from '../lib/format'
 import { Badge, Card, Empty, ErrorNote, Spinner } from './ui'
 
@@ -46,7 +47,8 @@ function presetFrom(key: string): string {
 }
 
 export interface EvaluateArgs {
-  rows: ExplorerRow[]
+  /** The selected records, as the FHIR resources the EHR returned. */
+  resources: FhirResource[]
   question: string
   dateFrom?: string
   dateTo?: string
@@ -87,7 +89,7 @@ export function Explorer({ ehr, ehrName, patientId, onEvaluate, evaluating }: Pr
     setError(undefined)
     try {
       const r = await api.records(ehr, patientId, selectedKinds, from || undefined, to || undefined)
-      setResult(r)
+      setResult(explorerFromBundle(r, ehr, patientId))
       setSelected(new Set())
       setTab('all')
     } catch (e) {
@@ -320,7 +322,7 @@ export function Explorer({ ehr, ehrName, patientId, onEvaluate, evaluating }: Pr
                   type="button"
                   className="btn bg-ai text-white hover:opacity-90 dark:text-canvas"
                   disabled={selected.size === 0 || evaluating}
-                  onClick={() => onEvaluate({ rows: selectedRows, question, dateFrom: from || undefined, dateTo: to || undefined })}
+                  onClick={() => onEvaluate({ resources: selectedRows.flatMap((r) => (r.resource ? [r.resource] : [])), question, dateFrom: from || undefined, dateTo: to || undefined })}
                 >
                   {evaluating ? <Spinner size={15} /> : <Sparkles size={15} />} Evaluate with AI
                 </button>

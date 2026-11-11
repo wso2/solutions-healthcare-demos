@@ -6,7 +6,7 @@
 port = 9093
 labFhirBaseUrl = "http://localhost:8082/fhir/r4"
 labDisplayName = "Quest Diagnostics"
-integrationWebhookUrl = "http://localhost:19091/api/lab/notifications"
+integrationWebhookUrl = "http://localhost:19091/fhir/r4/$process-message"
 integrationWebhookApiKey = "demo-lab-webhook-key"
 # 0 = results wait for the presenter to release them from the lab console.
 autoReleaseSeconds = 0

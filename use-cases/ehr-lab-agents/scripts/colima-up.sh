@@ -10,7 +10,7 @@ set -euo pipefail
 
 PROFILE="${COLIMA_PROFILE:-agent-manager}"
 CPU="${COLIMA_CPU:-6}"
-MEMORY="${COLIMA_MEMORY:-14}"
+MEMORY="${COLIMA_MEMORY:-10}"
 DISK="${COLIMA_DISK:-120}"
 
 command -v colima >/dev/null 2>&1 || { echo "colima is required: brew install colima docker docker-compose" >&2; exit 1; }

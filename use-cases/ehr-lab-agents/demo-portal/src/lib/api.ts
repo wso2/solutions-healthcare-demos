@@ -1,5 +1,8 @@
 // Typed client for the integration API (/api) and the lab simulator (/lab-api).
-// Shapes mirror ehr_agentic_integration/types.bal.
+// Clinical data arrives as FHIR R4 (lib/fhir.ts); the other shapes mirror ehr_agentic_integration/types.bal.
+import type { Bundle, Communication, DiagnosticReport, FhirResource, Patient, Specimen } from './fhir'
+import { accessToken, loadAuthConfig, sessionRejected } from './smartAuth'
+import { tracedFetch } from './smartTrace'
 
 export type Stage =
   | 'STARTING'
@@ -23,6 +26,8 @@ export interface EhrInfo {
   baseUrl: string
   reachable: boolean
   summaryOperation: boolean
+  /** Identifier system of the EHR's MRNs. */
+  mrnSystem: string
 }
 
 export interface SystemInfo {
@@ -178,6 +183,11 @@ export interface AgentManagerInfo {
   agents: ManagedAgent[]
 }
 
+// ── Portal view models ──
+// The interfaces from here down to LabOrder (except the agent outputs) are the portal's own view models.
+// The API returns FHIR R4; lib/fhir.ts derives these from it (patientCard, summaryFromIps,
+// explorerFromBundle, labOrderFromBundle, labResultsFromBundle, labOrdersFromBundle, ...).
+
 export interface PatientCard {
   ehr: string
   ehrName: string
@@ -267,6 +277,8 @@ export interface PatientSummary {
   flags: SummaryFlag[]
   careGaps: { title: string; detail: string; suggestedTests: string[] }[]
   generatedAt: string
+  /** The IPS document it was derived from. */
+  bundle?: Bundle
 }
 
 export interface ExplorerRow {
@@ -281,6 +293,8 @@ export interface ExplorerRow {
   status?: string | null
   code?: string | null
   text?: string | null
+  /** The FHIR resource the row was derived from (sent as-is to the AI evaluation). */
+  resource?: FhirResource
 }
 
 export interface ExplorerResult {
@@ -391,15 +405,21 @@ export interface TimelineEvent {
   status: 'ok' | 'error'
 }
 
+/** The assessment's data as the API returns it; lib/fhir.ts assessmentView() turns the FHIR parts into view models. */
 export interface AssessmentData {
-  summary?: PatientSummary
+  /** The enriched IPS document. */
+  summary?: Bundle
   copilot?: { status: 'running' | 'idle' | 'failed'; messages: CopilotMessage[] }
   evaluation?: CopilotEvaluation
   labOrderApproval?: LabOrderApproval
-  labOrder?: LabOrderPlaced
-  patientNotification?: PatientNotification
-  labVisit?: LabVisit
-  labResults?: LabResults
+  /** Collection: [0] the EHR's ServiceRequest, [1] the lab's. */
+  labOrder?: Bundle
+  /** As filed in the EHR. */
+  patientNotification?: Communication
+  /** The lab's Specimen. */
+  labVisit?: Specimen
+  /** Collection: [0] the DiagnosticReport as filed in the EHR, then its Observations. */
+  labResults?: Bundle
   analysis?: ResultsAnalysis
   carePlan?: CarePlanResult
   draftNote?: { noteId: string; status: string }
@@ -482,7 +502,8 @@ export interface FaultSwitch { id: string; label: string; description: string; a
 
 export interface Analyte { code: string; name: string; unit: string; longevityTarget: string }
 export interface OrderableTest { code: string; name: string; analytes: string[]; purpose: string; preparation: string }
-export interface LabCatalog { orderableTests: OrderableTest[]; analytes: Analyte[] }
+/** `aliases`: equivalent LOINC code → catalog analyte code (results under an alias join that analyte's series). */
+export interface LabCatalog { orderableTests: OrderableTest[]; analytes: Analyte[]; aliases: Record<string, string> }
 
 export interface LongevityRecord {
   schema: string
@@ -557,8 +578,14 @@ export class ApiError extends Error {
   }
 }
 
-async function request<T>(url: string, init?: RequestInit): Promise<T> {
-  const response = await fetch(url, {
+async function request<T>(url: string, init?: RequestInit, trace?: string): Promise<T> {
+  return (await send<T>(url, init, trace)).body
+}
+
+/** A request whose response headers matter too. */
+async function send<T>(url: string, init?: RequestInit, trace?: string): Promise<{ body: T; headers: Headers }> {
+  const doFetch = trace ? (u: string, i: RequestInit) => tracedFetch('api', trace, u, i) : fetch
+  const response = await doFetch(url, {
     ...init,
     headers: { 'Content-Type': 'application/json', ...(init?.headers ?? {}) },
   })
@@ -568,7 +595,7 @@ async function request<T>(url: string, init?: RequestInit): Promise<T> {
     const message = (body && typeof body === 'object' && 'message' in body ? String(body.message) : text) || response.statusText
     throw new ApiError(response.status, message)
   }
-  return body as T
+  return { body: body as T, headers: response.headers }
 }
 
 function safeJson(text: string): unknown {
@@ -580,6 +607,38 @@ function safeJson(text: string): unknown {
 }
 
 const post = <T>(url: string, body: unknown) => request<T>(url, { method: 'POST', body: JSON.stringify(body) })
+
+/** A lab action: the resource it produced, and whether the lab's webhook reached the integration. */
+async function labAction<T>(url: string): Promise<{ resource: T; integrationNotified: boolean }> {
+  const { body, headers } = await send<T>(url, { method: 'POST', body: '{}' })
+  return { resource: body, integrationNotified: headers.get('X-Integration-Notified') === 'true' }
+}
+
+/**
+ * A patient-app call. With SMART sign-in enabled it goes to the APIM gateway (config.apiBase stands in for
+ * the integration's /api) with the patient's bearer token; otherwise straight to the integration.
+ */
+async function patientRequest<T>(path: string): Promise<T> {
+  const config = await loadAuthConfig()
+  if (!config.enabled) return request<T>(`/api${path}`)
+  const token = await accessToken()
+  if (!token) throw new SignInRequired()
+  try {
+    return await request<T>(`${config.apiBase}${path}`, { headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' } }, `API · GET ${path.replace(/\/patients\/[^/]+\//, '/patients/{id}/')}`)
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) {
+      sessionRejected()
+      throw new SignInRequired()
+    }
+    throw err
+  }
+}
+
+export class SignInRequired extends ApiError {
+  constructor() {
+    super(401, 'Your session has ended. Sign in again.')
+  }
+}
 const patientPath = (ehr: string, id: string) => `/api/ehrs/${ehr}/patients/${encodeURIComponent(id)}`
 
 export const api = {
@@ -587,28 +646,28 @@ export const api = {
   catalog: () => request<LabCatalog>('/api/lab-catalog'),
   explorerKinds: () => request<ExplorerKind[]>('/api/explorer-kinds'),
 
-  searchPatients: (ehr: string, q: string) => request<PatientCard[]>(`/api/ehrs/${ehr}/patients?q=${encodeURIComponent(q)}`),
-  patient: (ehr: string, id: string) => request<PatientCard>(patientPath(ehr, id)),
-  summary: (ehr: string, id: string) => request<PatientSummary>(`${patientPath(ehr, id)}/summary`),
-  ips: (ehr: string, id: string) => request<unknown>(`${patientPath(ehr, id)}/ips`),
+  searchPatients: (ehr: string, q: string) => request<Bundle<Patient>>(`/api/ehrs/${ehr}/patients?q=${encodeURIComponent(q)}`),
+  patient: (ehr: string, id: string) => request<Patient>(patientPath(ehr, id)),
+  summary: (ehr: string, id: string) => request<Bundle>(`${patientPath(ehr, id)}/summary`),
+  ips: (ehr: string, id: string) => request<Bundle>(`${patientPath(ehr, id)}/ips`),
   records: (ehr: string, id: string, kinds: string[], from?: string, to?: string) => {
     const params = new URLSearchParams()
     if (kinds.length) params.set('kinds', kinds.join(','))
     if (from) params.set('from', from)
     if (to) params.set('to', to)
-    return request<ExplorerResult>(`${patientPath(ehr, id)}/records?${params}`)
+    return request<Bundle>(`${patientPath(ehr, id)}/records?${params}`)
   },
   patientAssessments: (ehr: string, id: string) => request<AssessmentListItem[]>(`${patientPath(ehr, id)}/assessments`),
   longevityRecord: (ehr: string, id: string) => request<LongevityRecord>(`${patientPath(ehr, id)}/longevity-record`),
-  journey: (ehr: string, id: string) => request<PatientJourney>(`${patientPath(ehr, id)}/journey`),
-  patientAppPatients: () => request<PatientAppEntry[]>('/api/patient-app/patients'),
+  journey: (ehr: string, id: string) => patientRequest<PatientJourney>(`/ehrs/${ehr}/patients/${encodeURIComponent(id)}/journey`),
+  patientAppPatients: () => patientRequest<PatientAppEntry[]>('/patient-app/patients'),
 
   assessments: () => request<AssessmentListItem[]>('/api/assessments'),
   assessment: (id: string) => request<Assessment>(`/api/assessments/${id}`),
   workflow: (id: string) => request<WorkflowView>(`/api/assessments/${id}/workflow`),
   startAssessment: (ehr: string, patientId: string) => post<{ id: string; existing: boolean }>('/api/assessments', { ehr, patientId }),
-  evaluate: (id: string, records: ExplorerRow[], question: string, dateFrom?: string, dateTo?: string) =>
-    post(`/api/assessments/${id}/evaluations`, { records, question, dateFrom: dateFrom || null, dateTo: dateTo || null }),
+  evaluate: (id: string, resources: FhirResource[], question: string, dateFrom?: string, dateTo?: string) =>
+    post(`/api/assessments/${id}/evaluations`, { resources, question, dateFrom: dateFrom || null, dateTo: dateTo || null }),
   messageCopilot: (id: string, message: string) => post(`/api/assessments/${id}/copilot-messages`, { message }),
   orderLabs: (id: string, body: LabOrderApproval) => post(`/api/assessments/${id}/lab-order`, body),
   release: (id: string, comment: string) => post(`/api/assessments/${id}/release`, { comment }),
@@ -623,11 +682,7 @@ export const api = {
   deidentifySample: (ehr: string, patientId: string) => post<DeidentifySample>('/api/agent-manager/deidentify-samples', { ehr, patientId }),
   assessmentUsage: (id: string) => request<AssessmentUsage>(`/api/agent-manager/usage?assessment=${encodeURIComponent(id)}`),
 
-  labOrders: () => request<LabOrder[]>('/lab-api/orders'),
-  collectSpecimen: (id: string) => post<{ specimenId: string; integrationNotified: boolean }>(`/lab-api/orders/${id}/collect`, {}),
-  releaseLabOrder: (id: string) =>
-    post<{ serviceRequestId: string; diagnosticReportId: string; observations: number; integrationNotified: boolean }>(
-      `/lab-api/orders/${id}/release`,
-      {},
-    ),
+  labOrders: () => request<Bundle>('/lab-api/orders'),
+  collectSpecimen: (id: string) => labAction<Specimen>(`/lab-api/orders/${id}/collect`),
+  releaseLabOrder: (id: string) => labAction<DiagnosticReport>(`/lab-api/orders/${id}/release`),
 }

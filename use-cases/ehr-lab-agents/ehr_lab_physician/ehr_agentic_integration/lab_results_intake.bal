@@ -1,16 +1,20 @@
 import ballerina/log;
 import ballerina/task;
 import ballerina/workflow;
+import ballerinax/health.fhir.r4 as r4;
 import ballerinax/health.fhir.r4.international401;
 
 // Two things arrive from the lab, each by two paths:
 //   - "specimen collected": completes the patient's lab-visit human task;
 //   - "report ready": the system event the workflow waits on for results.
-// The lab's webhook (POST /api/lab/notifications) delivers them immediately as FHIR messages that carry the
+// The lab's FHIR messages (POST /fhir/r4/$process-message, fhir_api.bal) deliver them immediately with the
 // resources (lab_messages.bal); this fallback poller reads the same resources from the lab's FHIR server
 // when a message never arrived. Both paths hand on the same typed FHIR resources and are idempotent — a
 // completed task cannot be completed twice, and the workflow takes the first `labResultReady` — and
 // checking a status is a plain comparison, so neither path involves an LLM.
+
+# Tag system on the lab-results event: which path noticed the report (`lab-webhook` or `fallback-poll`).
+const string LAB_NOTICE_PATH_SYSTEM = "urn:demo:longevity:lab-notice-path";
 
 # Completes the patient's lab-visit task with the specimen the lab collected.
 #
@@ -32,12 +36,13 @@ isolated function completeLabVisit(string labServiceRequestId, international401:
     if taskId is () {
         return false;
     }
-    LabVisit visit = {
-        specimenId,
-        collectedAt: specimen.collection?.collectedDateTime ?: nowIso(),
-        collectedBy: string `${labDisplayName} (${via})`
-    };
-    check completeTask(taskId, visit, "lab", "lab-system");
+    // The task's result is the lab's Specimen itself, with who completed the task as its collector.
+    international401:Specimen visit = specimen.clone();
+    international401:SpecimenCollection collection = visit.collection ?: {};
+    collection.collectedDateTime = collection.collectedDateTime ?: nowIso();
+    collection.collector = {display: string `${labDisplayName} (${via})`};
+    visit.collection = collection;
+    check completeTask(taskId, check fhirJson(visit), "lab", "lab-system");
     return true;
 }
 
@@ -58,12 +63,18 @@ isolated function signalLabResult(string labServiceRequestId, international401:D
     if !isFinalReportStatus(report.status) || reportId is () {
         return false;
     }
-    LabResultNotice notice = {
-        serviceRequestId: labServiceRequestId, diagnosticReportId: reportId, status: report.status, via,
-        report: report.toJson(),
-        observations: from international401:Observation observation in observations select observation.toJson()
+    // The event carries the lab's resources as a FHIR `collection` Bundle, tagged with the path that noticed it.
+    r4:BundleEntry[] entries = [{fullUrl: string `${labFhirBaseUrl}/DiagnosticReport/${reportId}`, 'resource: report}];
+    foreach international401:Observation observation in observations {
+        entries.push({fullUrl: string `${labFhirBaseUrl}/Observation/${observation.id ?: ""}`, 'resource: observation});
+    }
+    r4:Bundle notice = {
+        'type: "collection",
+        timestamp: nowIso(),
+        meta: {tag: [{system: LAB_NOTICE_PATH_SYSTEM, code: via == "lab webhook" ? "lab-webhook" : "fallback-poll", display: via}]},
+        entry: entries
     };
-    check workflow:sendData(longevityAssessment, assessment.id, "labResultReady", notice);
+    check workflow:sendData(longevityAssessment, assessment.id, "labResultReady", check fhirJson(notice));
     return true;
 }
 

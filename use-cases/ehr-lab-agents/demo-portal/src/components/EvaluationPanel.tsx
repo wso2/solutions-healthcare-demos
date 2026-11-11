@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CheckCircle2, CheckSquare, ChevronDown, FlaskConical, RefreshCw, Sparkles, Square } from 'lucide-react'
-import { api, type Assessment, type CopilotEvaluation, type LabCatalog, type Level } from '../lib/api'
+import { api, type CopilotEvaluation, type LabCatalog, type Level } from '../lib/api'
+import type { AssessmentView as Assessment } from '../lib/fhir'
 import { isCopilotFailure } from '../lib/agentErrors'
 import { AgentFailureNote } from './AgentFailureNote'
 import { Explorer } from './Explorer'
@@ -66,10 +67,10 @@ function AiEvaluateStep({ assessment, catalog, onChanged }: { assessment: Assess
           ehrName={assessment.ehrName}
           patientId={assessment.patientId}
           evaluating={evaluating}
-          onEvaluate={async ({ rows, question, dateFrom, dateTo }) => {
+          onEvaluate={async ({ resources, question, dateFrom, dateTo }) => {
             setEvaluating(true)
             try {
-              await api.evaluate(assessment.id, rows, question, dateFrom, dateTo)
+              await api.evaluate(assessment.id, resources, question, dateFrom, dateTo)
               onChanged()
             } finally {
               setEvaluating(false)

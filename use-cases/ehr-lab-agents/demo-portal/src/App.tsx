@@ -6,6 +6,7 @@ import { PatientPage } from './pages/PatientPage'
 import { AssessmentPage } from './pages/AssessmentPage'
 import { PatientHome, PatientJourneyPage } from './pages/PatientPages'
 import { LabConsole } from './pages/LabConsole'
+import { PatientCallback, RequirePatientSignIn } from './pages/PatientAuth'
 
 // The home page shows the flow and opens each app in its own browser tab; an app has no navigation to
 // the others, so every tab stays one persona.
@@ -20,8 +21,12 @@ export default function App() {
         <Route path="/physician/assessments/:id" element={<AssessmentPage />} />
       </Route>
       <Route element={<AppShell app="patient" />}>
-        <Route path="/patient" element={<PatientHome />} />
-        <Route path="/patient/:ehr/:patientId" element={<PatientJourneyPage />} />
+        {/* SMART on FHIR redirect URI; outside the sign-in gate. */}
+        <Route path="/patient/callback" element={<PatientCallback />} />
+        <Route element={<RequirePatientSignIn />}>
+          <Route path="/patient" element={<PatientHome />} />
+          <Route path="/patient/:ehr/:patientId" element={<PatientJourneyPage />} />
+        </Route>
       </Route>
       <Route element={<AppShell app="lab" />}>
         <Route path="/lab" element={<LabConsole />} />

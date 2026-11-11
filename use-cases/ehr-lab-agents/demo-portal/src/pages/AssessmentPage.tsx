@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, WifiOff } from 'lucide-react'
-import { api, type Assessment, type LabCatalog } from '../lib/api'
+import { api, type LabCatalog } from '../lib/api'
+import { assessmentView, type AssessmentView as Assessment } from '../lib/fhir'
+import { useReferenceData } from '../lib/useSystem'
 import { usePolling } from '../lib/usePolling'
 import { WAITING_ON, isTerminal, stagePosition, stepStates, type StepKey } from '../lib/stages'
 import { formatDate, initials, titleCase } from '../lib/format'
@@ -17,12 +19,10 @@ export function AssessmentPage() {
   const { id = '' } = useParams()
   const location = useLocation()
   const navigate = useNavigate()
-  const [catalog, setCatalog] = useState<LabCatalog>()
-  const { data: assessment, error, refresh } = usePolling(() => api.assessment(id), 2000, true, [id])
-
-  useEffect(() => {
-    api.catalog().then(setCatalog).catch(() => undefined)
-  }, [])
+  const { system, catalog, ready } = useReferenceData()
+  const { data: raw, error, refresh } = usePolling(() => api.assessment(id), 2000, true, [id])
+  // The assessment with its FHIR parts (IPS, order, notification, specimen, results) as view models.
+  const assessment = useMemo(() => (raw && ready ? assessmentView(raw, system, catalog) : undefined), [raw, ready, system, catalog])
 
   // A selection handed over from the patient page: evaluate it as soon as the workflow waits on the physician.
   const pending = (location.state as { evaluation?: EvaluateArgs } | null)?.evaluation
@@ -30,7 +30,7 @@ export function AssessmentPage() {
   useEffect(() => {
     if (!pending || sent.current || !assessment || assessment.stage !== 'AWAITING_PHYSICIAN' || !assessment.data.summary) return
     sent.current = true
-    void api.evaluate(assessment.id, pending.rows, pending.question, pending.dateFrom, pending.dateTo).then(() => {
+    void api.evaluate(assessment.id, pending.resources, pending.question, pending.dateFrom, pending.dateTo).then(() => {
       navigate(`${location.pathname}${location.search}`, { replace: true, state: null })
       void refresh()
     })

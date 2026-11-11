@@ -3,6 +3,8 @@ import ballerina/lang.'int as langint;
 import ballerina/log;
 import ballerina/random;
 import ballerina/workflow;
+import ballerinax/health.fhir.r4 as r4;
+import ballerinax/health.fhir.r4.international401;
 import ballerinax/metrics.logs as _;
 
 import wso2/icp.runtime.bridge as _;
@@ -10,6 +12,10 @@ import wso2/icp.runtime.bridge as _;
 // The API the demo portal uses. Reads of an EHR go straight to it through the FHIR connector;
 // physician actions complete the workflow's human tasks; assessment reads come from the read model.
 // Copilot runs happen in the background so a slow model call never holds an HTTP request open.
+
+# Ballerina's default HTTP listener (port 9090; `[ballerina.http] defaultListenerPort` changes it). The portal
+# API and the integration's FHIR API (fhir_api.bal) share it, so the integration serves both on one port.
+listener http:Listener apiListener = http:getDefaultListener();
 
 public function main() returns error? {
     check startLabResultsPoller();
@@ -58,10 +64,10 @@ type ErrorBody record {|
     cors: {
         allowOrigins: corsAllowOrigins,
         allowMethods: ["GET", "POST", "OPTIONS"],
-        allowHeaders: ["Content-Type", "X-Lab-Api-Key"]
+        allowHeaders: ["Content-Type"]
     }
 }
-service /api on new http:Listener(apiPort) {
+service /api on apiListener {
 
     # Liveness check.
     #
@@ -78,6 +84,7 @@ service /api on new http:Listener(apiPort) {
                 name: ehr.displayName,
                 vendor: ehr.vendor,
                 baseUrl: ehr.fhirBaseUrl,
+                mrnSystem: ehr.mrnSystem,
                 reachable: ehrReachable(ehr.id),
                 summaryOperation: ehrSupportsSummaryOperation(ehr.id)
             };
@@ -155,57 +162,65 @@ service /api on new http:Listener(apiPort) {
     # + ehr - the EHR id
     # + q - an MRN or part of a name; blank lists the clinic's patients
     # + birthdate - optional birth date filter
-    # + return - the matching patients, or 502 if the EHR search fails
+    # + return - a FHIR `searchset` Bundle of the matching Patients, by name, or 502 if the EHR search fails
     resource function get ehrs/[string ehr]/patients(string q = "", string? birthdate = ())
-            returns PatientCard[]|http:BadGateway {
-        PatientCard[]|error patients = searchEhrPatients(ehr, q, birthdate);
-        if patients is error {
-            log:printError("EHR patient search failed", patients, ehr = ehr);
-            return <http:BadGateway>{body: <ErrorBody>{message: string `${ehrName(ehr)} search failed: ${describeError(patients)}`}};
+            returns json|http:BadGateway {
+        do {
+            EhrSystemConfig system = check ehrSystem(ehr);
+            international401:Patient[] patients = check searchEhrPatients(ehr, q, birthdate);
+            r4:BundleEntry[] entries = [];
+            foreach international401:Patient patient in patients {
+                entries.push({fullUrl: string `${system.fhirBaseUrl}/Patient/${patient.id ?: ""}`, 'resource: patient,
+                    search: {mode: "match"}});
+            }
+            r4:Bundle bundle = {'type: "searchset", total: patients.length(), timestamp: nowIso(), entry: entries};
+            return check fhirJson(bundle);
+        } on fail error failure {
+            log:printError("EHR patient search failed", failure, ehr = ehr);
+            return <http:BadGateway>{body: <ErrorBody>{message: string `${ehrName(ehr)} search failed: ${describeError(failure)}`}};
         }
-        return patients;
     }
 
     # One patient.
     #
     # + ehr - the EHR id
     # + id - the patient's id in that EHR
-    # + return - the patient, or 404
-    resource function get ehrs/[string ehr]/patients/[string id]() returns PatientCard|http:NotFound {
-        EhrSystemConfig|error system = ehrSystem(ehr);
-        var patient = readEhrPatient(ehr, id);
-        if system is error || patient is error {
+    # + return - the FHIR Patient, or 404
+    resource function get ehrs/[string ehr]/patients/[string id]() returns json|http:NotFound {
+        international401:Patient|error patient = readEhrPatient(ehr, id);
+        json|error patientJson = patient is error ? patient : fhirJson(patient);
+        if patientJson is error {
             return <http:NotFound>{body: <ErrorBody>{message: string `Patient ${id} not found in ${ehrName(ehr)}`}};
         }
-        return patientCard(system, patient);
+        return patientJson;
     }
 
-    # The patient summary (IPS sections, trends, flags), built live from the EHR.
+    # The patient summary, built live from the EHR: the International Patient Summary as a FHIR document,
+    # with the clinic's rule-based flags (DetectedIssue) and care gaps (proposed ServiceRequest). The same
+    # document is served to FHIR clients as `GET /fhir/r4/Patient/{id}/$summary` (fhir_api.bal).
     #
     # + ehr - the EHR id
     # + id - the patient's id in that EHR
-    # + return - the summary, or 502 if the EHR cannot be read
-    resource function get ehrs/[string ehr]/patients/[string id]/summary() returns PatientSummary|http:BadGateway {
-        PatientSummary|error summary = liveSummary(ehr, id);
+    # + return - the IPS document Bundle, or 502 if the EHR cannot be read
+    resource function get ehrs/[string ehr]/patients/[string id]/summary() returns json|http:BadGateway {
+        json|error summary = liveSummary(ehr, id);
         if summary is error {
             return <http:BadGateway>{body: <ErrorBody>{message: describeError(summary)}};
         }
         return summary;
     }
 
-    # The International Patient Summary as a FHIR document Bundle.
+    # The International Patient Summary: the same document as `/summary`, under its IPS name.
     #
     # + ehr - the EHR id
     # + id - the patient's id in that EHR
-    # + return - the IPS Bundle, or 502 if the EHR cannot be read
+    # + return - the IPS document Bundle, or 502 if the EHR cannot be read
     resource function get ehrs/[string ehr]/patients/[string id]/ips() returns json|http:BadGateway {
-        do {
-            EhrSystemConfig system = check ehrSystem(ehr);
-            EhrRecord ehrRecord = check fetchEhrRecord(ehr, id);
-            return buildIpsBundle(system, ehrRecord);
-        } on fail error failure {
-            return <http:BadGateway>{body: <ErrorBody>{message: describeError(failure)}};
+        json|error summary = liveSummary(ehr, id);
+        if summary is error {
+            return <http:BadGateway>{body: <ErrorBody>{message: describeError(summary)}};
         }
+        return summary;
     }
 
     # The EHR data explorer.
@@ -215,9 +230,10 @@ service /api on new http:Listener(apiPort) {
     # + kinds - data types (see /explorer-kinds), repeated or comma-separated; none for all
     # + 'from - earliest date (YYYY-MM-DD)
     # + to - latest date (YYYY-MM-DD)
-    # + return - the records with the FHIR searches that produced them, or 502 if the EHR cannot be read
+    # + return - a FHIR `collection` Bundle of the records, ending with a Provenance listing the FHIR searches that
+    # produced them, or 502 if the EHR cannot be read
     resource function get ehrs/[string ehr]/patients/[string id]/records(string[] kinds = [], string? 'from = (),
-            string? to = ()) returns ExplorerResult|http:BadGateway {
+            string? to = ()) returns json|http:BadGateway {
         string[] selected = [];
         foreach string value in kinds {
             foreach string kind in re `,`.split(value) {
@@ -226,7 +242,8 @@ service /api on new http:Listener(apiPort) {
                 }
             }
         }
-        ExplorerResult|error result = exploreEhrRecords(ehr, id, selected, 'from, to);
+        r4:Bundle|error records = exploreEhrRecords(ehr, id, selected, 'from, to);
+        json|error result = records is error ? records : fhirJson(records);
         if result is error {
             log:printError("EHR explorer query failed", result, ehr = ehr, patientId = id);
             return <http:BadGateway>{body: <ErrorBody>{message: string `${ehrName(ehr)}: ${describeError(result)}`}};
@@ -426,12 +443,12 @@ service /api on new http:Listener(apiPort) {
     # background; the evaluation appears in the assessment's `data.evaluation`.
     #
     # + id - the assessment id
-    # + request - the selected records, date range and question
+    # + request - the selected FHIR resources, date range and question
     # + return - 202 once the evaluation has started, 400 without records, 404, 409 unless the assessment is
     # waiting on the physician, or 500
     resource function post assessments/[string id]/evaluations(EvaluationRequest request)
             returns http:Accepted|http:BadRequest|http:NotFound|http:Conflict|http:InternalServerError {
-        if request.records.length() == 0 {
+        if request.resources.length() == 0 {
             return <http:BadRequest>{body: <ErrorBody>{message: "Select at least one record to evaluate"}};
         }
         AssessmentRow|http:NotFound|http:Conflict|http:InternalServerError row = assessmentIn(id, AWAITING_PHYSICIAN);
@@ -440,11 +457,11 @@ service /api on new http:Listener(apiPort) {
         }
         do {
             json data = check row.data.fromJsonString();
-            PatientSummary summary = check (check data.summary).cloneWithType();
+            IpsContents summary = check ipsContents(check data.summary);
             string question = request.question.trim().length() > 0 ? request.question : "Overview and evaluation of the selected records";
-            check appendCopilotMessage(id, "physician", question, request.records.length(), request.dateFrom, request.dateTo, "running");
-            addEvent(id, PHYSICIAN, string `Asked the Copilot to evaluate ${request.records.length()} records`, question);
-            _ = start evaluateInBackground(id, summary, request);
+            check appendCopilotMessage(id, "physician", question, request.resources.length(), request.dateFrom, request.dateTo, "running");
+            addEvent(id, PHYSICIAN, string `Asked the Copilot to evaluate ${request.resources.length()} records`, question);
+            _ = start evaluateInBackground(id, row.ehr, summary, request);
             return <http:Accepted>{body: {status: "running"}};
         } on fail error failure {
             return <http:InternalServerError>{body: <ErrorBody>{message: failure.message()}};
@@ -522,37 +539,6 @@ service /api on new http:Listener(apiPort) {
         return <http:Accepted>{body: {'retry: decision.'retry}};
     }
 
-    // ── Inbound from the lab ──
-
-    # A FHIR message from the lab: specimen collected, or report ready, with the resources it is about
-    # (see lab_messages.bal).
-    #
-    # + apiKey - the shared secret the lab sends in `X-Lab-Api-Key`
-    # + message - the FHIR message Bundle
-    # + return - 202 with whether the workflow moved on, 400 for a message that is not a lab message,
-    # 401 for a wrong key, or 500
-    resource function post lab/notifications(@http:Header {name: "X-Lab-Api-Key"} string? apiKey,
-            @http:Payload {mediaType: ["application/fhir+json", "application/json"]} json message)
-            returns http:Accepted|http:BadRequest|http:Unauthorized|http:InternalServerError {
-        if apiKey != labWebhookApiKey {
-            return <http:Unauthorized>{body: <ErrorBody>{message: "Invalid lab API key"}};
-        }
-        SpecimenCollectedMessage|ResultsReadyMessage|error parsed = parseLabMessage(message);
-        if parsed is error {
-            log:printWarn("Refused a lab message", parsed);
-            return <http:BadRequest>{body: <ErrorBody>{message: parsed.message()}};
-        }
-        boolean|error handled = parsed is SpecimenCollectedMessage
-            ? completeLabVisit(parsed.serviceRequestId, parsed.specimen, "lab webhook")
-            : signalLabResult(parsed.serviceRequestId, parsed.report, parsed.observations, "lab webhook");
-        if handled is error {
-            log:printError("Lab message could not be processed", handled, serviceRequestId = parsed.serviceRequestId,
-                    event = parsed is SpecimenCollectedMessage ? EVENT_SPECIMEN_COLLECTED : EVENT_RESULTS_READY);
-            return <http:InternalServerError>{body: <ErrorBody>{message: handled.message()}};
-        }
-        return <http:Accepted>{body: {handled}};
-    }
-
     // ── Presenter controls ──
 
     # The failure switches and whether each is on.
@@ -591,11 +577,27 @@ service /api on new http:Listener(apiPort) {
 #
 # + ehr - the EHR id
 # + patientId - the patient's id in that EHR
-# + return - the summary, or an error if the EHR cannot be read
-isolated function liveSummary(string ehr, string patientId) returns PatientSummary|error {
+# + return - the IPS document as FHIR JSON, or an error if the EHR cannot be read
+isolated function liveSummary(string ehr, string patientId) returns json|error {
     EhrSystemConfig system = check ehrSystem(ehr);
     EhrRecord ehrRecord = check fetchEhrRecord(ehr, patientId);
-    return buildSummary(system, ehrRecord);
+    return fhirJson(buildSummary(system, ehrRecord));
+}
+
+# The tests and placer order id of an assessment's lab order, read from the FHIR order it stored.
+#
+# + data - the assessment's data
+# + return - the catalog test codes and the placer order id; empty before the order is placed
+isolated function placedOrder(json data) returns [string[], string?] {
+    json|error labOrder = data.labOrder;
+    if labOrder is () || labOrder is error {
+        return [[], ()];
+    }
+    [international401:ServiceRequest, international401:ServiceRequest]|error orders = labOrderContents(labOrder);
+    if orders is error {
+        return [[], ()];
+    }
+    return [orderedTestCodes(orders[0]), identifierValue(orders[0].identifier, PLACER_ORDER_SYSTEM)];
 }
 
 # Who the assessment is waiting on, from its stage.
@@ -625,7 +627,7 @@ isolated function waitingOn(string stage) returns string {
 
 isolated function assessmentListItem(AssessmentRow row) returns json {
     json|error data = row.data.fromJsonString();
-    json|error tests = data is json ? data.labOrder.tests : ();
+    string[] tests = data is json ? placedOrder(data)[0] : [];
     json|error headline = data is json ? data.analysis.headline : ();
     return {
         id: row.id,
@@ -636,7 +638,7 @@ isolated function assessmentListItem(AssessmentRow row) returns json {
         stage: row.stage,
         waitingOn: waitingOn(row.stage),
         'error: row.'error,
-        tests: tests is json[] ? tests : [],
+        tests,
         headline: headline is string ? headline : (),
         createdAt: row.createdAt,
         updatedAt: row.updatedAt
@@ -668,21 +670,36 @@ isolated function patientJourney(AssessmentRow row) returns json {
             step = "stopped";
         }
     }
-    json|error testCodes = data.labOrder.tests;
-    json[] tests = [];
-    if testCodes is json[] {
-        foreach json code in testCodes {
-            OrderableTest? test = orderableByCode(code.toString());
-            tests.push({
-                code: code.toString(),
-                name: test is OrderableTest ? test.name : code.toString(),
-                preparation: test is OrderableTest ? test.preparation : ()
-            });
+    [string[], string?] [testCodes, placerOrder] = placedOrder(data);
+    json[] tests = from string code in testCodes
+        let OrderableTest? test = orderableByCode(code)
+        select {code: code, name: test is OrderableTest ? test.name : code, preparation: test is OrderableTest ? test.preparation : ()};
+    // The patient app's own view of the FHIR Communication and Specimen.
+    json|error communicationJson = data.patientNotification;
+    json|error specimenJson = data.labVisit;
+    json notification = ();
+    if communicationJson is map<json> {
+        anydata|error communication = parseFhir(communicationJson);
+        if communication is international401:Communication {
+            string[] texts = from international401:CommunicationPayload payload in communication.payload ?: []
+                let string? text = payload.contentString
+                where text is string
+                select text;
+            string[] instructions = texts.length() > 1 ? texts.slice(1) : [];
+            map<json> view = {communicationId: communication.id, message: texts.length() > 0 ? texts[0] : "",
+                instructions: instructions, labName: labDisplayName};
+            notification = view;
         }
     }
-    json|error notification = data.patientNotification;
-    json|error visit = data.labVisit;
-    json|error placerOrder = data.labOrder.placerOrderId;
+    json visit = ();
+    if specimenJson is map<json> {
+        anydata|error specimen = parseFhir(specimenJson);
+        if specimen is international401:Specimen {
+            map<json> view = {specimenId: specimen.id, collectedAt: specimen.collection?.collectedDateTime ?: "",
+                collectedBy: specimen.collection?.collector?.display ?: labDisplayName};
+            visit = view;
+        }
+    }
     return {
         id: row.id,
         ehr: row.ehr,
@@ -692,9 +709,9 @@ isolated function patientJourney(AssessmentRow row) returns json {
         startedAt: row.createdAt,
         updatedAt: row.updatedAt,
         tests,
-        orderNumber: placerOrder is string ? placerOrder : (),
-        notification: notification is json ? notification : (),
-        labVisit: visit is json ? visit : (),
+        orderNumber: placerOrder,
+        notification,
+        labVisit: visit,
         labName: labDisplayName
     };
 }
@@ -750,8 +767,8 @@ isolated function completePhysicianTask(string id, Stage expected, string taskNa
     }
 }
 
-isolated function evaluateInBackground(string id, PatientSummary summary, EvaluationRequest request) {
-    CopilotEvaluation|error evaluation = runCopilotEvaluation(id, summary, request);
+isolated function evaluateInBackground(string id, string ehr, IpsContents summary, EvaluationRequest request) {
+    CopilotEvaluation|error evaluation = runCopilotEvaluation(id, ehr, summary, request);
     storeCopilotResult(id, evaluation, "Diagnostic Copilot: evaluation ready");
 }
 

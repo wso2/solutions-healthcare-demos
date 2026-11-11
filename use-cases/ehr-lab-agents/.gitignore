@@ -34,6 +34,10 @@ seed/synthea/.cache/
 gateway/output/
 gateway/build-manifest.yaml
 
-# Generated service configuration (scripts/host-mode.sh)
+# Generated service configuration (scripts/host-mode.sh, scripts/apim-setup.sh)
 config/*.toml
 !config/*.example.toml
+config/patient-auth.json
+
+# WSO2 API Manager + Healthcare accelerator install (scripts/apim-setup.sh)
+.apim/
