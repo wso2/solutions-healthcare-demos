@@ -1,0 +1,25 @@
+[package]
+org = "wso2healthcare"
+name = "lab_simulator"
+version = "0.1.0"
+distribution = "2201.14.1"
+title = "Reference Lab Simulator"
+
+[build-options]
+sticky = true
+observabilityIncluded = true
+
+[[dependency]]
+org = "ballerinax"
+name = "health.fhir.r4"
+version = "6.3.3"
+
+[[dependency]]
+org = "ballerinax"
+name = "health.fhir.r4.international401"
+version = "4.0.5"
+
+[[dependency]]
+org = "ballerinax"
+name = "health.fhir.r4.parser"
+version = "7.1.1"

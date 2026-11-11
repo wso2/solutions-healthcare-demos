@@ -1,0 +1,43 @@
+# Secrets — never commit. See secrets.example.toml.
+secrets.toml
+# Host mode (scripts/utils/host-mode.sh): generated package configs (the integration's holds the secrets) and the
+# COMPOSE_FILE switch
+ehr_lab_physician/*/Config.toml
+ehr_lab_physician/*/tests/Config.toml
+ehr_lab_physician/mocks/*/Config.toml
+.env
+# WSO2 Integrator's ICP runtime id (machine-specific)
+.icp_runtime_id
+# Credentials WSO2 Agent Manager issued to the agents (scripts/utils/amp-setup.sh)
+.amp/
+
+# Ballerina lock files. The integration's and the lab simulator's are committed: they pin ballerina/ftp 2.20.3
+# (with sticky = true), because health.clients.fhir 3.0.6 needs data.csv 0.8.2 and the ftp bundled with
+# 2201.14.1 needs data.csv 1.x; without the pin every rebuild after the first fails as "incompatible versions".
+Dependencies.toml
+!ehr_lab_physician/ehr_agentic_integration/Dependencies.toml
+!ehr_lab_physician/lab_simulator/Dependencies.toml
+
+# Ballerina build output
+target/
+generated/
+
+# Portal
+node_modules/
+dist/
+*.local
+
+# Synthea jar and raw output (seed/synthea/generate.sh)
+seed/synthea/.cache/
+
+# gateway-builder output (scripts/utils/amp-gateway.sh)
+gateway/output/
+gateway/build-manifest.yaml
+
+# Generated service configuration (scripts/utils/host-mode.sh, scripts/utils/apim-setup.sh)
+config/*.toml
+!config/*.example.toml
+config/patient-auth.json
+
+# WSO2 API Manager + Healthcare accelerator install (scripts/utils/apim-setup.sh)
+.apim/

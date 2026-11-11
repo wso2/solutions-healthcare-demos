@@ -1,0 +1,4 @@
+[
+  {"name": "ehr", "listen": "0.0.0.0:8081", "upstream": "fhir-ehr:9090", "enabled": true},
+  {"name": "lab-webhook", "listen": "0.0.0.0:9091", "upstream": "integration:9090", "enabled": true}
+]

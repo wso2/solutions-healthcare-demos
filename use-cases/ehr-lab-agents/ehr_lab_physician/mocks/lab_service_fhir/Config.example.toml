@@ -1,0 +1,11 @@
+# Copy to Config.toml (gitignored) and fill in. All values here are placeholders.
+port = 9092
+inboundApiKey = "quest-inbound-key"
+notificationUrl = "http://localhost:9090/longevity/fhir/r4/notifications/quest"
+notificationApiKey = "demo-quest-key"
+webhookSecret = "demo-quest-secret"
+payloadMode = "full-resource"
+autoRelease = true
+resultDelaySeconds = 20
+defaultScenario = "elevated-cardiometabolic-risk"
+publicBaseUrl = "http://localhost:9092/quest/fhir/r4"

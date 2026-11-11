@@ -1,0 +1,9 @@
+[package]
+org = "wso2healthcare"
+name = "pubmed_mcp"
+version = "0.1.0"
+distribution = "2201.14.1"
+title = "PubMed MCP Server"
+
+[build-options]
+observabilityIncluded = true

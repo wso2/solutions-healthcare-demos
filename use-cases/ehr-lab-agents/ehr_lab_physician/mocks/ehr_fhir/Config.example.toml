@@ -1,0 +1,7 @@
+# Copy to Config.toml (gitignored) and fill in. All values here are placeholders.
+port = 9091
+latencyMs = 150
+failureRate = 0.0
+requireAuth = true
+clientId = "longevity-integration"
+clientSecret = "demo-secret"

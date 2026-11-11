@@ -1,0 +1,37 @@
+[package]
+org = "wso2healthcare"
+name = "ehr_agentic_integration"
+version = "0.1.0"
+distribution = "2201.14.1"
+title = "EHR + Lab Agentic Integration"
+
+[build-options]
+sticky = true
+remoteManagement = true
+observabilityIncluded = true
+
+[[dependency]]
+org = "ballerinax"
+name = "health.fhir.r4"
+version = "6.3.3"
+
+[[dependency]]
+org = "ballerinax"
+name = "health.fhir.r4.international401"
+version = "4.0.5"
+
+[[dependency]]
+org = "ballerinax"
+name = "health.fhirr4"
+version = "3.0.8"
+
+# Brought in by health.fhirr4; 4.0.1 does not compile against international401 4.0.5.
+[[dependency]]
+org = "ballerinax"
+name = "health.fhir.r4.ips"
+version = "4.0.2"
+
+[[dependency]]
+org = "ballerinax"
+name = "health.fhir.r4.parser"
+version = "7.1.1"

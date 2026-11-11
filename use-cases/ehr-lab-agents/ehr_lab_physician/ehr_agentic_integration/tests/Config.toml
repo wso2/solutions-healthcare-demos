@@ -1,0 +1,29 @@
+# Test configuration: the compose stack's Postgres and FHIR servers on their host ports, and an
+# in-memory workflow engine so tests need no Temporal server. (scripts/utils/bal.sh overrides the hosts
+# when tests run inside the Ballerina container.)
+dbHost = "localhost"
+dbPort = 5433
+labFhirBaseUrl = "http://localhost:8082/fhir/r4"
+toxiproxyUrl = "http://localhost:8474"
+
+labMcpServerUrl = "http://localhost:8011/mcp/"
+
+[[ehrSystems]]
+id = "ehr"
+displayName = "EHR"
+vendor = "fhir"
+fhirBaseUrl = "http://localhost:8081/fhir/r4"
+mcpServerUrl = "http://localhost:8010/mcp/"
+mrnSystem = "urn:demo:longview-clinic:mrn"
+outageProxy = "ehr"
+
+[ballerina.workflow]
+mode = "IN_MEMORY"
+
+[ballerina.ai.wso2ProviderConfig]
+serviceUrl = "https://7eff1239-64bb-4663-b256-30a00d187a5c-prod.e1-us-east-azure.choreoapis.dev/copilot/llm-api/v1.0/openai"
+accessToken = "eyJ4NXQiOiJqSHlTb2Jacjc3b1lPQ0hjNGxRVmswM2hZdzgiLCJraWQiOiJOR05pTm1WaVpXUmhaRGMyWkdObU1XRXpOVFEzTVRRek5EUTNNR0V5WldRM01qQmlaVE5qT0RJMlpHUmhOekl6TURZelptUTVNR1U0WTJabE5URTJNQV9SUzI1NiIsInR5cCI6ImF0K2p3dCIsImFsZyI6IlJTMjU2In0.eyJzdWIiOiJmNDA2YTQ0NS1lNTJmLTQ1NjYtYmFmZS1mMDgwYmIxODExMDUiLCJhdXQiOiJBUFBMSUNBVElPTl9VU0VSIiwiaXNzIjoiaHR0cHM6Ly9hcGkuYXNnYXJkZW8uaW8vdC9iYWxsZXJpbmFjb3BpbG90L29hdXRoMi90b2tlbiIsImNsaWVudF9pZCI6Ill1bE5zSm1MOGRKT1RoNEhmNGJaMUZTaFhhVWEiLCJhdWQiOiJZdWxOc0ptTDhkSk9UaDRIZjRiWjFGU2hYYVVhIiwibmJmIjoxNzkzODY4NDQ0LCJhenAiOiJZdWxOc0ptTDhkSk9UaDRIZjRiWjFGU2hYYVVhIiwib3JnX2lkIjoiYTJmNzdkYTYtOWMyZS00MzNjLWIzM2QtZmE5Y2VlNTNmMGQ2Iiwic2NvcGUiOiJlbWFpbCIsImV4cCI6MTc5Mzg3MjA0NCwib3JnX25hbWUiOiJiYWxsZXJpbmFjb3BpbG90IiwiaWF0IjoxNzkzODY4NDQ0LCJqdGkiOiI2YWVlY2M5My0wNWE3LTQzYzYtOTgwMy1lMDQzZjZiOWVmODQiLCJvcmdfaGFuZGxlIjoiYmFsbGVyaW5hY29waWxvdCJ9.nJB7KnJKfexit0qlas37u8ncrGkX1nGLb0dKUqwpHeGh3pAAyz92DzWadCZLGERAuR6lHfSnoeAK3JsIbV2f8L6iprlpbOA0JI3FYqLr2PBQIk-2TVUr7HRrrRVOGUtLSlYEZMDy5Z1ZBwe2MkTd1guSGa7cWwHTiRjUe_FXYtdT62iUKvNGwZrsQNTZ89akXWhzfvhljcmTljCgpvRoHzbMHmgx8o9afLvlgIU7MOH2MKwX6J7GOIg4Ox7VxNqPIGkylxRXdY1cBGUSPYh29eaGm2fkdrnc1R2SKtzK950u7rfchGvHaIQxKCV-GxJ1PJY8FzUuW9Cp4Bmhp7HZtQ"
+
+# The API and FHIR services on a port of their own while tests run.
+[ballerina.http]
+defaultListenerPort = 19090

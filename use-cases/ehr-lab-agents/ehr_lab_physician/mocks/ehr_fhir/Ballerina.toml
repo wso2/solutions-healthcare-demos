@@ -1,0 +1,9 @@
+[package]
+org = "wso2healthcare"
+name = "ehr_fhir"
+version = "0.1.0"
+distribution = "2201.13.4"
+title = "mock-cerner-ehr-fhir"
+
+[build-options]
+observabilityIncluded = false

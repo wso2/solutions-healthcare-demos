@@ -1,0 +1,65 @@
+{
+  "tools": ["*"],
+  "redactNarrative": true,
+  "redactReferenceDisplay": true,
+  "securityLabels": true,
+  "defaultAccess": "allow",
+  "nonJsonContent": "allow",
+  "resources": [
+    {
+      "type": "Patient",
+      "rules": [
+        {
+          "fhirPaths": [
+            "Patient.name",
+            "Patient.photo",
+            "Patient.contact",
+            "Patient.address.line",
+            "Patient.address.city",
+            "Patient.address.district",
+            "Patient.address.postalCode",
+            "Patient.address.extension('http://hl7.org/fhir/StructureDefinition/geolocation')",
+            "Patient.extension('http://hl7.org/fhir/StructureDefinition/patient-birthPlace')",
+            "Patient.extension('http://hl7.org/fhir/StructureDefinition/patient-mothersMaidenName')",
+            "Patient.telecom.where(system = 'email')"
+          ],
+          "operation": "redact"
+        },
+        { "fhirPaths": ["Patient.telecom.where(system = 'phone').value"], "operation": "mask", "keepLast": 4 },
+        { "fhirPaths": ["Patient.birthDate", "Patient.deceased.ofType(dateTime)"], "operation": "generalize", "precision": "year" },
+        { "fhirPaths": ["Patient.identifier.value"], "operation": "hash" }
+      ],
+      "denySearchParams": ["name", "family", "given", "phonetic", "phone", "email", "telecom", "address",
+        "address-city", "address-postalcode", "birthdate", "identifier"]
+    },
+    {
+      "type": "Practitioner",
+      "rules": [{ "fhirPaths": ["Practitioner.name", "Practitioner.telecom", "Practitioner.address", "Practitioner.photo"], "operation": "redact" }],
+      "denySearchParams": ["name", "family", "given", "phone", "email", "telecom", "address"]
+    },
+    {
+      "type": "Observation",
+      "include": [
+        "Observation.status", "Observation.category", "Observation.code", "Observation.subject", "Observation.encounter",
+        "Observation.effective", "Observation.value", "Observation.dataAbsentReason", "Observation.interpretation",
+        "Observation.referenceRange", "Observation.component", "Observation.hasMember", "Observation.derivedFrom",
+        "Observation.method", "Observation.bodySite", "Observation.specimen"
+      ]
+    },
+    { "type": "Condition", "rules": [{ "fhirPaths": ["Condition.note"], "operation": "redact" }] },
+    { "type": "AllergyIntolerance", "rules": [{ "fhirPaths": ["AllergyIntolerance.note"], "operation": "redact" }] },
+    { "type": "MedicationRequest", "rules": [{ "fhirPaths": ["MedicationRequest.note"], "operation": "redact" }] },
+    { "type": "MedicationStatement", "rules": [{ "fhirPaths": ["MedicationStatement.note"], "operation": "redact" }] },
+    { "type": "Procedure", "rules": [{ "fhirPaths": ["Procedure.note"], "operation": "redact" }] },
+    { "type": "DiagnosticReport", "rules": [{ "fhirPaths": ["DiagnosticReport.presentedForm"], "operation": "redact" }] },
+    { "type": "DocumentReference", "access": "deny" },
+    { "type": "Binary", "access": "deny" },
+    { "type": "Media", "access": "deny" },
+    { "type": "Communication", "access": "deny" },
+    { "type": "QuestionnaireResponse", "access": "deny" },
+    { "type": "RelatedPerson", "access": "deny" },
+    { "type": "Claim", "access": "deny" },
+    { "type": "ExplanationOfBenefit", "access": "deny" },
+    { "type": "Coverage", "access": "deny" }
+  ]
+}
