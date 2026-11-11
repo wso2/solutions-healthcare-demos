@@ -1,6 +1,6 @@
 # Custom WSO2 API Platform gateway for the demo: the stock 1.2.1 policy set — every policy pinned to
 # the version gateway 1.2.1 ships (generated from its /app/build-manifest.yaml) — plus mcp-fhir-deidentify.
-# Built by scripts/amp-gateway.sh with ghcr.io/wso2/api-platform/gateway-builder:1.2.1.
+# Built by scripts/utils/amp-gateway.sh with ghcr.io/wso2/api-platform/gateway-builder:1.2.1.
 version: v1
 gateway:
   version: 1.2.1

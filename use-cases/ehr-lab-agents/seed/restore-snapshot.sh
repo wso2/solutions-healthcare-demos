@@ -4,7 +4,7 @@
 # assessments still open in the portal with their workflow view.
 #
 #   seed/restore-snapshot.sh              # restore seed/snapshot/
-#   seed/restore-snapshot.sh <dir>        # restore another snapshot taken with scripts/snapshot.sh
+#   seed/restore-snapshot.sh <dir>        # restore another snapshot taken with scripts/utils/snapshot.sh
 #
 # Everything except Postgres is stopped first: the FHIR servers and Temporal create tables on
 # start, and a restore under a running writer would interleave with it. Restoring replaces the

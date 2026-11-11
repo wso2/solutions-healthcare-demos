@@ -9,17 +9,17 @@
 # Over budget, the gateway answers 429; the agent's workflow step retries, then pauses for operations to
 # retry (once the budget is raised) or stop. Budgets: amp/budgets.json.
 #
-#   ./scripts/amp-budgets.sh                           # apply amp/budgets.json (idempotent; amp-setup.sh runs it)
-#   ./scripts/amp-budgets.sh --exhaust care-planner    # demo: shrink one agent's budget to $0.0001 — its next
+#   ./scripts/utils/amp-budgets.sh                           # apply amp/budgets.json (idempotent; amp-setup.sh runs it)
+#   ./scripts/utils/amp-budgets.sh --exhaust care-planner    # demo: shrink one agent's budget to $0.0001 — its next
 #                                                      # model call is refused (run without flags to restore)
-#   ./scripts/amp-budgets.sh --off                     # no budgets
-#   ./scripts/amp-budgets.sh --config openrouter       # the agents' OpenRouter model configurations instead
+#   ./scripts/utils/amp-budgets.sh --off                     # no budgets
+#   ./scripts/utils/amp-budgets.sh --config openrouter       # the agents' OpenRouter model configurations instead
 #                                                      # of their Claude ones (amp-openrouter.sh)
 #
 # Also writes .amp/budgets.json (the budgets in force) and .amp/model-prices.json (the gateway's prices for
 # the model in use), which the trace router uses to show spend against budget.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 API="${AMP_API:-http://api.amp.localhost:8080/api/v1}"
 THUNDER="${AMP_THUNDER:-http://thunder.amp.localhost:8080}"
@@ -78,7 +78,7 @@ for name in "${NAMES[@]}"; do
 
   [[ $(api GET "/orgs/$ORG/projects/$PROJECT/agents/$name/model-configs") == 200 ]] || die "cannot read $name's model configurations"
   config=$(jq -r --arg c "$CONFIG_NAME" '[.configs[]? | select(.name == $c)][0].uuid // empty' "$WORK/resp")
-  [[ -n "$config" ]] || die "$name has no '$CONFIG_NAME' model configuration — run ./scripts/amp-setup.sh"
+  [[ -n "$config" ]] || die "$name has no '$CONFIG_NAME' model configuration — run ./scripts/utils/amp-setup.sh"
   [[ $(api GET "/orgs/$ORG/projects/$PROJECT/agents/$name/model-configs/$config") == 200 ]] || die "cannot read $name's model configuration"
   proxy_uuid=$(jq -r '.envMappings.default.configuration.proxyUuid // empty' "$WORK/resp")
   # The provider follows from the configuration's name; what Agent Manager reports is used for any other name.
@@ -144,5 +144,5 @@ docker exec -i k3d-amp-local-server-0 kubectl -n default-default get cm api-plat
 chmod 644 .amp/budgets.json .amp/model-prices.json   # read by the trace router (runs as nobody); no secrets
 jq -r 'to_entries[] | "prices for \(.key) from the gateway: $\(.value.input_cost_per_token * 1000000)/M input, $\(.value.output_cost_per_token * 1000000)/M output tokens"' \
   .amp/model-prices.json | while read -r line; do log "$line"; done
-[[ $MODE == exhaust ]] && log "$EXHAUST's next model call will be refused (429) — run ./scripts/amp-budgets.sh to restore"
+[[ $MODE == exhaust ]] && log "$EXHAUST's next model call will be refused (429) — run ./scripts/utils/amp-budgets.sh to restore"
 exit 0

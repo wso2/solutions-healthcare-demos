@@ -2,12 +2,12 @@
 # Installs WSO2 Agent Manager (AMP) on a local k3d cluster `amp-local`, inside the same colima VM
 # as the demo stack. Idempotent: AMP's installer skips what is already there, so re-running is safe.
 #
-#   ./scripts/amp-install.sh            # ~15-20 minutes on first run
+#   ./scripts/utils/amp-install.sh            # ~15-20 minutes on first run
 #
 # The installer runs in AMP's own quick-start container (the release's tested toolchain: bash 5,
 # k3d, kubectl, helm), so the host needs only colima and docker. Running the release's
 # k3d-install.sh on the host instead fails on macOS: its install.sh needs bash 4+ and macOS ships
-# 3.2. Afterwards run ./scripts/amp-setup.sh to register the demo's agents.
+# 3.2. Afterwards run ./scripts/utils/amp-setup.sh to register the demo's agents.
 set -euo pipefail
 
 AMP_VERSION="${AMP_VERSION:-1.0.0}"
@@ -22,7 +22,7 @@ command -v docker >/dev/null 2>&1 || die "docker is required (brew install colim
 # AMP and the demo share one VM: the demo's containers reach AMP's gateway through the VM, and
 # one VM is one thing to start before a demo.
 if [[ "$(docker context show)" != "colima-${COLIMA_PROFILE}" ]]; then
-  die "docker is not pointed at colima profile '${COLIMA_PROFILE}' — run ./scripts/colima-up.sh first"
+  die "docker is not pointed at colima profile '${COLIMA_PROFILE}' — run ./scripts/utils/colima-up.sh first"
 fi
 
 log "Installing Agent Manager ${AMP_VERSION} with ${IMAGE}"

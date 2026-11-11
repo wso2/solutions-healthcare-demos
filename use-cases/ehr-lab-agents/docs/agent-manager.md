@@ -10,14 +10,14 @@ scripted, so you can reproduce it on a laptop and reuse the pattern for any exte
 
 | Feature | What it does here | AMP mechanism | In this repo |
 |---|---|---|---|
-| Agent identity | Each agent has its own OAuth client (AgentID) | AgentID per external agent (environment ThunderID) | `scripts/amp-setup.sh` |
+| Agent identity | Each agent has its own OAuth client (AgentID) | AgentID per external agent (environment ThunderID) | `scripts/utils/amp-setup.sh` |
 | Permissions | Roles decide which MCP tools an agent may call: the Copilot and Analyst read the EHR, all three search PubMed, nobody writes | MCP proxies with identity security, scopes per tool group, roles assigned to agents | `amp-setup.sh`, `agents.bal` (`connectMcp`) |
-| FHIR de-identification | Names, addresses, contact details and identifiers are taken out of FHIR tool results before an agent (and Claude) sees them; guarded searches are refused | Custom gateway policy `mcp-fhir-deidentify` on the FHIR MCP proxies | `gateway/policies/mcp-fhir-deidentify`, `scripts/amp-gateway.sh`, `amp/fhir-deidentify.json` |
+| FHIR de-identification | Names, addresses, contact details and identifiers are taken out of FHIR tool results before an agent (and Claude) sees them; guarded searches are refused | Custom gateway policy `mcp-fhir-deidentify` on the FHIR MCP proxies | `gateway/policies/mcp-fhir-deidentify`, `scripts/utils/amp-gateway.sh`, `amp/fhir-deidentify.json` |
 | AI gateway | Agents call Claude through AMP, each through its own model configuration and key; the Anthropic key lives only in AMP | LLM provider (`anthropic` template) + an agent model configuration (LLM proxy) per agent | `amp-setup.sh`, `model_provider.bal` |
-| Budgets and cost | Each agent has its own US$/day and tokens/hour budget; over budget the gateway refuses it and the workflow waits for operations. Spend per agent, assessment and workflow step in the portal | `llm-cost`, `llm-cost-based-ratelimit`, `token-based-ratelimit` on each agent's model configuration | `scripts/amp-budgets.sh`, `amp/budgets.json`, `infra/trace-router` (ledger) |
-| PHI guardrail | MRNs, SSNs and phone numbers are redacted before anything reaches Claude | `pii-masking-regex` policy on the provider | `scripts/amp-guardrails.sh` |
+| Budgets and cost | Each agent has its own US$/day and tokens/hour budget; over budget the gateway refuses it and the workflow waits for operations. Spend per agent, assessment and workflow step in the portal | `llm-cost`, `llm-cost-based-ratelimit`, `token-based-ratelimit` on each agent's model configuration | `scripts/utils/amp-budgets.sh`, `amp/budgets.json`, `infra/trace-router` (ledger) |
+| PHI guardrail | MRNs, SSNs and phone numbers are redacted before anything reaches Claude | `pii-masking-regex` policy on the provider | `scripts/utils/amp-guardrails.sh` |
 | Monitoring | Every agent run is a trace under its agent: LLM calls, tool calls, tokens, latency | OTLP traces with GenAI semantic conventions | `ballerina/otel`, `infra/trace-router` |
-| Evaluation | Each agent is scored continuously by built-in and custom evaluators, judged by Claude | Evaluators + monitors (Argo workflows in AMP) | `amp/`, `scripts/amp-evaluations.sh` |
+| Evaluation | Each agent is scored continuously by built-in and custom evaluators, judged by Claude | Evaluators + monitors (Argo workflows in AMP) | `amp/`, `scripts/utils/amp-evaluations.sh` |
 
 ## Architecture
 
@@ -57,12 +57,12 @@ flowchart LR
 
 ```bash
 ./scripts/up.sh                  # colima VM + demo stack (first run restores seed/snapshot)
-./scripts/amp-install.sh         # AMP 1.0.0 as k3d cluster amp-local (~15–20 min, once)
-./scripts/amp-gateway.sh         # custom gateway: stock 1.2.1 policies + mcp-fhir-deidentify (~6 min first time)
-./scripts/amp-setup.sh           # agents, AgentIDs, roles, MCP proxies (+ tunnel, FHIR policy),
+./scripts/utils/amp-install.sh         # AMP 1.0.0 as k3d cluster amp-local (~15–20 min, once)
+./scripts/utils/amp-gateway.sh         # custom gateway: stock 1.2.1 policies + mcp-fhir-deidentify (~6 min first time)
+./scripts/utils/amp-setup.sh           # agents, AgentIDs, roles, MCP proxies (+ tunnel, FHIR policy),
                                  # model configs, keys and budgets per agent, tracing keys
-./scripts/amp-guardrails.sh --verify   # PHI guardrail, and proof of what Claude receives
-./scripts/amp-evaluations.sh --backfill 24   # custom evaluators, a monitor per agent, review of the last 24 h
+./scripts/utils/amp-guardrails.sh --verify   # PHI guardrail, and proof of what Claude receives
+./scripts/utils/amp-evaluations.sh --backfill 24   # custom evaluators, a monitor per agent, review of the last 24 h
 ```
 
 Console: http://console.amp.localhost:8080 (admin / admin) → project **Longevity Clinic**. The portal
@@ -155,7 +155,7 @@ proxy as the Copilot:
 | `DocumentReference`, `Communication`, `Claim`, … | notes, messages, billing | withheld |
 | `search Patient family=Schmeler` | the patient | refused before the EHR |
 
-**How it gets into AMP.** Gateway policies are compiled into the gateway. `scripts/amp-gateway.sh`:
+**How it gets into AMP.** Gateway policies are compiled into the gateway. `scripts/utils/amp-gateway.sh`:
 1. runs the policy's tests, plus a check of `amp/fhir-deidentify.json` against it;
 2. builds the gateway with WSO2's `gateway-builder:1.2.1` from `gateway/build.yaml` — every stock policy pinned
    to the version 1.2.1 ships, plus this one — into two images (runtime with the policy compiled in, controller
@@ -201,7 +201,7 @@ The provider has `security.apiKey.key = "x-api-key"` (the connector always sends
 `resilience.timeout = "300s"`. The per-agent proxies are created with an `API-Key` header and a 60 s timeout;
 `amp-budgets.sh` switches them to `x-api-key` and 300 s (`ISSUES_TO_REPORT.md` D9, D12).
 
-**Budgets** (`amp/budgets.json`, applied by `scripts/amp-budgets.sh`): per agent, `llm-cost-based-ratelimit`
+**Budgets** (`amp/budgets.json`, applied by `scripts/utils/amp-budgets.sh`): per agent, `llm-cost-based-ratelimit`
 (US$ per day, priced by `llm-cost` from the gateway's price list — Sonnet 4.6 at $3/$15 per M tokens) and
 `token-based-ratelimit` (tokens per hour). Why model configurations and not consumer-level limits on the
 provider: those key on an application id that provider API keys do not carry, so all agents would share one
@@ -249,8 +249,8 @@ changes: OpenRouter is added next to it, and one command switches the agents bet
 
 ```bash
 # secrets.toml: openrouterApiKey = "sk-or-v1-…"
-./scripts/amp-openrouter.sh            # provider + PHI guardrail, per-agent "openrouter" model configs, budgets, prices
-./scripts/amp-models.sh openrouter     # point the agents at them (back: ./scripts/amp-models.sh claude)
+./scripts/utils/amp-openrouter.sh            # provider + PHI guardrail, per-agent "openrouter" model configs, budgets, prices
+./scripts/utils/amp-models.sh openrouter     # point the agents at them (back: ./scripts/utils/amp-models.sh claude)
 ```
 
 - **Provider `openrouter`:** OpenAI template, upstream `https://openrouter.ai/api/v1`; holds the OpenRouter key and
@@ -280,9 +280,9 @@ Getting OpenRouter through Agent Manager 1.0.0 needed three workarounds:
 DeepSeek sometimes answers a structured-output request in plain text instead of the tool call the Ballerina
 provider asks for ("did not return a tool call"). The workflow's agent retries absorb it.
 
-**Other models.** `./scripts/amp-models.sh openrouter --model <id>` switches to any OpenRouter model (its price is
+**Other models.** `./scripts/utils/amp-models.sh openrouter --model <id>` switches to any OpenRouter model (its price is
 added to the gateway first). One assessment each (Sofia Alvarez, same question, all tools), judged by GPT-6 Luna
-(`./scripts/amp-scores.sh deepseek-v4-1-flash glm-5-3 claude-haiku-5-5`):
+(`./scripts/utils/amp-scores.sh deepseek-v4-1-flash glm-5-3 claude-haiku-5-5`):
 
 | | DeepSeek V4.1 Flash | GLM 5.3 | Claude Haiku 5.5 |
 |---|---|---|---|
@@ -353,7 +353,7 @@ profile's provider and points every monitor at it (`--judge claude` overrides it
   cap (`maxTokens: 8192`; the default 1024 ran out on large traces). A review of one full assessment's traces cost
   about $0.05.
 - **Reviews per model:** `--since <time> --until <time> --label <name>` reviews one window as `<agent>-review-<name>`,
-  kept beside other labelled reviews; `./scripts/amp-scores.sh <name>…` prints them side by side. A new review's
+  kept beside other labelled reviews; `./scripts/utils/amp-scores.sh <name>…` prints them side by side. A new review's
   first run can miss its judge proxy (401, judges skipped; `ISSUES_TO_REPORT.md` D17): `--rerun <name>` repeats it.
 - **`claude`:** Claude Sonnet 4.6 through `claude-judge`, which needs the workarounds below.
 
@@ -411,18 +411,18 @@ are available. An LLM-judge evaluator is a prompt template with `{trace.output}`
 1. **Identity** (console → project → agents): three AgentIDs and their roles — `ehr-reader` on the Copilot
    and Results Analysis, `lab-reader` on Results Analysis only, no EHR or lab access for Care Plan.
 2. **FHIR de-identification** (console → MCP proxies → fhir-ehr → policies: `mcp-fhir-deidentify`). For
-   proof, `./scripts/amp-setup.sh --no-fhir-policy` and back.
+   proof, `./scripts/utils/amp-setup.sh --no-fhir-policy` and back.
 3. **Run an assessment** (portal home → Physician workspace → Sofia Alvarez → order labs; release results from
    the lab console). The Results Analysis agent reads the EHR through the FHIR MCP proxy and cites PubMed.
-4. **Govern the spend** (console → agent → model configuration). `./scripts/amp-budgets.sh --exhaust care-planner`,
+4. **Govern the spend** (console → agent → model configuration). `./scripts/utils/amp-budgets.sh --exhaust care-planner`,
    release the lab results: the Care Plan step retries, then the assessment pauses with "Daily AI budget
-   reached" and **Retry / Stop**. `./scripts/amp-budgets.sh` to restore, press **Retry**: the workflow completes.
+   reached" and **Retry / Stop**. `./scripts/utils/amp-budgets.sh` to restore, press **Retry**: the workflow completes.
 5. **Traces** (console → Diagnostic Copilot → Traces): the run with its LLM calls, `search`/`read` and
    `search_pubmed` tool calls, tokens and duration.
-6. **Guardrail:** `./scripts/amp-guardrails.sh --verify` — the model can only repeat `*****` for the MRN, SSN and
+6. **Guardrail:** `./scripts/utils/amp-guardrails.sh --verify` — the model can only repeat `*****` for the MRN, SSN and
    phone number it was sent.
 7. **Evaluation** (console → agent → Monitors): scores per evaluator over time. Open a trace to see its
-   per-evaluator scores and explanations. `./scripts/amp-scores.sh` prints the same in the terminal.
+   per-evaluator scores and explanations. `./scripts/utils/amp-scores.sh` prints the same in the terminal.
 
 ## Notes for a real deployment
 

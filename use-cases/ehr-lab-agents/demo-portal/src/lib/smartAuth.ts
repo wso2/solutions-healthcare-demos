@@ -8,7 +8,7 @@
 //   4. exchanges the code for a token at the APIM token endpoint, and
 //   5. calls the patient-app API on the APIM gateway with "Authorization: Bearer <token>".
 //
-// "mode" switches the patient app (scripts/patient-app-mode.sh): "smart" signs in as above; "normal" (the default,
+// "mode" switches the patient app (scripts/utils/patient-app-mode.sh): "smart" signs in as above; "normal" (the default,
 // and the fallback when the file is missing or SMART settings are incomplete) calls the integration directly.
 
 export type PatientAppMode = 'smart' | 'normal'
@@ -27,7 +27,7 @@ export interface PatientAuthConfig {
   /** Defaults to {origin}/patient/callback; it must match the callback URL registered on the APIM application. */
   redirectUri?: string
   /**
-   * Demo only: the patient users scripts/apim-setup.sh registered in APIM, shown on the sign-in screen so the
+   * Demo only: the patient users scripts/utils/apim-setup.sh registered in APIM, shown on the sign-in screen so the
    * presenter knows what to type on the APIM login page. Nothing here is sent anywhere by the app.
    */
   demoUsers?: DemoUser[]
@@ -83,7 +83,7 @@ export function loadAuthConfig(): Promise<PatientAuthConfig> {
       const mode: PatientAppMode = raw.mode === 'smart' || (!raw.mode && raw.enabled === true) ? 'smart' : 'normal'
       const c = { ...DISABLED, ...raw, mode }
       const enabled = mode === 'smart' && !!c.clientId && !!c.iss && !c.clientId.startsWith('<')
-      if (mode === 'smart' && !enabled) console.warn('patient-auth.json: SMART mode needs iss and clientId (scripts/apim-setup.sh); using normal mode')
+      if (mode === 'smart' && !enabled) console.warn('patient-auth.json: SMART mode needs iss and clientId (scripts/utils/apim-setup.sh); using normal mode')
       return { ...c, enabled, iss: trimSlash(c.iss), apiBase: trimSlash(c.apiBase || '/api') }
     })
   return configPromise

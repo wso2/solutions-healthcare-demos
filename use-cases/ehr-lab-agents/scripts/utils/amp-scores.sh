@@ -3,10 +3,10 @@
 # one row per agent and evaluator, each the mean score over that review's traces (0–1; "skip" when every
 # trace was skipped). Use it to compare models on the same assessment.
 #
-#   ./scripts/amp-scores.sh deepseek-v4-1-flash glm-5-3     # the labelled reviews to compare
-#   ./scripts/amp-scores.sh                                  # the continuous monitors, last 24 h
+#   ./scripts/utils/amp-scores.sh deepseek-v4-1-flash glm-5-3     # the labelled reviews to compare
+#   ./scripts/utils/amp-scores.sh                                  # the continuous monitors, last 24 h
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 API="${AMP_API:-http://api.amp.localhost:8080/api/v1}"
 THUNDER="${AMP_THUNDER:-http://thunder.amp.localhost:8080}"

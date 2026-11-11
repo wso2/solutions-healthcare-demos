@@ -3,14 +3,14 @@
 # patient app signs in with SMART on FHIR (standalone launch, public client, PKCE). APIM runs on the Mac with
 # its default ports (9443 console/key manager, 8243 gateway); it needs port 5672 free for its message broker.
 #
-#   ./scripts/apim-setup.sh            # install (once), start, configure — leaves the patient app in SMART mode
-#   ./scripts/apim-setup.sh install    # unzip APIM into .apim/, apply the accelerator, add CORS for the portal
-#   ./scripts/apim-setup.sh start      # start APIM in the background and wait for it (log: .apim/apim.log)
-#   ./scripts/apim-setup.sh configure  # API, patient users, application; writes config/patient-auth.json, mode smart
-#   ./scripts/apim-setup.sh stop
-#   ./scripts/apim-setup.sh status
+#   ./scripts/utils/apim-setup.sh            # install (once), start, configure — leaves the patient app in SMART mode
+#   ./scripts/utils/apim-setup.sh install    # unzip APIM into .apim/, apply the accelerator, add CORS for the portal
+#   ./scripts/utils/apim-setup.sh start      # start APIM in the background and wait for it (log: .apim/apim.log)
+#   ./scripts/utils/apim-setup.sh configure  # API, patient users, application; writes config/patient-auth.json, mode smart
+#   ./scripts/utils/apim-setup.sh stop
+#   ./scripts/utils/apim-setup.sh status
 #
-# Switch the patient app between SMART and normal mode afterwards with ./scripts/patient-app-mode.sh.
+# Switch the patient app between SMART and normal mode afterwards with ./scripts/utils/patient-app-mode.sh.
 #
 # What `configure` sets up (idempotent):
 #   - API "HealthspanPatientApp" /patient-app/1.0.0 → the integration's http://localhost:9090/api, with the two GET
@@ -24,7 +24,7 @@
 # Environment: APIM_ZIP (default ~/wso2/products/wso2am-4.3.0.zip), INTEGRATION_URL (default http://localhost:9090/api),
 # PORTAL_ORIGIN (default http://localhost:5173), PATIENT_PASSWORD (default Patient@123).
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 APIM_ZIP=${APIM_ZIP:-$HOME/wso2/products/wso2am-4.3.0.zip}
 HCAM_VERSION=2.0.0
@@ -95,7 +95,7 @@ install() {
   # covers the well-known endpoint and the API.
   cat >> "$TOML" <<EOF
 
-# Added by scripts/apim-setup.sh: the patient app (a browser SPA) calls /oauth2/token and /oauth2/revoke.
+# Added by scripts/utils/apim-setup.sh: the patient app (a browser SPA) calls /oauth2/token and /oauth2/revoke.
 [[catalina.valves]]
 properties.className = "org.wso2.carbon.identity.cors.valve.CORSValve"
 
@@ -328,7 +328,7 @@ EOF
 }
 
 configure() {
-  running || die "APIM is not running (./scripts/apim-setup.sh start)"
+  running || die "APIM is not running (./scripts/utils/apim-setup.sh start)"
   admin_token
   configure_api
   configure_users
@@ -336,7 +336,7 @@ configure() {
   write_auth_config
   cat <<EOF
 
-  The patient app is in SMART mode (./scripts/patient-app-mode.sh normal switches back). Open $PORTAL_ORIGIN/patient and sign in as one of:
+  The patient app is in SMART mode (./scripts/utils/patient-app-mode.sh normal switches back). Open $PORTAL_ORIGIN/patient and sign in as one of:
 $(for e in "${PATIENTS[@]}"; do IFS='|' read -r u g f p <<<"$e"; printf '    %-7s %-16s Patient/%s\n' "$u" "$g $f" "$p"; done)
   password: $PATIENT_PASSWORD
 
@@ -347,7 +347,7 @@ EOF
 
 status() {
   if running; then log "APIM running: $KM/publisher, $GW/r4/.well-known/smart-configuration"; else log "APIM not running"; fi
-  ./scripts/patient-app-mode.sh status
+  ./scripts/utils/patient-app-mode.sh status
 }
 
 case ${1:-all} in
@@ -355,7 +355,7 @@ case ${1:-all} in
   start) start ;;
   stop) stop ;;
   configure) configure ;;
-  off) ./scripts/patient-app-mode.sh normal ;;   # older spelling
+  off) ./scripts/utils/patient-app-mode.sh normal ;;   # older spelling
   status) status ;;
   all) install; start; configure ;;
   -h|--help) sed -n '2,25p' "$0" ;;

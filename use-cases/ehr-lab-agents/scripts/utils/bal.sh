@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Runs the Ballerina CLI from the pinned Docker image, for machines without a local Ballerina 2201.14.1.
 # With a local install, use `bal` directly.
-#   ./scripts/bal.sh build                      # from inside a package directory
-#   ./scripts/bal.sh test
+#   ./scripts/utils/bal.sh build                      # from inside a package directory
+#   ./scripts/utils/bal.sh test
 # Dependencies are cached in the `ehr-lab-agents-bal-cache` volume between runs.
 set -euo pipefail
 
 BAL_IMAGE="${BAL_IMAGE:-ballerina/ballerina:2201.14.1}"
-ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 REL="${PWD#"$ROOT"}"
 
 # A fresh named volume is root-owned; the image runs as `ballerina` (uid 100). Fix it once.

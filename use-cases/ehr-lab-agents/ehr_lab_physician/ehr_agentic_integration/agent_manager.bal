@@ -10,7 +10,7 @@
 //               distribution's ballerina/otel) and shows under that agent in AMP's console;
 //               infra/trace-router adds the agent's tracing key per trace.
 //
-// scripts/amp-setup.sh registers the agents and writes their credentials into secrets.toml. Without
+// scripts/utils/amp-setup.sh registers the agents and writes their credentials into secrets.toml. Without
 // it the agents call Anthropic and the FHIR MCP servers directly, as before.
 //
 // Tracing uses ballerina/otel rather than ballerinax/amp: the router supplies the per-agent key that
@@ -41,7 +41,7 @@ type ManagedAgentConfig record {|
     string[] roles = [];
 |};
 
-# Agent Manager settings, written by scripts/amp-setup.sh.
+# Agent Manager settings, written by scripts/utils/amp-setup.sh.
 #
 # + enabled - route the agents through Agent Manager
 # + consoleUrl - Agent Manager's console, linked from the portal
@@ -69,7 +69,7 @@ type AgentManagerConfig record {|
     ManagedAgentConfig carePlanner = {};
 |};
 
-# Agent Manager integration; off until scripts/amp-setup.sh has registered the agents.
+# Agent Manager integration; off until scripts/utils/amp-setup.sh has registered the agents.
 configurable AgentManagerConfig agentManager = {};
 
 # The three agents, by the key used in the API and the portal.

@@ -1,6 +1,6 @@
 # EHR + Lab agentic integration demo.
 #
-#   ./scripts/reset.sh              # build, start and seed everything (clean slate)
+#   ./scripts/utils/reset.sh              # build, start and seed everything (clean slate)
 #
 # Host ports
 #   5433  Postgres (5432 is often taken by a local install)
@@ -14,7 +14,7 @@
 #   8014  Judge adapter (Agent Manager's evaluation judge → Claude; see infra/judge-adapter)
 #
 # WSO2 Agent Manager runs next to this stack as the k3d cluster `amp-local` in the same colima VM
-# (scripts/amp-install.sh); its gateway and identity provider are reached by hostname through the VM.
+# (scripts/utils/amp-install.sh); its gateway and identity provider are reached by hostname through the VM.
 
 name: ehr-lab-agents
 
@@ -273,7 +273,7 @@ services:
       - ./infra/mcp-gatekeeper/default.conf.template:/etc/nginx/templates/default.conf.template:ro
     # Never serve without a key: an empty key would let requests without the header through.
     entrypoint: ["/bin/sh", "-c"]
-    command: ['[ $${#MCP_TUNNEL_KEY} -ge 32 ] || { echo "MCP_TUNNEL_KEY missing — run scripts/amp-setup.sh" >&2; exit 1; }; exec /docker-entrypoint.sh nginx -g "daemon off;"']
+    command: ['[ $${#MCP_TUNNEL_KEY} -ge 32 ] || { echo "MCP_TUNNEL_KEY missing — run scripts/utils/amp-setup.sh" >&2; exit 1; }; exec /docker-entrypoint.sh nginx -g "daemon off;"']
 
   mcp-tunnel:
     image: cloudflare/cloudflared:2026.9.3
@@ -283,7 +283,7 @@ services:
       - mcp-gatekeeper
     command: ["tunnel", "--no-autoupdate", "--url", "http://mcp-gatekeeper:8080"]
 
-  # In front of Agent Manager's AI gateway for the agents on OpenRouter (scripts/amp-models.sh openrouter):
+  # In front of Agent Manager's AI gateway for the agents on OpenRouter (scripts/utils/amp-models.sh openrouter):
   # moves the OpenRouter client's "Authorization: Bearer <agent key>" to x-api-key, where the gateway checks
   # each agent's key, and drops JSON null fields that Mistral's API rejects (infra/llm-auth-adapter).
   llm-auth-adapter:
@@ -296,7 +296,7 @@ services:
   # ── Demo portal (React) ─────────────────────────────────────────────────────
   # Physician workspace, patient app and lab console. nginx proxies /api and /lab-api.
   # The patient app's SMART on FHIR sign-in (APIM in front of its API) is read at runtime from
-  # config/patient-auth.json: "mode" normal or smart (scripts/patient-app-mode.sh), read on every page load.
+  # config/patient-auth.json: "mode" normal or smart (scripts/utils/patient-app-mode.sh), read on every page load.
   portal:
     build:
       context: ./demo-portal

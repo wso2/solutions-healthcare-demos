@@ -9,12 +9,12 @@
 #                                catalogue, so budgets and spend work for them too
 #
 # The judge's provider (openrouter-judge) is made by amp-evaluations.sh (amp/monitors.json → "judge").
-# Switch the agents with ./scripts/amp-models.sh openrouter, and back with ./scripts/amp-models.sh claude.
+# Switch the agents with ./scripts/utils/amp-models.sh openrouter, and back with ./scripts/utils/amp-models.sh claude.
 #
-#   ./scripts/amp-openrouter.sh                 # after amp-setup.sh; idempotent. Needs openrouterApiKey in secrets.toml.
-#   ./scripts/amp-openrouter.sh --prices-only   # only add the models' prices (amp-models.sh --model uses this)
+#   ./scripts/utils/amp-openrouter.sh                 # after amp-setup.sh; idempotent. Needs openrouterApiKey in secrets.toml.
+#   ./scripts/utils/amp-openrouter.sh --prices-only   # only add the models' prices (amp-models.sh --model uses this)
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 API="${AMP_API:-http://api.amp.localhost:8080/api/v1}"
 THUNDER="${AMP_THUNDER:-http://thunder.amp.localhost:8080}"
@@ -146,7 +146,7 @@ done
 log "LLM provider $PROVIDER $verb and deployed ($AGENT_MODEL)"
 
 # ── The PHI guardrail, as on the anthropic provider ──
-./scripts/amp-guardrails.sh --provider "$PROVIDER"
+./scripts/utils/amp-guardrails.sh --provider "$PROVIDER"
 
 # ── Per-agent model configurations ──
 for i in 0 1 2; do
@@ -165,11 +165,11 @@ for i in 0 1 2; do
 done
 
 # ── Budgets (and the proxies' key header) on the new model configurations ──
-./scripts/amp-budgets.sh --config openrouter
+./scripts/utils/amp-budgets.sh --config openrouter
 
 cat <<EOF
 
 OpenRouter is set up in Agent Manager next to Anthropic. Nothing changed for the agents yet:
-  switch them        ./scripts/amp-models.sh openrouter     (back: ./scripts/amp-models.sh claude)
-  judge evaluations  ./scripts/amp-evaluations.sh            (amp/monitors.json → "judge": "openrouter")
+  switch them        ./scripts/utils/amp-models.sh openrouter     (back: ./scripts/utils/amp-models.sh claude)
+  judge evaluations  ./scripts/utils/amp-evaluations.sh            (amp/monitors.json → "judge": "openrouter")
 EOF

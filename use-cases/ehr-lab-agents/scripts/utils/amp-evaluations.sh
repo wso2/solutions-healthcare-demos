@@ -8,23 +8,23 @@
 #                       named in amp/monitors.json ("judge"): GPT-6 Luna through the `openrouter-judge`
 #                       provider, or Claude through `claude-judge` (each created here, see below)
 #
-#   ./scripts/amp-evaluations.sh                 # after amp-setup.sh; idempotent (updates in place)
-#   ./scripts/amp-evaluations.sh --backfill 24   # also review the last 24 hours of traces right away
-#   ./scripts/amp-evaluations.sh --judge claude  # use another judge profile than amp/monitors.json's
-#   ./scripts/amp-evaluations.sh --since 2026-10-19T05:10:00Z --label glm-5-3
+#   ./scripts/utils/amp-evaluations.sh                 # after amp-setup.sh; idempotent (updates in place)
+#   ./scripts/utils/amp-evaluations.sh --backfill 24   # also review the last 24 hours of traces right away
+#   ./scripts/utils/amp-evaluations.sh --judge claude  # use another judge profile than amp/monitors.json's
+#   ./scripts/utils/amp-evaluations.sh --since 2026-10-19T05:10:00Z --label glm-5-3
 #                                                # review the traces since then, as <agent>-review-glm-5-3 (kept
 #                                                # beside other labelled reviews, e.g. to compare models;
 #                                                # --until closes the window)
-#   ./scripts/amp-evaluations.sh --rerun glm-5-3 # run the labelled reviews again, in place. A new review gets its
+#   ./scripts/utils/amp-evaluations.sh --rerun glm-5-3 # run the labelled reviews again, in place. A new review gets its
 #                                                # own judge proxy and key, and its first run can start before the
 #                                                # gateway accepts them (judges skipped: 401, ISSUES_TO_REPORT.md
 #                                                # D17); a re-run uses the proxy once it is live.
-#   ./scripts/amp-evaluations.sh --update-judge  # re-save an existing judge provider (new key or upstream);
+#   ./scripts/utils/amp-evaluations.sh --update-judge  # re-save an existing judge provider (new key or upstream);
 #                                                # do it when no review is running
 #
 # Scores show in the console: agent → Monitors, and a Score column on each trace.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 API="${AMP_API:-http://api.amp.localhost:8080/api/v1}"
 THUNDER="${AMP_THUNDER:-http://thunder.amp.localhost:8080}"

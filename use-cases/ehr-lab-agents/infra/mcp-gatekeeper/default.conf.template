@@ -3,7 +3,7 @@
 # WSO2 Agent Manager only proxies MCP upstreams with a public address, so its gateway reaches the
 # local FHIR MCP servers through a Cloudflare quick tunnel. The tunnel URL is public; this gatekeeper
 # makes it useless to anyone but Agent Manager's MCP proxy, which sends X-Tunnel-Key (written by
-# scripts/amp-setup.sh into the proxy's upstream auth). Per-agent, per-tool authorization happens in
+# scripts/utils/amp-setup.sh into the proxy's upstream auth). Per-agent, per-tool authorization happens in
 # Agent Manager, before a request ever reaches the tunnel.
 #
 #   /ehr/mcp/     →  fhir-mcp-ehr:8000/mcp/

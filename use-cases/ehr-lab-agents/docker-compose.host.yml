@@ -1,5 +1,5 @@
 # Host mode: the integration and the lab simulator run on the Mac (WSO2 Integrator or `bal run`), and
-# everything else stays in containers. Switch with ./scripts/host-mode.sh on|off — it writes the packages'
+# everything else stays in containers. Switch with ./scripts/utils/host-mode.sh on|off — it writes the packages'
 # Config.toml files and sets COMPOSE_FILE in .env, so every `docker compose` command (and the scripts that
 # run one) uses this override while host mode is on.
 #

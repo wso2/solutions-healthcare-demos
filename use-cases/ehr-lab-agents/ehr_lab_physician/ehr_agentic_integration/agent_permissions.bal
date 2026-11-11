@@ -117,7 +117,7 @@ isolated function accessMatrix() returns AccessMatrix {
         foreach Permission permission in PERMISSIONS {
             if !enabled || agent.config.clientId == "" {
                 cells.push({permission: permission.key, granted: false,
-                    detail: agent.config.clientId == "" ? "no AgentID" : "no MCP proxies yet (run scripts/amp-setup.sh)"});
+                    detail: agent.config.clientId == "" ? "no AgentID" : "no MCP proxies yet (run scripts/utils/amp-setup.sh)"});
                 continue;
             }
             AgentToken token = agentToken(agent.config, permission);
@@ -161,7 +161,7 @@ isolated function probeAccess(string agentKey, string permissionKey) returns Pro
         return error(string `"${permission.label}" is never probed: it would change a system of record`);
     }
     if !usesMcpProxy(agent.config) || proxyUrl is () {
-        return error("Agent Manager MCP proxies are not configured (run scripts/amp-setup.sh)");
+        return error("Agent Manager MCP proxies are not configured (run scripts/utils/amp-setup.sh)");
     }
     time:Utc started = time:utcNow();
     AgentToken token = agentToken(agent.config, permission);
@@ -266,7 +266,7 @@ isolated function deidentifySample(string ehr, string patientId) returns Deident
     Permission[] permissions = PERMISSIONS.filter(p => p.key == "ehr-read-" + ehr);
     string? proxyUrl = agentManager.mcpProxyUrls[ehr];
     if copilots.length() == 0 || permissions.length() == 0 || proxyUrl is () || !usesMcpProxy(copilots[0].config) {
-        return error("Agent Manager MCP proxies are not configured (run scripts/amp-setup.sh)");
+        return error("Agent Manager MCP proxies are not configured (run scripts/utils/amp-setup.sh)");
     }
     fhir:FHIRResponse direct = check (check ehrClient(ehr))->getById("Patient", patientId);
     time:Utc started = time:utcNow();

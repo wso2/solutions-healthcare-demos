@@ -2,7 +2,7 @@
 # Starts (or creates) the colima VM that runs the whole demo: the docker-compose stack and the
 # Agent Manager k3d cluster. Sized for both; AMP's docs recommend vz + rosetta + a network address.
 #
-#   ./scripts/colima-up.sh
+#   ./scripts/utils/colima-up.sh
 #
 # Override with COLIMA_PROFILE / COLIMA_CPU / COLIMA_MEMORY. Resizing an existing VM can break the
 # k3d cluster inside it, so the size only applies when the profile is first created.

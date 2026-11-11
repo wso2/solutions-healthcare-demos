@@ -3,7 +3,7 @@ import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // The patient app's mode and SMART on FHIR settings: ../config/patient-auth.json, read on each request so
-// scripts/patient-app-mode.sh takes effect on the next page load. The container's nginx serves the same file
+// scripts/utils/patient-app-mode.sh takes effect on the next page load. The container's nginx serves the same file
 // (docker-compose.yml mounts it). Missing file → 404 → the app runs in normal mode.
 const patientAuthConfig = (): Plugin => ({
   name: 'patient-auth-config',

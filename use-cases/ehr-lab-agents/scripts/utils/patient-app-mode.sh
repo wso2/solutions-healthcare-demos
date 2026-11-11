@@ -2,14 +2,14 @@
 # Switches the patient app between its two modes. The switch is "mode" in config/patient-auth.json, which the
 # portal reads on every page load (nginx in the container, Vite with npm run dev): no rebuild or restart.
 #
-#   ./scripts/patient-app-mode.sh smart    # SMART on FHIR sign-in; the API through the WSO2 API Manager gateway
-#   ./scripts/patient-app-mode.sh normal   # no sign-in; the app calls the integration directly (the default)
-#   ./scripts/patient-app-mode.sh status
+#   ./scripts/utils/patient-app-mode.sh smart    # SMART on FHIR sign-in; the API through the WSO2 API Manager gateway
+#   ./scripts/utils/patient-app-mode.sh normal   # no sign-in; the app calls the integration directly (the default)
+#   ./scripts/utils/patient-app-mode.sh status
 #
-# SMART mode needs the APIM settings that scripts/apim-setup.sh writes into the same file (issuer, gateway,
+# SMART mode needs the APIM settings that scripts/utils/apim-setup.sh writes into the same file (issuer, gateway,
 # client ID, demo users); switching to normal keeps them, so switching back needs no APIM setup.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 CONFIG=config/patient-auth.json
 EXAMPLE=config/patient-auth.example.json
@@ -48,11 +48,11 @@ IFS=$'\t' read -r mode client iss < <(read_config)
 
 case ${1:-status} in
   smart)
-    [[ -n $client && $client != \<* && -n $iss ]] || die "no APIM settings in $CONFIG yet: run ./scripts/apim-setup.sh first"
+    [[ -n $client && $client != \<* && -n $iss ]] || die "no APIM settings in $CONFIG yet: run ./scripts/utils/apim-setup.sh first"
     set_mode smart
     log "mode: smart — the patient app signs in with SMART on FHIR ($iss)"
     if ! curl -sk -m 3 -o /dev/null "$iss/.well-known/smart-configuration"; then
-      log "warning: APIM does not answer at $iss — start it with ./scripts/apim-setup.sh start"
+      log "warning: APIM does not answer at $iss — start it with ./scripts/utils/apim-setup.sh start"
     fi
     log "reload the patient app (http://localhost:5173/patient)"
     ;;

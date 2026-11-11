@@ -1,6 +1,6 @@
 # Copy to Config.toml (gitignored) and fill in. All values here are placeholders.
 # Test configuration: the compose stack's Postgres and FHIR servers on their host ports, and an
-# in-memory workflow engine so tests need no Temporal server. (scripts/bal.sh overrides the hosts
+# in-memory workflow engine so tests need no Temporal server. (scripts/utils/bal.sh overrides the hosts
 # when tests run inside the Ballerina container.)
 dbHost = "localhost"
 dbPort = 5433

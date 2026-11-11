@@ -8,24 +8,24 @@
 #                 lab-reader           FHIR read tools, lab         → Results Analysis
 #                 literature-searcher  PubMed search                → all three agents
 #                 ehr-writer           FHIR create/update/delete    → nobody (only workflow activities write)
-#               The FHIR MCP proxies also run mcp-fhir-deidentify (built in by scripts/amp-gateway.sh): names,
+#               The FHIR MCP proxies also run mcp-fhir-deidentify (built in by scripts/utils/amp-gateway.sh): names,
 #               addresses, contact details and identifiers are taken out of tool results before an agent
 #               sees them (rules: amp/fhir-deidentify.json).
 #   AI gateway  an Anthropic provider holds the real Anthropic key; each agent gets its own model
-#               configuration (an LLM proxy with its own key and budget — scripts/amp-budgets.sh); the PHI
-#               guardrail (scripts/amp-guardrails.sh) redacts identifiers before Claude sees them.
+#               configuration (an LLM proxy with its own key and budget — scripts/utils/amp-budgets.sh); the PHI
+#               guardrail (scripts/utils/amp-guardrails.sh) redacts identifiers before Claude sees them.
 #   monitoring  each agent gets a tracing key; infra/trace-router forwards its runs under it.
 #
-#   ./scripts/amp-setup.sh                      # after ./scripts/amp-install.sh
-#   ./scripts/amp-setup.sh --skip-llm-provider  # everything but the AI gateway (keeps Claude direct)
-#   ./scripts/amp-setup.sh --skip-mcp-proxies   # no MCP proxies (agents reach the FHIR MCP servers directly)
-#   ./scripts/amp-setup.sh --no-fhir-policy     # FHIR MCP proxies without mcp-fhir-deidentify (before/after demo)
+#   ./scripts/utils/amp-setup.sh                      # after ./scripts/utils/amp-install.sh
+#   ./scripts/utils/amp-setup.sh --skip-llm-provider  # everything but the AI gateway (keeps Claude direct)
+#   ./scripts/utils/amp-setup.sh --skip-mcp-proxies   # no MCP proxies (agents reach the FHIR MCP servers directly)
+#   ./scripts/utils/amp-setup.sh --no-fhir-policy     # FHIR MCP proxies without mcp-fhir-deidentify (before/after demo)
 #
 # Idempotent: existing objects are kept. Keys and secrets are shown only once by Agent Manager, so each
 # run rotates them and rewrites the generated block in secrets.toml and .amp/trace-routes.json (both
 # gitignored). Nothing secret is printed. Needs curl and jq (both ship with macOS).
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 API="${AMP_API:-http://api.amp.localhost:8080/api/v1}"
 THUNDER="${AMP_THUNDER:-http://thunder.amp.localhost:8080}"
@@ -83,7 +83,7 @@ field() { jq -r "$1 // empty" "$WORK/resp"; }
 fail() { die "$2 failed (HTTP $1): $(head -c 400 "$WORK/resp")"; }
 
 for tool in curl jq docker openssl; do command -v "$tool" >/dev/null 2>&1 || die "$tool is required"; done
-curl -s -o /dev/null "$CONSOLE" || die "Agent Manager is not reachable at $CONSOLE — run ./scripts/amp-install.sh"
+curl -s -o /dev/null "$CONSOLE" || die "Agent Manager is not reachable at $CONSOLE — run ./scripts/utils/amp-install.sh"
 
 # ── Admin token: client credentials of the platform's API client, with the scopes this script uses ──
 SCOPES="amp:environment:read amp:gateway:read amp:project:read amp:project:create
@@ -249,7 +249,7 @@ PROXY_DESCRIPTIONS=(
   "Literature search (NCBI E-utilities) for the agents. Holds no patient data."
 )
 # FHIR de-identification on the two FHIR MCP proxies (EHR and lab) (mcp-fhir-deidentify, config amp/fhir-deidentify.json),
-# when the gateway offers it — it does once ./scripts/amp-gateway.sh has built it into the gateway.
+# when the gateway offers it — it does once ./scripts/utils/amp-gateway.sh has built it into the gateway.
 FHIR_POLICY='[]'
 if [[ ${#MCP_EHRS[@]} -gt 0 ]] && ! ${NO_FHIR_POLICY:-false}; then
   status=$(api GET "/orgs/$ORG/mcp-proxies/policies"); [[ $status == 200 ]] || fail "$status" "listing MCP policies"
@@ -258,7 +258,7 @@ if [[ ${#MCP_EHRS[@]} -gt 0 ]] && ! ${NO_FHIR_POLICY:-false}; then
     FHIR_POLICY=$(jq -c --arg v "$version" '[{name: "mcp-fhir-deidentify", version: $v, params: .}]' amp/fhir-deidentify.json)
     log "FHIR MCP proxies get mcp-fhir-deidentify $version (amp/fhir-deidentify.json)"
   else
-    log "the gateway does not offer mcp-fhir-deidentify — run ./scripts/amp-gateway.sh to add it"
+    log "the gateway does not offer mcp-fhir-deidentify — run ./scripts/utils/amp-gateway.sh to add it"
   fi
 fi
 for j in ${MCP_EHRS[@]+"${MCP_EHRS[@]}"}; do
@@ -394,7 +394,7 @@ fi
 
 # ── Per-agent model configurations (own gateway URL, key and budget) and tracing keys ──
 # Each agent reaches Claude through its own model configuration: an LLM proxy over the anthropic provider
-# that inherits the provider's guardrails and carries the agent's budget (scripts/amp-budgets.sh). Its key
+# that inherits the provider's guardrails and carries the agent's budget (scripts/utils/amp-budgets.sh). Its key
 # identifies the agent at the gateway, so spend and limits are per agent.
 for i in 0 1 2; do
   name="${NAMES[$i]}"
@@ -502,12 +502,12 @@ log "wrote the agentManager block in secrets.toml and .amp/trace-routes.json"
 
 # ── Per-agent budgets on the model configurations (amp/budgets.json) ──
 if [[ -n "$PROVIDER_UUID" ]]; then
-  ./scripts/amp-budgets.sh
+  ./scripts/utils/amp-budgets.sh
 fi
 # The block above holds the agents' Claude keys; when the agents run on OpenRouter (amp-models.sh), point
 # them back at their OpenRouter model configurations.
 if grep -q '^modelProvider *= *"openrouter"' config/integration.toml; then
-  ./scripts/amp-models.sh openrouter --no-restart
+  ./scripts/utils/amp-models.sh openrouter --no-restart
 fi
 
 # ── Apply: the integration reads its config at start; the router re-reads routes on every flush ──
@@ -524,6 +524,6 @@ Agent Manager is governing the agents.
   Agents         ${NAMES[*]}
   AI gateway     $([[ -n "$PROVIDER_UUID" ]] && echo "provider 'anthropic'; each agent has its own model configuration, key and budget (amp/budgets.json)" || echo "not set up — agents call Claude directly")
   MCP proxies    $($SKIP_MCP && echo "not set up — agents reach the MCP servers directly" || echo "$VHOST/{fhir-ehr,fhir-lab,pubmed}/mcp (AgentID; roles ehr-reader, lab-reader, literature-searcher, ehr-writer)")
-  FHIR policy    $([[ "$FHIR_POLICY" != '[]' ]] && echo "mcp-fhir-deidentify on fhir-ehr and fhir-lab (amp/fhir-deidentify.json)" || echo "not attached (./scripts/amp-gateway.sh adds it to the gateway)")
+  FHIR policy    $([[ "$FHIR_POLICY" != '[]' ]] && echo "mcp-fhir-deidentify on fhir-ehr and fhir-lab (amp/fhir-deidentify.json)" || echo "not attached (./scripts/utils/amp-gateway.sh adds it to the gateway)")
   Traces         $CONSOLE/org/$ORG/project/$PROJECT/agents/<agent>/environment/$ENV/observability/traces
 EOF

@@ -55,7 +55,7 @@ isolated function checkModelConfigured() returns error? {
     foreach ManagedAgent agent in managedAgents {
         if !usesLlmGateway(agent.config) && key.trim().length() == 0 {
             return error(string `${agent.role} has no model key: add ${setting} to secrets.toml `
-                + "(see secrets.example.toml), or register the agents with scripts/amp-setup.sh.");
+                + "(see secrets.example.toml), or register the agents with scripts/utils/amp-setup.sh.");
         }
     }
 }

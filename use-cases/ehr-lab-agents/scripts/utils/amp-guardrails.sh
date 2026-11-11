@@ -4,10 +4,10 @@
 # results as well as the latest message. Claude never sees them, so it cannot repeat them either. Agents
 # address the EHR by FHIR resource id (Patient/p-…), which is not PHI and is left alone.
 #
-#   ./scripts/amp-guardrails.sh            # apply (idempotent; after amp-setup.sh)
-#   ./scripts/amp-guardrails.sh --verify   # also show what the model saw, through the Copilot's gateway key
-#   ./scripts/amp-guardrails.sh --remove   # take the guardrail off again (for a before/after demo)
-#   ./scripts/amp-guardrails.sh --provider openrouter   # the same on the OpenRouter provider (amp-openrouter.sh)
+#   ./scripts/utils/amp-guardrails.sh            # apply (idempotent; after amp-setup.sh)
+#   ./scripts/utils/amp-guardrails.sh --verify   # also show what the model saw, through the Copilot's gateway key
+#   ./scripts/utils/amp-guardrails.sh --remove   # take the guardrail off again (for a before/after demo)
+#   ./scripts/utils/amp-guardrails.sh --provider openrouter   # the same on the OpenRouter provider (amp-openrouter.sh)
 #
 # Redacted: medical record numbers (MRN-…, ATH-…), SSNs, US phone numbers — structured identifiers a regex
 # finds reliably. Not emails: the policy matches on the raw JSON text, and the email pattern can start
@@ -17,7 +17,7 @@
 # Why redact rather than mask-and-restore: restoring depends on the model copying a placeholder exactly,
 # and Claude sometimes reformats it ("MRN_0001" without brackets), so the "restored" value is wrong.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 API="${AMP_API:-http://api.amp.localhost:8080/api/v1}"
 THUNDER="${AMP_THUNDER:-http://thunder.amp.localhost:8080}"
@@ -69,7 +69,7 @@ jq -n --arg name "$POLICY" --arg version "$VERSION" '{name: $name, version: $ver
 # PUT replaces the whole provider, so start from the stored one. `upstream` is left out to keep the stored
 # Anthropic key; `gateways` must be present for the change to reach the gateway.
 curl -sS "${auth[@]}" "$API/orgs/$ORG/llm-providers/$PROVIDER" -o "$WORK/provider"
-jq -e .uuid "$WORK/provider" >/dev/null || die "LLM provider $PROVIDER not found — run ./scripts/amp-setup.sh"
+jq -e .uuid "$WORK/provider" >/dev/null || die "LLM provider $PROVIDER not found — run ./scripts/utils/amp-setup.sh"
 UUID=$(jq -r .uuid "$WORK/provider")   # reads take the handle, updates only the UUID
 GATEWAY=$(curl -sS "${auth[@]}" "$API/orgs/$ORG/llm-providers/$UUID/deployments" \
   | jq -r '[.[]? | select(.status == "DEPLOYED")][0].gatewayId // empty')
@@ -94,7 +94,7 @@ if $VERIFY; then
   KEY=$(awk '/^\[wso2healthcare.ehr_agentic_integration.agentManager.copilot\]/{f=1;next} /^\[/{f=0} f && /^llmApiKey/{gsub(/.*= *"|"$/,"");print;exit}' secrets.toml)
   # The Copilot's own model configuration (its LLM proxy inherits the provider's guardrail).
   URL=$(awk '/^\[wso2healthcare.ehr_agentic_integration.agentManager.copilot\]/{f=1;next} /^\[/{f=0} f && /^llmGatewayUrl/{gsub(/.*= *"|"$/,"");print;exit}' secrets.toml)
-  [[ -n "$KEY" && -n "$URL" ]] || die "no gateway key in secrets.toml — run ./scripts/amp-setup.sh"
+  [[ -n "$KEY" && -n "$URL" ]] || die "no gateway key in secrets.toml — run ./scripts/utils/amp-setup.sh"
   ASK="Patient record number MRN-100234, SSN 123-45-6789, phone 617-555-0142. Repeat the record number, the SSN and the phone number exactly as you received them, one per line, nothing else."
   # The agents' active model (config/integration.toml): Claude speaks the Messages API, OpenRouter the OpenAI one.
   if grep -q '^modelProvider *= *"openrouter"' config/integration.toml; then

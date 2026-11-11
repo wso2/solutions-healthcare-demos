@@ -2,14 +2,14 @@
 # Saves the demo's current state as a snapshot that seed/restore-snapshot.sh (and scripts/up.sh)
 # can bring back: every FHIR store, the integration's database and Temporal's history.
 #
-#   ./scripts/snapshot.sh                 # overwrite seed/snapshot/ (the committed seed)
-#   ./scripts/snapshot.sh <dir>           # save somewhere else
+#   ./scripts/utils/snapshot.sh                 # overwrite seed/snapshot/ (the committed seed)
+#   ./scripts/utils/snapshot.sh <dir>           # save somewhere else
 #
 # Writers are stopped for the dump so the stores agree with each other (an assessment in the
 # integration's database matches its workflow in Temporal and its orders in the FHIR servers),
 # then started again. Dumps are checked for API keys before they are kept.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 OUT="${1:-seed/snapshot}"
 DATABASES=(fhir_ehr fhir_lab longevity temporal temporal_visibility)

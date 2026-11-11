@@ -4,8 +4,11 @@
 #   ./scripts/up.sh                  # start; on first run, load the saved demo state (seed/snapshot)
 #   ./scripts/up.sh --restore        # throw away the current data and load seed/snapshot again
 #   ./scripts/up.sh --clean          # throw away the current data and load only the seed patients
-#   ./scripts/up.sh --with-amp       # also install WSO2 Agent Manager, register the agents, add the PHI
+#   ./scripts/up.sh --with-amp       # also install WSO2 Agent Manager, build its gateway with the FHIR
+#                                    # de-identification policy, register the agents, add the PHI
 #                                    # guardrail and the evaluation monitors
+#
+# Everything else (Agent Manager tweaks, SMART on FHIR, host mode, snapshots) is in scripts/utils/.
 #
 # First run needs: colima, docker, docker-compose (brew install colima docker docker-compose), and
 # an Anthropic key in secrets.toml (copied from secrets.example.toml). --with-amp needs nothing more
@@ -20,7 +23,7 @@ for arg in "$@"; do
     --restore) MODE=restore ;;
     --clean) MODE=clean ;;
     --with-amp) WITH_AMP=true ;;
-    -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
     *) echo "unknown option: $arg (see --help)" >&2; exit 1 ;;
   esac
 done
@@ -39,7 +42,7 @@ fi
 # The patient app's mode (normal | smart) and SMART settings; the portal container mounts this file.
 [[ -f config/patient-auth.json ]] || cp config/patient-auth.example.json config/patient-auth.json
 
-./scripts/colima-up.sh
+./scripts/utils/colima-up.sh
 mkdir -p .amp   # Agent Manager credentials land here (amp-setup.sh); the trace router mounts it
 
 echo "Building images..."
@@ -54,7 +57,7 @@ fi
 
 case "$MODE" in
   clean)
-    ./scripts/reset.sh
+    ./scripts/utils/reset.sh
     ;;
   restore)
     ./seed/restore-snapshot.sh
@@ -79,10 +82,11 @@ echo "Waiting for the integration API..."
 until curl -sf http://localhost:9090/api/health >/dev/null; do sleep 2; done
 
 if $WITH_AMP; then
-  ./scripts/amp-install.sh
-  ./scripts/amp-setup.sh
-  ./scripts/amp-guardrails.sh
-  ./scripts/amp-evaluations.sh
+  ./scripts/utils/amp-install.sh
+  ./scripts/utils/amp-gateway.sh
+  ./scripts/utils/amp-setup.sh
+  ./scripts/utils/amp-guardrails.sh
+  ./scripts/utils/amp-evaluations.sh
 fi
 
 cat <<'EOF'

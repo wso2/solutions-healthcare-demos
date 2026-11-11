@@ -21,11 +21,11 @@ Manager's evaluators read an agent's input and output as text from `traceloop.en
 message list there becomes an empty agent output), so the router moves them there. Without this, evaluators
 see an empty input and output and skip the trace.
 
-Routes are read from ROUTES_FILE (written by scripts/amp-setup.sh) on every flush, so registering the
+Routes are read from ROUTES_FILE (written by scripts/utils/amp-setup.sh) on every flush, so registering the
 agents again takes effect without a restart. With no routes file, everything is dropped.
 
 Usage ledger: every agent run is also recorded in LEDGER_FILE — tokens from its `chat` spans, priced with the
-AI gateway's own price list (PRICES_FILE, exported by scripts/amp-budgets.sh), and the assessment it served
+AI gateway's own price list (PRICES_FILE, exported by scripts/utils/amp-budgets.sh), and the assessment it served
 (from the run's `gen_ai.conversation.id`, "<assessment>:<step>"). GET /usage returns spend per agent against
 the budgets Agent Manager enforces (BUDGETS_FILE) and the latest runs; GET /usage?assessment=<id> returns one
 assessment's runs. Agent Manager's console shows tokens per trace but not cost, hence this view.

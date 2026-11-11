@@ -134,7 +134,7 @@ export interface UsageHour {
   failed: number
 }
 
-// What Agent Manager enforces on the agent's model configuration (scripts/amp-budgets.sh).
+// What Agent Manager enforces on the agent's model configuration (scripts/utils/amp-budgets.sh).
 export interface AgentBudget {
   usdPerDay: number
   tokensPerHour: number

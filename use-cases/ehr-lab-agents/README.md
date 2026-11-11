@@ -57,46 +57,116 @@ flowchart LR
   PG --> UI
 ```
 
-## Run it
+## Prerequisites
 
-Everything runs in one **colima** VM: the demo's containers and the Agent Manager cluster. You need colima,
-docker and docker-compose (`brew install colima docker docker-compose`) and an Anthropic API key.
+- macOS. Everything runs in one **colima** VM: the demo's containers and, optionally, the Agent Manager cluster.
+- `brew install colima docker docker-compose`
+- An **Anthropic API key**
+- Free host ports: 5173, 5433, 7233, 8010–8012, 8014, 8081, 8082, 8233, 8474, 9090, 9093, 4318. With Agent
+  Manager, also 8080 and 8443.
+
+You don't need Ballerina, Node or Java for a normal run. The images build inside the VM.
+
+## Fresh run
 
 ```bash
-cp secrets.example.toml secrets.toml        # then put your anthropicApiKey in it
-./scripts/up.sh                              # creates the VM, builds, starts; first run loads seed/snapshot
-./scripts/amp-install.sh                     # WSO2 Agent Manager 1.0.0 on k3d (~15–20 min, once)
-./scripts/amp-gateway.sh                     # custom gateway with the mcp-fhir-deidentify policy (once)
-./scripts/amp-setup.sh                       # agents, AgentIDs, roles, MCP proxies (tunnel, FHIR policy), model
-                                             # configs + budgets per agent, traces
-./scripts/amp-guardrails.sh --verify         # PHI redaction on the AI gateway, and proof of what Claude sees
-./scripts/amp-evaluations.sh --backfill 24   # custom evaluators + a monitor per agent
+cd use-cases/ehr-lab-agents
+cp secrets.example.toml secrets.toml      # set anthropicApiKey
+./scripts/up.sh                           # add --with-amp to include WSO2 Agent Manager
 ```
 
-`./scripts/up.sh --with-amp` does all of it. How it works and how to demo it: [docs/agent-manager.md](docs/agent-manager.md). Later runs of `up.sh` keep whatever data the demo has.
+`scripts/up.sh` is the only script you need to start the demo. On a fresh clone it:
+
+1. Checks `secrets.toml`. If the file is missing it creates it from the example, then stops so you can add the key.
+2. Creates `config/patient-auth.json` from the example (the patient app starts in `normal` mode, with no sign-in).
+3. Starts or creates the colima VM (profile `agent-manager`, 6 CPU / 10 GB / 120 GB). The size applies only when
+   the VM is first created; override it with `COLIMA_CPU`, `COLIMA_MEMORY` and `COLIMA_DISK`.
+4. Builds the images and starts Postgres.
+5. On the first run, **loads the saved demo state** from `seed/snapshot/`: every FHIR store, the
+   integration's database and Temporal's history, so finished assessments open with their workflow view.
+6. Starts the whole stack and waits for `http://localhost:9090/api/health`.
+7. With `--with-amp`, also installs WSO2 Agent Manager (about 15–20 minutes the first time), builds its
+   gateway with the FHIR de-identification policy, registers the agents, adds the PHI guardrail and sets up the
+   evaluation monitors. See [WSO2 Agent Manager](#wso2-agent-manager).
+
+The first run takes a while: the images are built and the snapshot is restored.
+
+### Check it works
 
 | URL | What |
 |---|---|
-| http://localhost:5173 | Demo portal home: the flow; opens the physician workspace, patient app and lab console in new tabs |
+| http://localhost:5173 | Demo portal home: opens the physician workspace, patient app and lab console in new tabs |
 | http://localhost:8233 | Temporal UI: every assessment as a durable workflow |
-| http://console.amp.localhost:8080 | WSO2 Agent Manager console (admin / admin) → project *Longevity Clinic* |
 | http://localhost:9090/api/system | Integration API |
 | http://localhost:9090/fhir/r4/Patient/{id}/$summary | Integration FHIR API: a patient's IPS (the lab posts its messages to `/fhir/r4/$process-message`) |
 | http://localhost:8081/fhir/r4 · :8082 | EHR and lab FHIR servers |
 | http://localhost:8474/proxies | Toxiproxy (what the outage switches change) |
 | http://localhost:4318 | Trace router: traces forwarded per agent |
-| https://localhost:9443/publisher · /devportal | WSO2 API Manager (admin / admin), only with [SMART mode](#patient-app-smart-on-fhir-through-wso2-api-manager) |
-| https://localhost:8243/r4/.well-known/smart-configuration | SMART configuration on the APIM gateway |
+| http://console.amp.localhost:8080 | WSO2 Agent Manager console (admin / admin) → project *Longevity Clinic*; only with `--with-amp` |
 
-| Script | What |
+For an end-to-end check, run one full assessment through the API. It makes real model calls (three or more):
+
+```bash
+./scripts/utils/smoke-test.sh                      # default: ehr p-sofia-alvarez
+```
+
+To walk through the journey in the portal, follow [docs/demo-script.md](docs/demo-script.md).
+
+### Later runs
+
+```bash
+./scripts/up.sh             # keeps whatever data the demo has
+./scripts/up.sh --restore   # discard the data and load seed/snapshot again
+./scripts/up.sh --clean     # discard the data and load only the seed patients (no assessments)
+```
+
+To stop the stack, run `docker compose down` (the data volumes are kept) and `colima stop -p agent-manager`.
+
+### Troubleshooting
+
+- **"secrets.toml still has the placeholder key"**: put a real `anthropicApiKey` in `secrets.toml`.
+- **"This data is from the two-EHR layout"**: the volumes are from an older version. Run `./scripts/up.sh --restore`.
+- **"docker is not pointed at colima profile 'agent-manager'"** (Agent Manager scripts): run
+  `docker context use colima-agent-manager`.
+- **Changing the VM size after the first run**: don't. Resizing can break the Agent Manager cluster. Delete the
+  profile and start again instead.
+
+## Utility scripts
+
+Everything apart from `up.sh` is in [`scripts/utils/`](scripts/utils/). Run them from the use-case root.
+Each one prints its usage with `--help`.
+
+**Stack and data**
+
+| Script | What it does |
 |---|---|
-| `./scripts/up.sh [--restore\|--clean]` | Start. `--restore` reloads the saved demo state, `--clean` only the seed patients |
-| `./scripts/snapshot.sh` | Save the current state as the seed (`seed/snapshot/`, checked for API keys) |
-| `./scripts/reset.sh` | Clean slate: seed patients only, no assessments |
-| `./scripts/smoke-test.sh [ehr] [patientId]` | One full assessment through the API (default Sofia Alvarez; real model calls) |
-| `./scripts/colima-up.sh` | Start the VM (profile `agent-manager`, 6 CPU / 10 GB, vz + rosetta) |
-| `./scripts/patient-app-mode.sh smart\|normal\|status` | Patient app with SMART on FHIR sign-in through APIM, or without sign-in (default) |
-| `./scripts/apim-setup.sh [install\|start\|configure\|stop\|status]` | WSO2 API Manager 4.3.0 + Healthcare accelerator for SMART mode, on the Mac |
+| `colima-up.sh` | Starts or creates the VM (`up.sh` runs it). Env: `COLIMA_PROFILE`, `COLIMA_CPU`, `COLIMA_MEMORY`, `COLIMA_DISK` |
+| `reset.sh` | Clean slate: drops every volume, restarts, loads only the seed patients (`up.sh --clean` runs it) |
+| `snapshot.sh [dir]` | Saves the current state as the seed (default `seed/snapshot/`). It stops the writers so the stores agree, and checks the dumps for API keys |
+| `smoke-test.sh [ehr] [patientId]` | One full assessment through the API, as the portal does it |
+| `host-mode.sh on\|off\|config\|status` | Runs the two Ballerina services on the Mac. See [Host mode](#run-the-ballerina-services-on-the-mac-host-mode) |
+| `bal.sh <cmd>` | The Ballerina CLI from the pinned Docker image, for machines without Ballerina 2201.14.1 |
+
+**WSO2 Agent Manager** (in the order `up.sh --with-amp` runs them, then the optional ones)
+
+| Script | What it does |
+|---|---|
+| `amp-install.sh` | Installs Agent Manager 1.0.0 as the k3d cluster `amp-local` in the same VM |
+| `amp-gateway.sh [--restore]` | Builds the gateway with the `mcp-fhir-deidentify` policy and switches Agent Manager to it (`--restore`: back to the stock gateway) |
+| `amp-setup.sh` | Registers the agents: AgentIDs, roles, MCP proxies, model configurations, budgets and tracing keys. Writes the credentials into `secrets.toml` and `.amp/`. Flags: `--skip-llm-provider`, `--skip-mcp-proxies`, `--no-fhir-policy` |
+| `amp-guardrails.sh` | PHI redaction on the AI gateway. Flags: `--verify`, `--remove`, `--provider <name>` |
+| `amp-evaluations.sh` | Custom evaluators and a monitor per agent. Flags: `--backfill <hours>`, `--judge`, `--since/--until/--label`, `--rerun`, `--update-judge` |
+| `amp-budgets.sh` | Applies per-agent budgets from `amp/budgets.json`. Flags: `--exhaust <agent>` (demo a refused call), `--off`, `--config` |
+| `amp-openrouter.sh` | Adds an OpenRouter provider and per-agent model configurations. Needs `openrouterApiKey` in `secrets.toml` |
+| `amp-models.sh claude\|openrouter` | Points the agents at one model configuration and restarts the integration. Flags: `--model <id>`, `--no-restart` |
+| `amp-scores.sh [label…]` | Mean evaluation scores per agent and evaluator, one column per labelled review |
+
+**Patient app sign-in** (optional; see [docs/smart-on-fhir.md](docs/smart-on-fhir.md))
+
+| Script | What it does |
+|---|---|
+| `apim-setup.sh [install\|start\|configure\|stop\|status]` | WSO2 API Manager 4.3.0 and the Healthcare accelerator on the Mac. With no argument it installs, starts and configures |
+| `patient-app-mode.sh smart\|normal\|status` | Switches the patient app between SMART on FHIR sign-in and no sign-in, with no rebuild |
 
 ## The journey
 
@@ -110,23 +180,6 @@ cp secrets.example.toml secrets.toml        # then put your anthropicApiKey in i
 | 6 | Lab processes; lab console → **Release results**: the lab sends a FHIR message with the DiagnosticReport and its Observations (fallback poller reads them from the lab's FHIR server) | Lab | ⏸ system event |
 | 7 | Results filed in the EHR → **Results Analysis** → **Care Plan** → draft note in the EHR (preliminary) — unattended | Agents | activities |
 | 8 | Physician reviews and **releases**: note final, visit closed, report published, patient sees it | Physician | ⏸ **human task** (physician) |
-
-## Demo script (about 15 minutes)
-
-1. **Physician → Sofia Alvarez.** The patient summary is built live from the EHR over FHIR (12 searches in parallel, the EHR has no `$summary`); *View IPS bundle* shows the FHIR document. Point at the red allergy banner (aspirin, angioedema) and the first flag: *NSAID in use despite aspirin allergy* — a deterministic rule, because her ibuprofen is a patient-reported medication.
-2. **EHR explorer.** Lab results + medications + notes, last 3 years → the FHIR queries are listed. Read a note ("taking ibuprofen 400 mg two to three times daily").
-3. **Start the assessment and order labs.** The assessment starts (Temporal workflow); review the record beside the order form and pick the tests from the lab catalog (e.g. kidney function, metabolic panel, advanced lipids, liver panel).
-4. **Temporal UI.** The workflow is suspended on a *human task* for the physician.
-5. **Order labs.** Order of record in the EHR, order to Quest, patient notified. The workflow now waits on the **patient** — open the **patient app** (home page → Patient app, in its own tab): "Action needed: visit Quest Diagnostics", fasting instructions, order number. In [SMART mode](#patient-app-smart-on-fhir-through-wso2-api-manager), sign in as `sofia` / `Patient@123` on the APIM login page first, and open the SMART traffic panel to walk through discovery, authorize, token and the API calls.
-6. **Simulate a crash** (lab console → Simulate failures → Crash). The integration restarts in seconds; the workflow is still waiting on the patient.
-7. **Lab console → Collect specimen** → waiting on the **lab**. Optionally turn on *Lab webhook down* (lab console) first: the fallback poller completes the task ~20 s later.
-8. **Release results.** The lab sends its report and observations as a FHIR message; they are filed in the EHR, then both agents run unattended. The analysis — headline, risk counts, then tabs for overview, risk flags, lab results, care plan, chart note and patient report — confirms early CKD with cystatin C, insulin resistance (HOMA-IR) and a metabolic liver pattern.
-9. **Review & release.** The draft note becomes final in the EHR, the visit closes, the patient app shows the report.
-10. **EHR outage** (any assessment, before an EHR write): turn on the *EHR outage* in the lab console, act (e.g. order labs). The step retries; leave it cut and the assessment pauses with **Retry / Stop** — turn the outage off and click **Retry**: it completes. Turn it off within ~45 s instead and the retry succeeds on its own.
-
-11. **Agent Manager** (console only; the portal no longer shows governance). The console: the Copilot's traces (LLM calls, FHIR and PubMed tool calls, tokens), its monitor's scores, the `anthropic` provider with the PHI guardrail. Full script: [docs/agent-manager.md](docs/agent-manager.md#6-a-ten-minute-demo).
-
-Other personas: **Daniel Reyes** — silent cardiometabolic drift, father's MI at 54, ApoB/Lp(a)/HOMA-IR story; **Priya Nair** — ferritin and hemoglobin falling under treated hypothyroidism, iron deficiency treated in 2019; **Marcus Bell** — healthy control.
 
 ## How it is built, and why
 
@@ -155,17 +208,17 @@ Other personas: **Daniel Reyes** — silent cardiometabolic drift, father's MI a
 
 ## WSO2 Agent Manager
 
-`scripts/amp-install.sh` installs Agent Manager 1.0.0 as the k3d cluster `amp-local` in the same colima VM,
+`scripts/utils/amp-install.sh` installs Agent Manager 1.0.0 as the k3d cluster `amp-local` in the same colima VM,
 using AMP's own quick-start container (bash 5, k3d, kubectl, helm — nothing to install on the host).
-`scripts/amp-setup.sh` then registers project **Longevity Clinic** with three externally hosted agents and
+`scripts/utils/amp-setup.sh` then registers project **Longevity Clinic** with three externally hosted agents and
 writes what they were issued into a generated block of `secrets.toml` (and `.amp/`, both gitignored):
 
 | Feature | How it is wired |
 |---|---|
 | **Agent identity** | Each agent has an **AgentID** (OAuth client in the environment's ThunderID). The FHIR and PubMed MCP servers sit behind **MCP proxies** secured by AgentID, a scope per tool group. Roles: `ehr-reader` (FHIR read tools → Copilot, Analyst), `literature-searcher` (PubMed → all three), `ehr-writer` (FHIR writes → nobody). The integration's `McpToolKit` gets its token by client credentials with the proxy as `resource`. |
-| **FHIR de-identification** | `mcp-fhir-deidentify`, a custom gateway policy (`gateway/policies/`, built in by `scripts/amp-gateway.sh`), on the FHIR MCP proxies: names, addresses, contact details and identifiers are removed, masked, pseudonymised or generalised in tool results, notes and billing are withheld, and searches by name, birth date or identifier are refused (rules: `amp/fhir-deidentify.json`). |
+| **FHIR de-identification** | `mcp-fhir-deidentify`, a custom gateway policy (`gateway/policies/`, built in by `scripts/utils/amp-gateway.sh`), on the FHIR MCP proxies: names, addresses, contact details and identifiers are removed, masked, pseudonymised or generalised in tool results, notes and billing are withheld, and searches by name, birth date or identifier are refused (rules: `amp/fhir-deidentify.json`). |
 | **AI gateway** | LLM provider `anthropic` holds the Anthropic key. Each agent has its own model configuration (an LLM proxy with its own URL and key), so usage, limits and guardrails are per agent. |
-| **Budgets and cost** | Per-agent US$/day and tokens/hour on each model configuration (`scripts/amp-budgets.sh`, `amp/budgets.json`); over budget the gateway refuses the agent and the workflow step waits for operations to retry. The trace router prices every run with the gateway's price list: spend per agent, assessment and workflow step in the portal. |
+| **Budgets and cost** | Per-agent US$/day and tokens/hour on each model configuration (`scripts/utils/amp-budgets.sh`, `amp/budgets.json`); over budget the gateway refuses the agent and the workflow step waits for operations to retry. The trace router prices every run with the gateway's price list: spend per agent, assessment and workflow step in the portal. |
 | **Monitoring** | `ballerina/ai` emits GenAI spans (`invoke_agent`, `chat`, `execute_tool`); `ballerina/otel` exports them to `infra/trace-router`, which forwards each agent run with that agent's tracing key (Agent Manager attributes a trace by key; one process hosts three agents). |
 
 Without `amp-setup.sh` the agents call Claude and the FHIR MCP servers directly; the portal says so.
@@ -174,158 +227,33 @@ Without `amp-setup.sh` the agents call Claude and the FHIR MCP servers directly;
 address, so it cannot reach the FHIR MCP servers on the VM directly. `amp-setup.sh` therefore starts the
 `amp-tunnel` compose profile: a Cloudflare quick tunnel (no account) to `infra/mcp-gatekeeper`, an nginx that
 rejects every request without the `X-Tunnel-Key` only Agent Manager's proxy sends. The data is synthetic, but
-the tunnel URL is public while it runs. `./scripts/amp-setup.sh --skip-mcp-proxies` leaves the agents on
+the tunnel URL is public while it runs. `./scripts/utils/amp-setup.sh --skip-mcp-proxies` leaves the agents on
 direct MCP access (identity and traces still work).
 
 **Workarounds for Agent Manager 1.0.0** (reported upstream): the host installer needs bash 4+ (macOS has
 3.2), so the quick-start container is used; the gateway route caps requests at 30 s, so `amp-setup.sh` raises
 it to 300 s for long Claude calls.
 
-## Patient app: SMART on FHIR through WSO2 API Manager
+How it works and how to demo it: [docs/agent-manager.md](docs/agent-manager.md).
 
-The patient app runs in one of two modes, set by `"mode"` in `config/patient-auth.json`:
+## Patient app: SMART on FHIR (optional)
 
-| Mode | Sign-in | API calls |
-|---|---|---|
-| `normal` (default) | none: the app lists every patient with an assessment | straight to the integration (`/api`) |
-| `smart` | SMART on FHIR standalone launch: the patient signs in on the WSO2 API Manager login page and approves the scopes | through the APIM gateway with the patient's bearer token. The app shows only the token's patient. |
+By default the patient app has no sign-in. To have patients sign in with SMART on FHIR through WSO2 API
+Manager and the Healthcare accelerator, you need the APIM 4.3.0 zip and Java 11, 17 or 21, then run:
 
 ```bash
-./scripts/patient-app-mode.sh smart     # needs the APIM setup below, once
-./scripts/patient-app-mode.sh normal
-./scripts/patient-app-mode.sh status
+APIM_ZIP=~/wso2/products/wso2am-4.3.0.zip ./scripts/utils/apim-setup.sh   # ~5 min; leaves the app in smart mode
+./scripts/utils/patient-app-mode.sh normal                                # switch back
 ```
 
-The portal reads the file on every page load. Nginx serves it in the container (`docker-compose.yml` mounts
-it), and Vite serves it with `npm run dev`. A mode switch takes effect when you reload the patient app; you
-don't need to rebuild or restart anything. `up.sh` creates the file from `config/patient-auth.example.json` if
-it is missing. The app also falls back to `normal` if the file is missing or has no client ID.
-
-### Set up WSO2 API Manager (once)
-
-APIM runs on the Mac, beside the stack, and calls the integration at `http://localhost:9090/api`.
-
-**You need:**
-- the WSO2 API Manager 4.3.0 zip
-- Java 11, 17 or 21 (tested with Temurin 21)
-- these ports free: 9443, 9763, 8243, 8280, 9611, 9711 and **5672**. APIM's internal message broker uses
-  5672, so stop a local RabbitMQ first: `brew services stop rabbitmq`.
-
-The script downloads the [WSO2 Healthcare APIM Accelerator 2.0.0](https://github.com/wso2/healthcare-accelerator/releases/tag/v2.0.0)
-itself.
-
-```bash
-APIM_ZIP=~/wso2/products/wso2am-4.3.0.zip ./scripts/apim-setup.sh   # install, start, configure (~5 min)
-```
-
-The script leaves the patient app in `smart` mode. Then:
-
-1. **Trust APIM's self-signed certificate.** Open https://localhost:8243/r4/.well-known/smart-configuration
-   and https://localhost:9443/devportal in the browser and accept the warning on each. Until you do, the
-   browser blocks the app's calls to APIM, and the SMART traffic panel shows them as network errors.
-2. **Sign in.** Open http://localhost:5173/patient and click **Sign in**. The app lists the patients
-   registered in APIM with their usernames and passwords. Pick one, then type its credentials on the APIM
-   login page and click **Allow** on the consent page.
-
-| User | Patient | Password |
-|---|---|---|
-| `sofia` | Sofia Alvarez · `p-sofia-alvarez` | `Patient@123` |
-| `daniel` | Daniel Reyes · `p-daniel-reyes` | `Patient@123` |
-| `priya` | Priya Nair · `p-priya-nair` | `Patient@123` |
-| `marcus` | Marcus Bell · `p-marcus-bell` | `Patient@123` |
-
-A patient sees their own assessment once the physician has started one for them.
-
-**Afterwards:**
-- `./scripts/apim-setup.sh start`, `stop` and `status` start, stop and check APIM (log: `.apim/apim.log`).
-- `configure` is idempotent, so run it again after changing a user or the integration URL. It keeps the
-  application and its client ID.
-- `rm -rf .apim` and re-running the script reinstalls APIM from scratch.
-
-Environment overrides:
-- `APIM_ZIP`
-- `INTEGRATION_URL` (default `http://localhost:9090/api`)
-- `PORTAL_ORIGIN` (default `http://localhost:5173`)
-- `PATIENT_PASSWORD`
-
-**What `apim-setup.sh` sets up**
-
-| Step | What |
-|---|---|
-| install | Unzips APIM into `.apim/wso2am-4.3.0` (gitignored) and runs the accelerator's `merge.sh`. This adds the SMART well-known endpoint `/r4/.well-known/smart-configuration`, the FHIR metadata endpoint, the SMART scopes (`patient/*.r` → shared scope `patient-*.r` with role `patient-read`), the `patientId` claim and the Open Healthcare login theme. The script then fixes two things the merge leaves out on APIM 4.3 (below). |
-| API | `HealthspanPatientApp`, at `https://localhost:8243/patient-app/1.0.0`, forwarding to the integration's `/api`. It has two OAuth2-secured GET resources, `/patient-app/patients` and `/ehrs/{ehr}/patients/{id}/journey`, each requiring `patient-*.r`. The definition carries `x-wso2-oh-fhir-resourceType: Patient`, so the accelerator maps SMART scopes onto it. |
-| Users | One per demo persona, with the `patient-read` role. Each user's `patientId` claim holds the FHIR Patient id, which the accelerator returns as the token response's `patient`. |
-| Application | `HealthspanPatientApp`: authorization code and refresh token grants, public client, PKCE S256 required, callback `http://localhost:5173/patient/callback`, subscribed to the API |
-| Config | Writes `config/patient-auth.json` with the issuer, gateway, client ID, scopes, the users above, and `"mode": "smart"` |
-
-**Fixes on top of the accelerator.** Without these, sign-in or the API calls fail:
-- **Key validation handler.** `merge.sh` adds the accelerator's key validation handler only when
-  `deployment.toml` has no `[apim.key_manager]` section, and APIM 4.3 ships one. Without the handler, the
-  gateway can't match the token's `patient/*.r` to the resource scope `patient-*.r` and returns 403. The script
-  sets `key_validation_handler_impl` itself.
-- **CORS on the token endpoints.** The browser calls the key manager's `/oauth2/token` and `/oauth2/revoke`
-  directly. APIM writes the `[cors]` settings but doesn't install the Tomcat CORS valve that applies them, so
-  the script adds it through `[[catalina.valves]]`.
-
-### The sign-in flow
-
-The client is in `demo-portal/src/lib/smartAuth.ts`, and the sign-in screens are in `src/pages/PatientAuth.tsx`.
-
-1. **Discover.** `GET {iss}/.well-known/smart-configuration` returns `authorization_endpoint`,
-   `token_endpoint` and `revocation_endpoint`, all on the key manager at `:9443`.
-2. **Authorize.** The browser goes to the authorization endpoint with:
-   - `response_type=code`, `client_id`, `redirect_uri`, `scope`, `state`
-   - `aud={iss}`
-   - an S256 `code_challenge`
-   - `prompt=login`, so APIM always shows its login page. APIM lists no `end_session_endpoint`, so its login
-     session outlives **Sign out**.
-
-   The default scopes are `openid fhirUser launch/patient patient/*.r`.
-3. **Token.** `/patient/callback` checks `state`, then posts `grant_type=authorization_code`, the `code` and
-   the `code_verifier` to the token endpoint. The response includes `patient`, and the ID token carries
-   `fhirUser`. The session is kept for the browser tab only, and the refresh token renews the access token
-   before it expires.
-4. **Call the API.** The app sends `GET {apiBase}/patient-app/patients` and
-   `GET {apiBase}/ehrs/{ehr}/patients/{id}/journey` with `Authorization: Bearer <token>`. A 401 ends the
-   session. **Sign out** revokes the token.
-
-**SMART traffic panel.** In SMART mode, the patient app's landing page has a collapsible panel on the right
-(`src/components/SmartTracePanel.tsx`). It lists every request and response of these steps in order, each
-as a collapsible item. Repeated identical API calls stay as one entry. The panel shows tokens in full, which
-is meant for the demo. The APIM login and consent pages are not in it, because they happen outside the app.
-
-### Configuration keys
-
-`config/patient-auth.json` (gitignored; `apim-setup.sh` writes it):
-
-| Key | Meaning |
-|---|---|
-| `mode` | `smart` or `normal` |
-| `iss` | FHIR base URL on the gateway. The app discovers the endpoints from it and sends it as `aud`. |
-| `apiBase` | The patient-app API on the gateway; it stands in for the integration's `/api` |
-| `clientId` | Consumer key of the APIM application |
-| `scope` | Scopes requested at the authorization endpoint |
-| `redirectUri` | Must match the application's callback URL. Default `{portal origin}/patient/callback` |
-| `demoUsers` | The users listed on the sign-in screen, with their passwords. For the demo only. |
-
-### Known limitations
-
-- **The integration doesn't enforce which patient a caller sees.** The app shows only the token's patient,
-  but the integration would return another patient's journey to any valid token.
-- **The backend never receives the patient ID.** The accelerator's backend JWT generator looks the user up by
-  username. APIM 4.3 tokens identify the user by UUID, so the lookup fails and logs an error on every call.
-- **The header shows the user's UUID instead of their name.** The ID token carries no name claim.
-- **APIM's WebSub listener fails at startup.** `SecureWebhookServer` needs port 8443, which the Agent Manager
-  cluster already uses. The error in the log is harmless.
-- **Everything is local.** The certificates are self-signed and the passwords are demo passwords.
+Set-up details, demo users, the sign-in flow and known limitations: [docs/smart-on-fhir.md](docs/smart-on-fhir.md).
 
 ## Data
 
 `seed/snapshot/` is the saved demo state — every FHIR store, the integration's database (assessments, agent
 memory, longevity records) and Temporal's history — so finished assessments open with their workflow view.
-`up.sh` loads it on the first run (`seed/restore-snapshot.sh`); `scripts/snapshot.sh` replaces it. The
+`up.sh` loads it on the first run (`seed/restore-snapshot.sh`); `scripts/utils/snapshot.sh` replaces it. The
 images that wrote it are pinned by digest in `docker-compose.yml`.
-
 
 `seed/ehr/` holds the EHR's committed transaction bundles (one per patient, plus the clinic's directory),
 loaded by `seed/seed.sh`. They come from `seed/synthea/generate.sh`:
@@ -342,27 +270,28 @@ All patients are synthetic. Provider organizations and practitioners come from S
 ehr-lab-agents/
 ├── docker-compose.yml          all services
 ├── amp/                        Agent Manager evaluation config: evaluators/ (custom), monitors.json
-├── docs/agent-manager.md       identity, AI gateway, guardrail, traces, evaluation — how and why
+├── docs/                       agent-manager.md · smart-on-fhir.md · demo-script.md
 ├── config/                     container configuration (no secrets); patient-auth.json: patient app mode + SMART settings
 ├── infra/                      Postgres, Toxiproxy, trace router, MCP gatekeeper, judge adapter
+├── gateway/                    custom Agent Manager gateway policy (mcp-fhir-deidentify)
 ├── secrets.example.toml        copy to secrets.toml (gitignored)
-├── seed/                       snapshot/ (saved state) · ehr/, lab-seed.json, seed.sh
+├── seed/                       snapshot/ (saved state) · ehr/, lab-seed.json, seed.sh, restore-snapshot.sh
 │   └── synthea/                generate.sh · transform.py · storyline.py
 ├── ehr_lab_physician/          Ballerina workspace
 │   ├── ehr_agentic_integration/   workflow, activities, agents, explorer, IPS, workflow view, API
 │   ├── lab_simulator/             the reference lab's back office; notifies the integration with FHIR messages
 │   └── pubmed_mcp/                PubMed MCP server (literature search tool)
 ├── demo-portal/                React + Vite + Tailwind
-└── scripts/                    up · snapshot · reset · smoke-test · colima-up · amp-install · amp-setup ·
-                                amp-gateway · amp-guardrails · amp-budgets · amp-evaluations · bal ·
-                                apim-setup · patient-app-mode
-(.apim/                         WSO2 API Manager + Healthcare accelerator, installed by apim-setup.sh; gitignored)
+└── scripts/
+    ├── up.sh                   start everything, with data
+    └── utils/                  everything else (see Utility scripts)
+(.amp/, .apim/                  generated credentials and the APIM install; gitignored)
 ```
 
 ## Development
 
 ```bash
-# Ballerina 2201.14.1 (or ./scripts/bal.sh <cmd> to use the Docker image instead)
+# Ballerina 2201.14.1 (or ./scripts/utils/bal.sh <cmd> to use the Docker image instead)
 cd ehr_lab_physician/ehr_agentic_integration
 bal test                                     # unit tests need the compose stack running
 
@@ -371,7 +300,7 @@ docker compose stop portal
 cd demo-portal && npm install && npm run dev
 
 # Regenerate the seed data (needs Java 17+; downloads Synthea once into seed/synthea/.cache)
-./seed/synthea/generate.sh && ./scripts/reset.sh
+./seed/synthea/generate.sh && ./scripts/utils/reset.sh
 ```
 
 The integration's and the lab simulator's `Dependencies.toml` are committed and `sticky`. They pin
@@ -379,22 +308,22 @@ The integration's and the lab simulator's `Dependencies.toml` are committed and 
 2201.14.1 needs `data.csv` 1.x. Without the pin, every rebuild after the first fails with "Incompatible
 versions: ballerina/data.csv". Don't delete these files.
 
-### Running the integration and lab simulator in WSO2 Integrator
+### Run the Ballerina services on the Mac (host mode)
 
 To run or debug the two Ballerina services from WSO2 Integrator, use host mode. The integration and the
 lab simulator then run on the Mac. Everything else stays in containers, including the PubMed MCP server.
 
 ```bash
-./scripts/host-mode.sh on       # write each package's Config.toml, stop both containers, point the rest at the Mac
+./scripts/utils/host-mode.sh on       # write each package's Config.toml, stop both containers, point the rest at the Mac
 # Open ehr_lab_physician/ in WSO2 Integrator and run ehr_agentic_integration and lab_simulator,
 # or run `bal run` in each package directory.
-./scripts/host-mode.sh status
-./scripts/host-mode.sh off      # back to everything in containers (stop the local runs first)
+./scripts/utils/host-mode.sh status
+./scripts/utils/host-mode.sh off      # back to everything in containers (stop the local runs first)
 ```
 
 `host-mode.sh on` generates the gitignored `Config.toml` files from `config/integration.toml`,
 `config/lab-simulator.toml` and `secrets.toml`, swapping each container address for a host port. After
-`amp-setup.sh` or `amp-models.sh` changes those files, run `./scripts/host-mode.sh config`.
+`amp-setup.sh` or `amp-models.sh` changes those files, run `./scripts/utils/host-mode.sh config`.
 
 Host mode also sets `COMPOSE_FILE` in `.env`, so every `docker compose` command applies
 [`docker-compose.host.yml`](docker-compose.host.yml) until host mode is switched off:

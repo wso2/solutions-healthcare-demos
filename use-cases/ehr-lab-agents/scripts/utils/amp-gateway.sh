@@ -4,8 +4,8 @@
 # de-identification of MCP tool results. Once the gateway runs it, Agent Manager lists the policy for MCP
 # proxies, and amp-setup.sh attaches it to the two FHIR MCP proxies (config: amp/fhir-deidentify.json).
 #
-#   ./scripts/amp-gateway.sh             # test, build, load into Agent Manager's cluster, switch (idempotent)
-#   ./scripts/amp-gateway.sh --restore   # switch Agent Manager's gateway back to the stock images
+#   ./scripts/utils/amp-gateway.sh             # test, build, load into Agent Manager's cluster, switch (idempotent)
+#   ./scripts/utils/amp-gateway.sh --restore   # switch Agent Manager's gateway back to the stock images
 #
 # How: WSO2's gateway-builder compiles the policy into the policy engine (gateway-runtime image) and adds its
 # definition to the gateway-controller image; both are imported into the k3d cluster, and the gateway's Helm
@@ -14,7 +14,7 @@
 # The hash operation's key is generated once into .amp/fhir-hash.key and set as the gateway's
 # policy_configurations.mcpfhirdeidentify_v0.hash_key.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 CLUSTER=amp-local
 NS=default-default
@@ -44,7 +44,7 @@ die() { printf '\033[0;31m[amp-gateway] ERROR:\033[0m %s\n' "$*" >&2; exit 1; }
 kc() { docker exec -i "k3d-$CLUSTER-server-0" kubectl "$@"; }
 yq() { docker run --rm -i "$YQ" "$@"; }
 
-docker inspect "k3d-$CLUSTER-server-0" >/dev/null 2>&1 || die "Agent Manager's cluster is not running — run ./scripts/amp-install.sh"
+docker inspect "k3d-$CLUSTER-server-0" >/dev/null 2>&1 || die "Agent Manager's cluster is not running — run ./scripts/utils/amp-install.sh"
 
 image_of() { kc -n "$NS" get deploy "$1" -o jsonpath='{.spec.template.spec.containers[0].image}'; }
 
@@ -75,7 +75,7 @@ if [[ "$MODE" == restore ]]; then
   switch 'del(.gateway.controller.image) | del(.gateway.gatewayRuntime.image) | del(.gateway.config.policy_configurations.mcpfhirdeidentify_v0)
     | del(.gateway.config.controller.policies.definitions_path)' \
     ghcr.io/wso2/api-platform/gateway-runtime:1.2.1 ghcr.io/wso2/api-platform/gateway-controller:1.2.1
-  log "back on the stock gateway — re-run ./scripts/amp-setup.sh so the FHIR MCP proxies drop the policy"
+  log "back on the stock gateway — re-run ./scripts/utils/amp-setup.sh so the FHIR MCP proxies drop the policy"
   exit 0
 fi
 
@@ -131,4 +131,4 @@ for _ in $(seq 1 24); do
   sleep 5
 done
 [[ -n "$VERSION" ]] || die "Agent Manager does not list mcp-fhir-deidentify yet (GET /orgs/default/mcp-proxies/policies)"
-log "Agent Manager offers mcp-fhir-deidentify $VERSION for MCP proxies — run ./scripts/amp-setup.sh to attach it"
+log "Agent Manager offers mcp-fhir-deidentify $VERSION for MCP proxies — run ./scripts/utils/amp-setup.sh to attach it"

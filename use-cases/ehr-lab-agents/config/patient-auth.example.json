@@ -2,7 +2,7 @@
   "mode": "normal",
   "iss": "https://localhost:8243/r4",
   "apiBase": "https://localhost:8243/patient-app/1.0.0",
-  "clientId": "<written by scripts/apim-setup.sh>",
+  "clientId": "<written by scripts/utils/apim-setup.sh>",
   "scope": "openid fhirUser launch/patient patient/*.r",
   "redirectUri": "http://localhost:5173/patient/callback",
   "demoUsers": []

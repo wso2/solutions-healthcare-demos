@@ -484,7 +484,7 @@ func TestFhirPathSubset(t *testing.T) {
 	}
 }
 
-// TestConfigFile validates a deployment's configuration (scripts/amp-gateway.sh points it at
+// TestConfigFile validates a deployment's configuration (scripts/utils/amp-gateway.sh points it at
 // amp/fhir-deidentify.json), so a bad FHIRPath fails the build instead of the gateway deployment.
 func TestConfigFile(t *testing.T) {
 	path := os.Getenv("MCP_FHIR_DEIDENTIFY_CONFIG")

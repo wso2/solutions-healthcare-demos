@@ -2,7 +2,7 @@
 # Returns the demo to a clean slate: drops every data volume (both FHIR servers, Temporal history,
 # agent memory, assessments), starts the stack again and reloads the seed patients.
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 docker compose down -v --remove-orphans
 docker compose up -d --build

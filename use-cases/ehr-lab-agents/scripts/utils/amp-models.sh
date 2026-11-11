@@ -6,13 +6,13 @@
 # secrets.toml, sets modelProvider in config/integration.toml, applies that configuration's budgets and
 # restarts the integration. Both gateways stay in place; switching back is the same command.
 #
-#   ./scripts/amp-models.sh openrouter     # the OpenRouter model in config/integration.toml (openrouterModelName)
-#   ./scripts/amp-models.sh openrouter --model z-ai/glm-5.3   # … another OpenRouter model (sets openrouterModelName,
+#   ./scripts/utils/amp-models.sh openrouter     # the OpenRouter model in config/integration.toml (openrouterModelName)
+#   ./scripts/utils/amp-models.sh openrouter --model z-ai/glm-5.3   # … another OpenRouter model (sets openrouterModelName,
 #                                          # adds its price to the gateway's price list)
-#   ./scripts/amp-models.sh claude         # Claude Sonnet 4.6 via Anthropic
+#   ./scripts/utils/amp-models.sh claude         # Claude Sonnet 4.6 via Anthropic
 #   … --no-restart                         # write the settings only (amp-setup.sh uses this)
 set -euo pipefail
-cd "$(dirname "$0")/.."
+cd "$(dirname "$0")/../.."
 
 API="${AMP_API:-http://api.amp.localhost:8080/api/v1}"
 THUNDER="${AMP_THUNDER:-http://thunder.amp.localhost:8080}"
@@ -53,7 +53,7 @@ fi
 # Another OpenRouter model: record it, and give the gateway its price so budgets and spend stay right.
 if [[ -n "$MODEL_ID" ]]; then
   sed -i.bak "s#^openrouterModelName *= *\".*\"#openrouterModelName = \"$MODEL_ID\"#" config/integration.toml && rm -f config/integration.toml.bak
-  ./scripts/amp-openrouter.sh --prices-only
+  ./scripts/utils/amp-openrouter.sh --prices-only
 fi
 
 TOKEN="$(curl -sS -u amp-api-client:amp-api-client-secret -d grant_type=client_credentials \
@@ -129,7 +129,7 @@ MODEL=$([[ $CONFIG == claude ]] && sed -n 's/^anthropicModelName *= *"\(.*\)"/\1
 log "agents → $CONFIG model configurations ($MODEL), keys issued, secrets.toml and config/integration.toml updated"
 
 # ── The configuration's budgets, and .amp/budgets.json for the portal ──
-./scripts/amp-budgets.sh --config "$CONFIG"
+./scripts/utils/amp-budgets.sh --config "$CONFIG"
 
 if [[ $CONFIG == openrouter ]] && docker compose ps --status running --services 2>/dev/null | grep -qx integration; then
   docker compose up -d llm-auth-adapter >/dev/null 2>&1
